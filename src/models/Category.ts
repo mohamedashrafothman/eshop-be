@@ -11,12 +11,26 @@ export type ICategoryModel = Model<ICategoryDocument>;
 // schema definition
 const CategorySchema = new Schema<ICategoryDocument, object, ICategoryDocument>(
 	{
-		name: { type: String, trim: true, required: true, index: true },
+		name: { type: String, trim: true, required: [true, "Name is required!"], index: true },
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		icon: { type: String },
-		description: { type: String, trim: true, required: true },
-		parent: [{ type: Schema.Types.ObjectId, required: true, ref: "Category", autopopulate: true }],
-		children: [{ type: Schema.Types.ObjectId, required: true, ref: "Category", autopopulate: true }],
+		description: { type: String, trim: true, required: [true, "Description is required!"] },
+		parent: [
+			{
+				type: Schema.Types.ObjectId,
+				required: [true, "Parent is required!"],
+				ref: "Category",
+				autopopulate: true,
+			},
+		],
+		children: [
+			{
+				type: Schema.Types.ObjectId,
+				required: [true, "Children is required!"],
+				ref: "Category",
+				autopopulate: true,
+			},
+		],
 	},
 	{ timestamps: true }
 );

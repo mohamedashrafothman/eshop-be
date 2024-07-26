@@ -10,7 +10,7 @@ import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject, isAPIHeaders } from "../utils/helpers";
+import { formatResponseObject, isEmpty } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const AuthController = {
@@ -175,9 +175,9 @@ const AuthController = {
 	},
 	passportJWTStrategy: async ({ sub: _id }: { sub: string }, done: VerifiedCallback) => {
 		const [error, user] = await to(User.findOne({ _id }));
-		if (error) return done(error);
+		if (error) return done(error, false);
 		if (!user) return done(null, false);
-		return done(null, user, { scope: "all" });
+		return done(null, user);
 	},
 	passportGoogleStrategy: async (
 		req: Request,
@@ -391,6 +391,17 @@ const AuthController = {
 		req.flash("success", "Welcome Back!");
 		return done(null, newUser);
 	},
+	passportJWTAuthenticate: (req: Request, res: Response, next: NextFunction) =>
+		passport.authenticate(
+			"jwt",
+			{ session: false },
+			(err: any, user?: Express.User | false | null, info?: object | string | Array<string | undefined>) => {
+				if (err || !user || isEmpty(user))
+					return next({ status: httpStatus.UNAUTHORIZED, message: "Unauthorized" });
+				req.user = user;
+				next();
+			}
+		)(req, res, next),
 	postSocialUser: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
@@ -485,7 +496,7 @@ const AuthController = {
 					status: httpStatus.CREATED,
 					entities: {
 						data: {
-							user: { ...user.toJSON() },
+							...(user?.toJSON() || {}),
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -558,7 +569,8 @@ const AuthController = {
 					status: httpStatus.OK,
 					entities: {
 						data: {
-							user: { ...user.toJSON(), active: true },
+							...(user?.toJSON() || {}),
+							active: true,
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -627,7 +639,7 @@ const AuthController = {
 				status: httpStatus.CREATED,
 				entities: {
 					data: {
-						user: { ...newUser.toJSON() },
+						...(newUser?.toJSON() || {}),
 						accessToken,
 						refreshToken,
 						tokenType: vars.auth.strategies.jwt.tokenType,
@@ -674,7 +686,7 @@ const AuthController = {
 		const [userError, user] = await to(User.findOne({ email }));
 		if (userError) return next(userError);
 		if (user && Object.keys(user)?.length) {
-			req.flash("danger", `Account already exists, try to login instead.`);
+			req.flash("danger", "Account already exists, try to login instead.");
 			return res
 				.status(httpStatus.CONFLICT)
 				.json(formatResponseObject({ status: httpStatus.CONFLICT, flashes: req.flash() }));
@@ -704,7 +716,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `http://${req.headers.host}${!isAPIHeaders(req) ? "/dashboard" : ""}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -738,7 +750,7 @@ const AuthController = {
 				status: httpStatus.CREATED,
 				entities: {
 					data: {
-						user: { ...(createdUser?.toJSON() || {}) },
+						...(createdUser?.toJSON() || {}),
 						accessToken,
 						refreshToken,
 						tokenType: vars.auth.strategies.jwt.tokenType,
@@ -821,7 +833,8 @@ const AuthController = {
 					status: httpStatus.OK,
 					entities: {
 						data: {
-							user: { ...(user.toJSON() || {}), active: true },
+							...(user?.toJSON() || {}),
+							active: true,
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -848,8 +861,13 @@ const AuthController = {
 		const [updateUserError] = await to(User.updateOne({ _id }, { $set: { active: false } }));
 		if (updateUserError) return next(updateUserError);
 
-		req.flash("success", "Successfully logged out!");
-		res.status(httpStatus.OK).json(formatResponseObject({ status: httpStatus.OK, flashes: req.flash() }));
+		req.logout((err) => {
+			if (err) return next(err);
+
+			req.user = undefined;
+			req.flash("success", "Successfully logged out!");
+			res.status(httpStatus.OK).json(formatResponseObject({ status: httpStatus.OK, flashes: req.flash() }));
+		});
 	},
 	postRefreshToken: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
@@ -971,9 +989,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "password-reset",
 			subject: `[${vars.app.name}] Resetting Password.`,
-			actionUrl: `http://${req.headers.host}${
-				!isAPIHeaders(req) ? "/dashboard" : ""
-			}/auth/password/reset/${token}`,
+			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/password/reset/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -1132,7 +1148,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `http://${req.headers.host}${!isAPIHeaders(req) ? "/dashboard" : ""}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 

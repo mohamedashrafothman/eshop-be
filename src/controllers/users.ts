@@ -177,9 +177,7 @@ const UsersController = {
 				from: vars.email.sender,
 				filename: "verify-user",
 				subject: `[${vars.app.name}] Verify User Account.`,
-				actionUrl: `http://${req.headers.host}${
-					!isAPIHeaders(req) ? "/dashboard" : ""
-				}/auth/email/verify/${token}`,
+				actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
 			});
 			if (sendEmailError) return next(sendEmailError);
 
@@ -201,6 +199,7 @@ const UsersController = {
 			if (newEmailError) return next(newEmailError);
 		}
 
+		// FIXME: replace this with Admin role check.
 		if (logout && !isAPIHeaders(req)) {
 			const [deleteSessionsError] = await to(
 				Session.deleteMany({

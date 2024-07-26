@@ -11,6 +11,7 @@ type VarsTypes = {
 		name: string;
 		host: string;
 		port: string;
+		protocol: string;
 		url: string;
 	};
 	tokenTypes: {
@@ -66,6 +67,10 @@ type VarsTypes = {
 				};
 			};
 		};
+		roles: {
+			user: "USER";
+			admin: "ADMIN";
+		};
 	};
 	password: {
 		hashRounds: number;
@@ -91,6 +96,7 @@ const vars: VarsTypes = {
 		name: process.env?.APP_NAME || "",
 		host: process.env?.APP_HOST || "",
 		port: process.env?.APP_PORT || "",
+		protocol: process.env?.APP_PROTOCOL || "",
 		url: process.env?.APP_URL || "",
 	},
 	tokenTypes: {
@@ -145,6 +151,10 @@ const vars: VarsTypes = {
 					profileFields: ["r_basicprofile", "r_emailaddress"],
 				},
 			},
+		},
+		roles: {
+			user: "USER",
+			admin: "ADMIN",
 		},
 	},
 	password: {

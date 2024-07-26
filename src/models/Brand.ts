@@ -11,10 +11,10 @@ export type IBrandModel = Model<IBrandDocument>;
 // schema definition
 const BrandSchema = new Schema<IBrandDocument, object, IBrandDocument>(
 	{
-		name: { type: String, trim: true, required: true, index: true },
+		name: { type: String, trim: true, required: [true, "Name is required!"], index: true },
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		icon: { type: String },
-		description: { type: String, trim: true, required: true },
+		description: { type: String, trim: true, required: [true, "Description is required!"] },
 	},
 	{ timestamps: true }
 );

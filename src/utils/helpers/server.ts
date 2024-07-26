@@ -3,6 +3,7 @@ import { PaginateResult } from "mongoose";
 import vars from "../vars";
 
 export type FormatResponseObjectType<T> = {
+	success?: boolean;
 	status?: number;
 	entities?: {
 		data?: T | T[];
@@ -24,13 +25,28 @@ export const normalizePort = (val: string): number | string | boolean => {
 };
 
 /**
+ * check if request contains API Acceptable Media Type.
+ */
+export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
+	req.get("Content-Type") === vars.api.acceptableMediaType;
+
+/**
+ * check if request contains API Acceptable Accept.
+ */
+export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
+	req.get("Accept") === vars.api.acceptableMediaType;
+
+/**
  * check if request contains API Headers.
  */
-export const isAPIHeaders = (req: Request) =>
-	req.get("Content-Type") === vars.api.acceptableMediaType && req.get("Accept") === vars.api.acceptableMediaType;
+export const isAPIHeaders = (req: Request) => isAPIAcceptableMediaTypeHeader(req) && isAPIAcceptableAcceptHeader(req);
 
 /**
  * format response object
  */
-export const formatResponseObject = <T = void>(options: FormatResponseObjectType<T>): FormatResponseObjectType<T> =>
-	options;
+export const formatResponseObject = <T = void>(options: FormatResponseObjectType<T>): FormatResponseObjectType<T> => ({
+	success: true,
+	...options,
+});
+
+export const isJSONWebTokenError = (error: Error) => error?.name === "JsonWebTokenError";

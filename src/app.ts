@@ -32,7 +32,7 @@ app.set("view engine", "pug");
 app.set("port", normalizePort(vars.app.port));
 app.set("url", vars.app.url);
 app.set("x-powered-by", false);
-app.set("trust proxy", true); // to get user IP
+// app.set("trust proxy", true); // to get user IP
 app.use("/public", express.static(path.join(__dirname, "../public/"))); // serving public files.
 app.use("/storage", express.static(path.join(__dirname, "../public/storage/"))); // serving storage/multimedia files.
 app.use(timeout("1m"));
