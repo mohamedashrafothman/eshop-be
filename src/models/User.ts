@@ -36,12 +36,12 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		password: { type: String, hidden: true, required: [true, "Password is required!"] },
 		picture: { type: String },
-		// role: {
-		// 	type: String,
-		// 	enum: [...Object.values(vars.auth.roles)],
-		// 	default: vars.auth.roles.user,
-		// 	required: [true, "Role is required!"],
-		// },
+		role: {
+			type: String,
+			enum: [...Object.values(vars.auth.roles)],
+			default: vars.auth.roles.user,
+			required: [true, "Role is required!"],
+		},
 		active: { type: Boolean, default: false },
 		verified: { type: Boolean, default: false },
 		google: { type: String, default: undefined },

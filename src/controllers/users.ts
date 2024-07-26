@@ -7,7 +7,7 @@ import Session from "../models/Session";
 import Token from "../models/Token";
 import User from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject, isAPIHeaders } from "../utils/helpers";
+import { formatResponseObject } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const UsersController = {
@@ -63,7 +63,7 @@ const UsersController = {
 		}
 	},
 	getUsers: async (req: Request, res: Response, next: NextFunction) => {
-		const { q, status: verified, ...query } = req.query || {};
+		const { q, verified, deleted, active, ...query } = req.query || {};
 		const querySearchFields = ["name", "email"];
 		const sort = [
 			{ name: "Name A-Z", value: { name: 1 } },
@@ -81,8 +81,9 @@ const UsersController = {
 						})),
 					}) ||
 						{}),
-					...((verified && verified !== "all" && { verified }) || {}),
-					deleted: { $ne: true },
+					...((active && { active }) || {}),
+					...((verified && { verified }) || {}),
+					...((deleted && { deleted }) || {}),
 					_id: { $ne: req?.user?._id || "" },
 				},
 				{ ...query }
@@ -130,7 +131,7 @@ const UsersController = {
 		}
 
 		const { user: userIdentifier } = req.params || {};
-		const { oldPassword: _oldPassword, passwordConfirmation: _passwordConfirmation, logout, ...reqBody } = req.body;
+		const { oldPassword: _oldPassword, passwordConfirmation: _passwordConfirmation, ...reqBody } = req.body;
 		let isPasswordModified;
 		let isEmailModified;
 
@@ -199,21 +200,6 @@ const UsersController = {
 			if (newEmailError) return next(newEmailError);
 		}
 
-		// FIXME: replace this with Admin role check.
-		if (logout && !isAPIHeaders(req)) {
-			const [deleteSessionsError] = await to(
-				Session.deleteMany({
-					$or: [
-						{ "session.passport.user.slug": userIdentifier },
-						...(userIdentifier.match(/^[0-9a-fA-F]{24}$/)
-							? [{ "session.passport.user._id": userIdentifier }]
-							: []),
-					],
-				})
-			);
-			if (deleteSessionsError) return next(deleteSessionsError);
-		}
-
 		req.flash("success", "successfully updated.");
 		res.status(httpStatus.OK).json(
 			formatResponseObject({
@@ -267,43 +253,6 @@ const UsersController = {
 
 		req.flash("success", "Successfully Restored.");
 		res.status(httpStatus.OK).json(formatResponseObject({ status: httpStatus.OK, flashes: req.flash() }));
-	},
-	getDeletedUser: async (req: Request, res: Response, next: NextFunction) => {
-		const { q, status: verified, ...query } = req.query || {};
-		const querySearchFields = ["name", "email"];
-		const sort = [
-			{ name: "Name A-Z", value: { name: 1 } },
-			{ name: "Name Z-A", value: { name: -1 } },
-			{ name: "Created Date Ascending", value: { createdAt: 1 } },
-			{ name: "Created Date Descending", value: { createdAt: -1 } },
-		];
-
-		const [paginatedUsersError, paginatedUsers] = await to(
-			User.paginate(
-				{
-					...((q && {
-						$or: querySearchFields.map((item) => ({
-							[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
-						})),
-					}) ||
-						{}),
-					...((verified && verified !== "all" && { verified }) || {}),
-					deleted: true,
-					_id: { $ne: req?.user?._id || "" },
-				},
-				{ ...query }
-			)
-		);
-		if (paginatedUsersError) return next(paginatedUsersError);
-
-		const { docs, ...pagination } = paginatedUsers;
-
-		return res.status(httpStatus.OK).json(
-			formatResponseObject({
-				status: httpStatus.OK,
-				entities: { data: [...(docs || [])], meta: { pagination, sort } },
-			})
-		);
 	},
 };
 
