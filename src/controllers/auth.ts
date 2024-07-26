@@ -10,7 +10,7 @@ import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject, isEmpty } from "../utils/helpers";
+import { formatResponseObject } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const AuthController = {
@@ -174,9 +174,16 @@ const AuthController = {
 		});
 	},
 	passportJWTStrategy: async ({ sub: _id }: { sub: string }, done: VerifiedCallback) => {
-		const [error, user] = await to(User.findOne({ _id }));
-		if (error) return done(error, false);
+		const [userError, user] = await to(User.findOne({ _id }));
+		if (userError) return done(userError, false);
 		if (!user) return done(null, false);
+
+		const [tokenError, token] = await to(
+			Token.findOne({ user: user._id, kind: vars.tokenTypes.jwt, expireAt: { $gt: Date.now() } })
+		);
+		if (tokenError) return done(tokenError, false);
+		if (!token) return done(null, false);
+
 		return done(null, user);
 	},
 	passportGoogleStrategy: async (
@@ -392,16 +399,7 @@ const AuthController = {
 		return done(null, newUser);
 	},
 	passportJWTAuthenticate: (req: Request, res: Response, next: NextFunction) =>
-		passport.authenticate(
-			"jwt",
-			{ session: false },
-			(err: any, user?: Express.User | false | null, info?: object | string | Array<string | undefined>) => {
-				if (err || !user || isEmpty(user))
-					return next({ status: httpStatus.UNAUTHORIZED, message: "Unauthorized" });
-				req.user = user;
-				next();
-			}
-		)(req, res, next),
+		passport.authenticate("jwt", { session: false, failWithError: true })(req, res, next),
 	postSocialUser: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {

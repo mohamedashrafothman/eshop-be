@@ -4,9 +4,9 @@ import vars from "../vars";
 
 export type FormatResponseObjectType<T> = {
 	success?: boolean;
-	status?: number;
+	status: number;
 	entities?: {
-		data?: T | T[];
+		data: T | T[];
 		meta?: { pagination: Omit<PaginateResult<unknown>, "docs" | "meta">; sort: { name: string; value: object }[] };
 	};
 	flashes?: { [key: string]: string[] };
@@ -44,9 +44,18 @@ export const isAPIHeaders = (req: Request) => isAPIAcceptableMediaTypeHeader(req
 /**
  * format response object
  */
-export const formatResponseObject = <T = void>(options: FormatResponseObjectType<T>): FormatResponseObjectType<T> => ({
-	success: true,
-	...options,
+export const formatResponseObject = <T = void>({
+	success = true,
+	status,
+	entities,
+	flashes,
+	error,
+	message,
+}: FormatResponseObjectType<T>): FormatResponseObjectType<T> => ({
+	success,
+	status,
+	entities,
+	flashes,
+	error,
+	message,
 });
-
-export const isJSONWebTokenError = (error: Error) => error?.name === "JsonWebTokenError";
