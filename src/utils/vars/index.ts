@@ -9,6 +9,7 @@ type VarsTypes = {
 	isProduction: boolean;
 	app: {
 		name: string;
+		port: string;
 		host: string;
 		protocol: string;
 		url: string;
@@ -94,6 +95,7 @@ const vars: VarsTypes = {
 	isProduction: process.env?.NODE_ENV?.trim() === "production" || false,
 	app: {
 		name: process.env?.APP_NAME || "",
+		port: process.env.APP_PORT || "",
 		host: process.env?.APP_HOST || "",
 		protocol: process.env?.APP_PROTOCOL || "",
 		url: process.env?.APP_URL || "",
