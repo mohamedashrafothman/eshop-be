@@ -16,7 +16,7 @@ const EmailSchema = new Schema<IEmailDocument, object, IEmailDocument>(
 		from: { type: String, index: true, lowercase: true, trim: true, validate: [isEmail, "Invalid Email Address"] },
 		html: { type: String },
 		text: { type: String },
-		subject: { type: String, required: true },
+		subject: { type: String, required: [true, "Subject is required!"] },
 	},
 	{ timestamps: true }
 );

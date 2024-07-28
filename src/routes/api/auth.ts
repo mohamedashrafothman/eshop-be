@@ -1,6 +1,5 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
-import passport from "passport";
 import { default as authController } from "../../controllers/auth";
 import vars from "../../utils/vars";
 
@@ -9,7 +8,7 @@ const router = Router();
 // Endpoints
 router
 	.route("/logout")
-	.all(allowMethods(["post", "get"]), passport.authenticate("jwt", { session: false }))
+	.all(allowMethods(["post", "get"]), authController.passportJWTAuthenticate)
 	.post(authController.logout)
 	.get(authController.logout);
 router
@@ -34,21 +33,21 @@ router
 	.post(authController.validator("reset-password"), authController.postResetPassword);
 router
 	.route("/email/verify/:token")
-	.all(allowMethods(["get"]), passport.authenticate("jwt", { session: false }))
+	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getEmailVerification);
 router
 	.route("/email/resend")
-	.all(allowMethods(["get"]), passport.authenticate("jwt", { session: false }))
+	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getResendEmailVerification);
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
 	.all(allowMethods(["post"]), (req, res, next) =>
-		!req.headers.authorization ? passport.authenticate("jwt", { session: false })(req, res, next) : next()
+		!req.headers.authorization ? authController.passportJWTAuthenticate(req, res, next) : next()
 	)
 	.post(authController.validator("social-user"), authController.postSocialUser);
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})/unlink`)
-	.all(allowMethods(["get"]), passport.authenticate("jwt", { session: false }))
+	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getSocialUnlink);
 
 // Exporting router

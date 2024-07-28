@@ -12,7 +12,7 @@ declare global {
 			lang?: string;
 			prevPath?: string;
 			prevPrevPath?: string;
-			user: IUserDocument;
+			user: IUserDocument | undefined;
 		}
 	}
 }

@@ -10,7 +10,7 @@ import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject, isAPIHeaders } from "../utils/helpers";
+import { formatResponseObject } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const AuthController = {
@@ -174,10 +174,17 @@ const AuthController = {
 		});
 	},
 	passportJWTStrategy: async ({ sub: _id }: { sub: string }, done: VerifiedCallback) => {
-		const [error, user] = await to(User.findOne({ _id }));
-		if (error) return done(error);
+		const [userError, user] = await to(User.findOne({ _id }));
+		if (userError) return done(userError, false);
 		if (!user) return done(null, false);
-		return done(null, user, { scope: "all" });
+
+		const [tokenError, token] = await to(
+			Token.findOne({ user: user._id, kind: vars.tokenTypes.jwt, expireAt: { $gt: Date.now() } })
+		);
+		if (tokenError) return done(tokenError, false);
+		if (!token) return done(null, false);
+
+		return done(null, user);
 	},
 	passportGoogleStrategy: async (
 		req: Request,
@@ -207,7 +214,7 @@ const AuthController = {
 			user = Object.assign(user, {
 				...(profile?.id ? { google: profile.id } : {}),
 				...(!user?.name && profile?.displayName ? { name: profile.displayName } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -239,7 +246,7 @@ const AuthController = {
 		if (existsUserError) return done(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return done(updatedUserError);
 
@@ -265,7 +272,7 @@ const AuthController = {
 			email: profile?.emails?.[0]?.value || "",
 			google: profile.id,
 			active: true,
-			verified: true,
+			emailVerified: true,
 		};
 
 		const [newUserError, newUser] = await to(User.create(user));
@@ -312,7 +319,7 @@ const AuthController = {
 					? { name: `${profile.name.givenName} ${profile.name.middleName} ${profile.name.familyName}` }
 					: {}),
 				...(!user?.picture ? { picture: `https://graph.facebook.com/${profile.id}/picture?type=large` } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -346,7 +353,7 @@ const AuthController = {
 		if (existsUserError) return done(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return done(updatedUserError);
 
@@ -377,7 +384,7 @@ const AuthController = {
 			email: profile?.emails?.[0]?.value || "",
 			facebook: profile.id,
 			active: true,
-			verified: true,
+			emailVerified: true,
 		};
 
 		const [newUserError, newUser] = await to(User.create(user));
@@ -391,6 +398,8 @@ const AuthController = {
 		req.flash("success", "Welcome Back!");
 		return done(null, newUser);
 	},
+	passportJWTAuthenticate: (req: Request, res: Response, next: NextFunction) =>
+		passport.authenticate("jwt", { session: false, failWithError: true })(req, res, next),
 	postSocialUser: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
@@ -420,7 +429,7 @@ const AuthController = {
 				[req.params.provider]: req.body.providerId,
 				...(req?.body?.name ? { name: req.body.name } : {}),
 				...(req?.body?.picture ? { picture: req.body.picture } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -485,7 +494,7 @@ const AuthController = {
 					status: httpStatus.CREATED,
 					entities: {
 						data: {
-							user: { ...user.toJSON() },
+							...(user?.toJSON() || {}),
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -500,7 +509,7 @@ const AuthController = {
 		if (existsUserError) return next(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return next(updatedUserError);
 
@@ -558,7 +567,8 @@ const AuthController = {
 					status: httpStatus.OK,
 					entities: {
 						data: {
-							user: { ...user.toJSON(), active: true },
+							...(user?.toJSON() || {}),
+							active: true,
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -586,7 +596,7 @@ const AuthController = {
 				...(req.body.picture && { picture: req.body.picture }),
 				[req.params.provider]: req.body.providerId,
 				active: true,
-				verified: true,
+				emailVerified: true,
 			})
 		);
 		if (newUserError) return next(newUserError);
@@ -627,7 +637,7 @@ const AuthController = {
 				status: httpStatus.CREATED,
 				entities: {
 					data: {
-						user: { ...newUser.toJSON() },
+						...(newUser?.toJSON() || {}),
 						accessToken,
 						refreshToken,
 						tokenType: vars.auth.strategies.jwt.tokenType,
@@ -674,7 +684,7 @@ const AuthController = {
 		const [userError, user] = await to(User.findOne({ email }));
 		if (userError) return next(userError);
 		if (user && Object.keys(user)?.length) {
-			req.flash("danger", `Account already exists, try to login instead.`);
+			req.flash("danger", "Account already exists, try to login instead.");
 			return res
 				.status(httpStatus.CONFLICT)
 				.json(formatResponseObject({ status: httpStatus.CONFLICT, flashes: req.flash() }));
@@ -704,7 +714,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `http://${req.headers.host}${!isAPIHeaders(req) ? "/dashboard" : ""}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -738,7 +748,7 @@ const AuthController = {
 				status: httpStatus.CREATED,
 				entities: {
 					data: {
-						user: { ...(createdUser?.toJSON() || {}) },
+						...(createdUser?.toJSON() || {}),
 						accessToken,
 						refreshToken,
 						tokenType: vars.auth.strategies.jwt.tokenType,
@@ -821,7 +831,8 @@ const AuthController = {
 					status: httpStatus.OK,
 					entities: {
 						data: {
-							user: { ...(user.toJSON() || {}), active: true },
+							...(user?.toJSON() || {}),
+							active: true,
 							accessToken,
 							refreshToken,
 							tokenType: vars.auth.strategies.jwt.tokenType,
@@ -848,8 +859,13 @@ const AuthController = {
 		const [updateUserError] = await to(User.updateOne({ _id }, { $set: { active: false } }));
 		if (updateUserError) return next(updateUserError);
 
-		req.flash("success", "Successfully logged out!");
-		res.status(httpStatus.OK).json(formatResponseObject({ status: httpStatus.OK, flashes: req.flash() }));
+		req.logout((err) => {
+			if (err) return next(err);
+
+			req.user = undefined;
+			req.flash("success", "Successfully logged out!");
+			res.status(httpStatus.OK).json(formatResponseObject({ status: httpStatus.OK, flashes: req.flash() }));
+		});
 	},
 	postRefreshToken: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
@@ -971,9 +987,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "password-reset",
 			subject: `[${vars.app.name}] Resetting Password.`,
-			actionUrl: `http://${req.headers.host}${
-				!isAPIHeaders(req) ? "/dashboard" : ""
-			}/auth/password/reset/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/password/reset/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -1063,7 +1077,10 @@ const AuthController = {
 		}
 
 		const [userError] = await to(
-			User.findOneAndUpdate({ _id: verifyEmailToken.user, verified: { $ne: true } }, { $set: { verified: true } })
+			User.findOneAndUpdate(
+				{ _id: verifyEmailToken.user, emailVerified: { $ne: true } },
+				{ $set: { emailVerified: true } }
+			)
 		);
 		if (userError) return next(userError);
 
@@ -1085,7 +1102,7 @@ const AuthController = {
 		);
 	},
 	getResendEmailVerification: async (req: Request, res: Response, next: NextFunction) => {
-		const [userError, user] = await to(User.findOne({ _id: req?.user?._id || "", verified: { $ne: true } }));
+		const [userError, user] = await to(User.findOne({ _id: req?.user?._id || "", emailVerified: { $ne: true } }));
 		if (userError) return next(userError);
 		if (!user) {
 			req.flash("danger", "Email Already Verified!");
@@ -1132,7 +1149,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `http://${req.headers.host}${!isAPIHeaders(req) ? "/dashboard" : ""}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
