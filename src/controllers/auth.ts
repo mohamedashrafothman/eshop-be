@@ -714,7 +714,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -987,7 +987,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "password-reset",
 			subject: `[${vars.app.name}] Resetting Password.`,
-			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/password/reset/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/password/reset/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 
@@ -1149,7 +1149,7 @@ const AuthController = {
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 		});
 		if (sendEmailError) return next(sendEmailError);
 

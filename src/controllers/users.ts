@@ -178,7 +178,7 @@ const UsersController = {
 				from: vars.email.sender,
 				filename: "verify-user",
 				subject: `[${vars.app.name}] Verify User Account.`,
-				actionUrl: `${vars.app.protocol}://${req.headers.host}/auth/email/verify/${token}`,
+				actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 			});
 			if (sendEmailError) return next(sendEmailError);
 
