@@ -15,16 +15,6 @@ export type FormatResponseObjectType<T> = {
 };
 
 /**
- * normalize a port into a number, string, or false.
- */
-export const normalizePort = (val: string): number | string | boolean => {
-	const port = parseInt(val, 10);
-	if (Number.isNaN(port)) return val;
-	if (port >= 0) return port;
-	return false;
-};
-
-/**
  * check if request contains API Acceptable Media Type.
  */
 export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
