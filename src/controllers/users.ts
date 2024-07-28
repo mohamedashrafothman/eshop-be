@@ -63,7 +63,7 @@ const UsersController = {
 		}
 	},
 	getUsers: async (req: Request, res: Response, next: NextFunction) => {
-		const { q, verified, deleted, active, ...query } = req.query || {};
+		const { q, emailVerified, deleted, active, ...query } = req.query || {};
 		const querySearchFields = ["name", "email"];
 		const sort = [
 			{ name: "Name A-Z", value: { name: 1 } },
@@ -82,7 +82,7 @@ const UsersController = {
 					}) ||
 						{}),
 					...((active && { active }) || {}),
-					...((verified && { verified }) || {}),
+					...((emailVerified && { emailVerified }) || {}),
 					...((deleted && { deleted }) || {}),
 					_id: { $ne: req?.user?._id || "" },
 				},
@@ -155,7 +155,7 @@ const UsersController = {
 			});
 		}
 
-		user = Object.assign(user, { ...reqBody, ...(isEmailModified ? { verified: false } : {}) });
+		user = Object.assign(user, { ...reqBody, ...(isEmailModified ? { emailVerified: false } : {}) });
 		if (!user) return next();
 
 		const [saveError, newUser] = await to(user.save());

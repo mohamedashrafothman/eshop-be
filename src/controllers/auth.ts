@@ -214,7 +214,7 @@ const AuthController = {
 			user = Object.assign(user, {
 				...(profile?.id ? { google: profile.id } : {}),
 				...(!user?.name && profile?.displayName ? { name: profile.displayName } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -246,7 +246,7 @@ const AuthController = {
 		if (existsUserError) return done(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return done(updatedUserError);
 
@@ -272,7 +272,7 @@ const AuthController = {
 			email: profile?.emails?.[0]?.value || "",
 			google: profile.id,
 			active: true,
-			verified: true,
+			emailVerified: true,
 		};
 
 		const [newUserError, newUser] = await to(User.create(user));
@@ -319,7 +319,7 @@ const AuthController = {
 					? { name: `${profile.name.givenName} ${profile.name.middleName} ${profile.name.familyName}` }
 					: {}),
 				...(!user?.picture ? { picture: `https://graph.facebook.com/${profile.id}/picture?type=large` } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -353,7 +353,7 @@ const AuthController = {
 		if (existsUserError) return done(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return done(updatedUserError);
 
@@ -384,7 +384,7 @@ const AuthController = {
 			email: profile?.emails?.[0]?.value || "",
 			facebook: profile.id,
 			active: true,
-			verified: true,
+			emailVerified: true,
 		};
 
 		const [newUserError, newUser] = await to(User.create(user));
@@ -429,7 +429,7 @@ const AuthController = {
 				[req.params.provider]: req.body.providerId,
 				...(req?.body?.name ? { name: req.body.name } : {}),
 				...(req?.body?.picture ? { picture: req.body.picture } : {}),
-				verified: true,
+				emailVerified: true,
 				active: true,
 			});
 
@@ -509,7 +509,7 @@ const AuthController = {
 		if (existsUserError) return next(existsUserError);
 		if (existsUser) {
 			const [updatedUserError] = await to(
-				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, verified: true } })
+				User.updateOne({ _id: existsUser?._id }, { $set: { active: true, emailVerified: true } })
 			);
 			if (updatedUserError) return next(updatedUserError);
 
@@ -596,7 +596,7 @@ const AuthController = {
 				...(req.body.picture && { picture: req.body.picture }),
 				[req.params.provider]: req.body.providerId,
 				active: true,
-				verified: true,
+				emailVerified: true,
 			})
 		);
 		if (newUserError) return next(newUserError);
@@ -1077,7 +1077,10 @@ const AuthController = {
 		}
 
 		const [userError] = await to(
-			User.findOneAndUpdate({ _id: verifyEmailToken.user, verified: { $ne: true } }, { $set: { verified: true } })
+			User.findOneAndUpdate(
+				{ _id: verifyEmailToken.user, emailVerified: { $ne: true } },
+				{ $set: { emailVerified: true } }
+			)
 		);
 		if (userError) return next(userError);
 
@@ -1099,7 +1102,7 @@ const AuthController = {
 		);
 	},
 	getResendEmailVerification: async (req: Request, res: Response, next: NextFunction) => {
-		const [userError, user] = await to(User.findOne({ _id: req?.user?._id || "", verified: { $ne: true } }));
+		const [userError, user] = await to(User.findOne({ _id: req?.user?._id || "", emailVerified: { $ne: true } }));
 		if (userError) return next(userError);
 		if (!user) {
 			req.flash("danger", "Email Already Verified!");

@@ -34,7 +34,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		},
 		name: { type: String, trim: true, required: [true, "Name is required!"] },
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
-		password: { type: String, hidden: true, required: [true, "Password is required!"] },
+		password: { type: String, hidden: true },
 		picture: { type: String },
 		role: {
 			type: String,
@@ -43,13 +43,16 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			required: [true, "Role is required!"],
 		},
 		active: { type: Boolean, default: false },
-		verified: { type: Boolean, default: false },
+		emailVerified: { type: Boolean, default: false },
 		google: { type: String, default: undefined },
 		facebook: { type: String, default: undefined },
-		// addresses: [{ type: Schema.Types.ObjectId, ref: "Address", autopopulate: true }],
 	},
 	{
-		toJSON: { virtual: true, transform: (_doc, { password, ...ret }) => ret },
+		toJSON: {
+			versionKey: false,
+			virtual: true,
+			transform: (_doc, { password, _id, ...ret }) => ({ id: _id, ...ret }),
+		},
 		timestamps: true,
 	}
 );

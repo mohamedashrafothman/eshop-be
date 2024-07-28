@@ -1,5 +1,3 @@
-import IAddress from "./Address.interface";
-
 export default interface User {
 	email: string;
 	name: string;
@@ -8,8 +6,7 @@ export default interface User {
 	picture: string;
 	role: string;
 	active: boolean;
-	verified: boolean;
+	emailVerified: boolean;
 	google?: string;
 	facebook?: string;
-	addresses?: [IAddress];
 }
