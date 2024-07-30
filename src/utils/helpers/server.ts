@@ -1,6 +1,8 @@
 import { Request } from "express";
-import { PaginateResult } from "mongoose";
+import { ValidationError } from "express-validator";
+import { Error, PaginateResult } from "mongoose";
 import vars from "../vars";
+import { groupBy } from "./index";
 
 export type FormatResponseObjectType<T> = {
 	success?: boolean;
@@ -59,3 +61,15 @@ export const formatResponseObject = <T = void>({
 	error,
 	message,
 });
+
+/**
+ * format validation error messages
+ */
+export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
+	const errorsGroupedByPath = groupBy<{ path?: string; msg?: string; message?: string }>(errors, "path");
+	const errorsPaths = Object.keys(errorsGroupedByPath).filter(Boolean);
+	const errorsMapped = errorsPaths.map((path: string) => ({
+		[path]: errorsGroupedByPath[path].map((error) => error?.msg || error?.message),
+	}));
+	return JSON.parse(JSON.stringify(errorsMapped));
+};

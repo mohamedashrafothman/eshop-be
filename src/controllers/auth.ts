@@ -1,8 +1,9 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
+import createError from "http-errors";
 import httpStatus from "http-status";
-import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
+import jsonwebtoken from "jsonwebtoken";
 import passport, { type Profile } from "passport";
 import { type VerifiedCallback } from "passport-jwt";
 import { type IVerifyOptions } from "passport-local";
@@ -10,7 +11,7 @@ import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, formatValidationErrorMessagesResponse } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const AuthController = {
@@ -403,8 +404,8 @@ const AuthController = {
 	postSocialUser: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		if (req.isAuthenticated()) {
@@ -676,19 +677,15 @@ const AuthController = {
 	postRegister: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const { email } = req.body;
 		const [userError, user] = await to(User.findOne({ email }));
 		if (userError) return next(userError);
-		if (user && Object.keys(user)?.length) {
-			req.flash("danger", "Account already exists, try to login instead.");
-			return res
-				.status(httpStatus.CONFLICT)
-				.json(formatResponseObject({ status: httpStatus.CONFLICT, flashes: req.flash() }));
-		}
+		if (user && Object.keys(user)?.length)
+			return next(createError(httpStatus.CONFLICT, "Account already exists, try to login instead."));
 
 		const [createdUserError, createdUser] = await to(
 			User.create({
@@ -761,8 +758,8 @@ const AuthController = {
 	postLogin: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const { email } = req.body;
@@ -774,7 +771,7 @@ const AuthController = {
 			if (compareError) return next(compareError);
 			if (!isMatch) {
 				req.flash("danger", "Your credentials doesn't match our records.");
-				return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY }));
+				return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 			}
 
 			const [updateUserError] = await to(
@@ -870,8 +867,8 @@ const AuthController = {
 	postRefreshToken: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const { refreshToken: refreshToken } = req.body as { refreshToken: string };
@@ -881,59 +878,14 @@ const AuthController = {
 		if (userRefreshTokenError) return next(userRefreshTokenError);
 		if (!userRefreshToken) {
 			req.flash("danger", "Token has been expired, please login again!");
-			return res
-				.status(httpStatus.FORBIDDEN)
-				.json(formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() }));
+			return next(createError(httpStatus.FORBIDDEN));
 		}
-
-		jsonwebtoken.verify(
-			refreshToken,
-			vars.auth.strategies.jwt.refreshTokenSecret,
-			async (error: VerifyErrors | null, payload: JwtPayload | string | undefined) => {
-				if (error) return next(formatResponseObject({ status: httpStatus.FORBIDDEN, error }));
-				const _id = payload?.sub || "";
-				const accessToken = jsonwebtoken.sign(
-					{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
-					vars.auth.strategies.jwt.accessTokenSecret,
-					{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
-				);
-				const refreshToken = jsonwebtoken.sign(
-					{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
-					vars.auth.strategies.jwt.refreshTokenSecret,
-					{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
-				);
-
-				const [newRefreshTokenError] = await to(
-					Token.updateOne(
-						{ token: refreshToken, kind: vars.tokenTypes.jwt, expireAt: { $gt: Date.now() } },
-						{
-							$set: {
-								token: refreshToken,
-								expireAt:
-									Date.now() +
-									1000 * 60 * 60 * 24 * vars.auth.strategies.jwt.refreshTokenExpiresInDays,
-							},
-						}
-					)
-				);
-				if (newRefreshTokenError) return next(newRefreshTokenError);
-
-				return res.status(httpStatus.OK).json(
-					formatResponseObject({
-						status: httpStatus.OK,
-						entities: {
-							data: { accessToken, refreshToken, tokenType: vars.auth.strategies.jwt.tokenType },
-						},
-					})
-				);
-			}
-		);
 	},
 	postForgotPassword: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const { email } = req.body;
@@ -941,12 +893,7 @@ const AuthController = {
 		if (userError) return next(userError);
 		if (!user) {
 			req.flash("danger", "No account found with this email.");
-			return res.status(httpStatus.NOT_FOUND).json(
-				formatResponseObject({
-					status: httpStatus.NOT_FOUND,
-					flashes: req.flash(),
-				})
-			);
+			return next(createError(httpStatus.NOT_FOUND));
 		}
 
 		const token = await user.createHashToken();
@@ -1000,8 +947,8 @@ const AuthController = {
 	postResetPassword: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const [resetPasswordTokenError, resetPasswordToken] = await to(
@@ -1014,12 +961,7 @@ const AuthController = {
 		if (resetPasswordTokenError) return next(resetPasswordTokenError);
 		if (!resetPasswordToken) {
 			req.flash("danger", "token is invalid or has expired.");
-			return res.status(httpStatus.NOT_FOUND).json(
-				formatResponseObject({
-					status: httpStatus.NOT_FOUND,
-					flashes: req.flash(),
-				})
-			);
+			return next(createError(httpStatus.NOT_FOUND));
 		}
 
 		let userError = null;
@@ -1071,9 +1013,7 @@ const AuthController = {
 		if (verifyEmailTokenError) return next(verifyEmailTokenError);
 		if (!verifyEmailToken) {
 			req.flash("danger", "token is invalid or has expired.");
-			return res
-				.status(httpStatus.NOT_FOUND)
-				.json(formatResponseObject({ status: httpStatus.NOT_FOUND, flashes: req.flash() }));
+			return next(createError(httpStatus.NOT_FOUND));
 		}
 
 		const [userError] = await to(
@@ -1106,9 +1046,7 @@ const AuthController = {
 		if (userError) return next(userError);
 		if (!user) {
 			req.flash("danger", "Email Already Verified!");
-			return res
-				.status(httpStatus.NOT_FOUND)
-				.json(formatResponseObject({ status: httpStatus.NOT_FOUND, flashes: req.flash() }));
+			return next(createError(httpStatus.NOT_FOUND));
 		}
 
 		const [userRefreshTokenError, userRefreshToken] = await to(

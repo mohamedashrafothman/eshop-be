@@ -1,13 +1,14 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
+import createError from "http-errors";
 import httpStatus from "http-status";
 import Email from "../models/Email";
 import Session from "../models/Session";
 import Token from "../models/Token";
 import User from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, formatValidationErrorMessagesResponse } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const UsersController = {
@@ -126,8 +127,8 @@ const UsersController = {
 	updateSingleUser: async (req: Request, res: Response, next: NextFunction) => {
 		const validationErrors = validationResult(req);
 		if (!validationErrors.isEmpty()) {
-			req.flash("danger", JSON.parse(JSON.stringify(validationErrors.array({ onlyFirstError: true }))));
-			return next(formatResponseObject({ status: httpStatus.UNPROCESSABLE_ENTITY, flashes: req.flash() }));
+			req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
 		}
 
 		const { user: userIdentifier } = req.params || {};
