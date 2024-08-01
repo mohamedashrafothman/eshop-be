@@ -9,7 +9,10 @@ export type FormatResponseObjectType<T> = {
 	status: number;
 	entities?: {
 		data: T | T[];
-		meta?: { pagination: Omit<PaginateResult<unknown>, "docs" | "meta">; sort: { name: string; value: object }[] };
+		meta?: {
+			pagination: Omit<PaginateResult<unknown>, "docs" | "meta">;
+			sort: { name: string; value: object }[];
+		};
 	};
 	flashes?: { [key: string]: string[] };
 	error?: Error;
@@ -41,7 +44,8 @@ export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
 /**
  * check if request contains API Headers.
  */
-export const isAPIHeaders = (req: Request) => isAPIAcceptableMediaTypeHeader(req) && isAPIAcceptableAcceptHeader(req);
+export const isAPIHeaders = (req: Request) =>
+	isAPIAcceptableMediaTypeHeader(req) && isAPIAcceptableAcceptHeader(req);
 
 /**
  * format response object
@@ -66,7 +70,11 @@ export const formatResponseObject = <T = void>({
  * format validation error messages
  */
 export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
-	const errorsGroupedByPath = groupBy<{ path?: string; msg?: string; message?: string }>(errors, "path");
+	const errorsGroupedByPath = groupBy<{
+		path?: string;
+		msg?: string;
+		message?: string;
+	}>(errors, "path");
 	const errorsPaths = Object.keys(errorsGroupedByPath).filter(Boolean);
 	const errorsMapped = errorsPaths.map((path: string) => ({
 		[path]: errorsGroupedByPath[path].map((error) => error?.msg || error?.message),

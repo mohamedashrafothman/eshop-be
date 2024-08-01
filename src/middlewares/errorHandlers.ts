@@ -1,11 +1,20 @@
 import { NextFunction, Request, Response } from "express";
 import createError from "http-errors";
 import httpStatus from "http-status";
-import { formatResponseObject, formatValidationErrorMessagesResponse } from "../utils/helpers";
+import {
+	formatResponseObject,
+	formatValidationErrorMessagesResponse,
+	isFunction,
+} from "../utils/helpers";
 
 const notFoundErrorHandler = (_req: Request, _res: Response, next: NextFunction) =>
 	next(createError(httpStatus.NOT_FOUND, "The resources you're looking for is Not found."));
-const internalServerErrorHandler = (error: Error, req: Request, res: Response, _next: NextFunction) => {
+const internalServerErrorHandler = (
+	error: Error,
+	req: Request,
+	res: Response,
+	_next: NextFunction
+) => {
 	const {
 		status: errorStatus = httpStatus.INTERNAL_SERVER_ERROR,
 		message: errorMessage = httpStatus["500_MESSAGE"],
@@ -37,17 +46,21 @@ const internalServerErrorHandler = (error: Error, req: Request, res: Response, _
 	if (errorName === "ValidationError") {
 		message = httpStatus["422_MESSAGE"];
 		status = httpStatus.UNPROCESSABLE_ENTITY;
-		req.flash("danger", formatValidationErrorMessagesResponse(Object.values(errorRest.errors)));
+		if (isFunction(req.flash))
+			req.flash(
+				"danger",
+				formatValidationErrorMessagesResponse(Object.values(errorRest.errors))
+			);
 	}
 
 	// return response
-	req.flash("danger", message);
+	if (isFunction(req.flash)) req.flash("danger", message);
 	res.status(status).json(
 		formatResponseObject({
 			...(errorRest || {}),
 			success: false,
 			status,
-			flashes: req.flash(),
+			...(isFunction(req.flash) ? { flashes: req.flash() } : { message }),
 		})
 	);
 };

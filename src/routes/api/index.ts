@@ -1,5 +1,5 @@
 import { Router } from "express";
-import authController from "../../controllers/auth";
+import * as authController from "../../controllers/auth";
 import authRouter from "./auth";
 import usersRouter from "./users";
 
@@ -7,7 +7,7 @@ const router = Router();
 
 // Nested routes
 router.use("/auth", authRouter);
-router.use("/users", authController.passportJWTAuthenticate, usersRouter);
+router.use("/users", authController._passportJWTAuthenticate, usersRouter);
 
 // Exporting router
 export default router;

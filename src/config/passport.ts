@@ -3,12 +3,12 @@ import { Strategy as FacebookStrategy } from "passport-facebook";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
 import { Strategy as LocalStrategy } from "passport-local";
-import authController from "../controllers/auth";
+import * as authController from "../controllers/auth";
 import vars from "../utils/vars";
 
 // serialize and deserialize user
-passport.serializeUser(authController.passportSerializeUser);
-passport.deserializeUser(authController.passportDeserializeUser);
+passport.serializeUser(authController._passportSerializeUser);
+passport.deserializeUser(authController._passportDeserializeUser);
 
 // sign in using http bearer token
 passport.use(
@@ -17,7 +17,7 @@ passport.use(
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 			secretOrKey: vars.auth.strategies.jwt.accessTokenSecret,
 		},
-		authController.passportJWTStrategy
+		authController._passportJWTStrategy
 	)
 );
 
@@ -29,7 +29,7 @@ passport.use(
 			passwordField: vars.auth.strategies.locale.passwordField,
 			passReqToCallback: true,
 		},
-		authController.passportLocalStrategy
+		authController._passportLocalStrategy
 	)
 );
 
@@ -43,7 +43,7 @@ passport.use(
 			profileFields: vars.auth.strategies.social.facebook.profileFields,
 			passReqToCallback: true,
 		},
-		authController.passportFacebookStrategy
+		authController._passportFacebookStrategy
 	)
 );
 
@@ -57,6 +57,6 @@ passport.use(
 			scope: vars.auth.strategies.social.google.profileFields,
 			passReqToCallback: true,
 		},
-		authController.passportGoogleStrategy
+		authController._passportGoogleStrategy
 	)
 );

@@ -9,7 +9,10 @@ export interface ISessionDocument extends SoftDeleteInterface, ISession, Documen
 export type ISessionModel = Model<ISessionDocument>;
 
 // schema definition
-const SessionSchema = new Schema<ISessionDocument, object, ISessionDocument>({}, { timestamps: true });
+const SessionSchema = new Schema<ISessionDocument, object, ISessionDocument>(
+	{},
+	{ timestamps: true }
+);
 
 // modal definition
 const SessionModal = model<

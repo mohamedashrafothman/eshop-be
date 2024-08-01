@@ -1,8 +1,12 @@
 export * from "./server";
 
-const isEmpty = (obj: any) => [Object, Array].includes((obj || {}).constructor) && !Object.entries(obj || {}).length;
+const isEmpty = (obj: any) =>
+	[Object, Array].includes((obj || {}).constructor) && !Object.entries(obj || {}).length;
 
-const groupBy = <T extends Record<string, any>>(objArray: T[], prop: keyof T): { [key: string]: T[] } => {
+const groupBy = <T extends Record<string, any>>(
+	objArray: T[],
+	prop: keyof T
+): { [key: string]: T[] } => {
 	return objArray.reduce(
 		(acc, obj) => {
 			const key = obj[prop] as string; // Explicitly type key as string
@@ -14,4 +18,6 @@ const groupBy = <T extends Record<string, any>>(objArray: T[], prop: keyof T): {
 	);
 };
 
-export { groupBy, isEmpty };
+const isFunction = (value: any): boolean => typeof value === "function";
+
+export { groupBy, isEmpty, isFunction };

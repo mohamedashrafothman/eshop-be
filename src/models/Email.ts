@@ -12,8 +12,22 @@ export type IEmailModel = Model<IEmailDocument>;
 // schema definition
 const EmailSchema = new Schema<IEmailDocument, object, IEmailDocument>(
 	{
-		to: [{ type: String, index: true, lowercase: true, trim: true, validate: [isEmail, "Invalid Email Address"] }],
-		from: { type: String, index: true, lowercase: true, trim: true, validate: [isEmail, "Invalid Email Address"] },
+		to: [
+			{
+				type: String,
+				index: true,
+				lowercase: true,
+				trim: true,
+				validate: [isEmail, "Invalid Email Address"],
+			},
+		],
+		from: {
+			type: String,
+			index: true,
+			lowercase: true,
+			trim: true,
+			validate: [isEmail, "Invalid Email Address"],
+		},
 		html: { type: String },
 		text: { type: String },
 		subject: { type: String, required: [true, "Subject is required!"] },
@@ -22,9 +36,9 @@ const EmailSchema = new Schema<IEmailDocument, object, IEmailDocument>(
 );
 
 // modal definition
-const EmailModal = model<IEmailDocument, PaginateModel<IEmailDocument> & SoftDeleteModel<IEmailDocument> & IEmailModel>(
-	"Email",
-	EmailSchema
-);
+const EmailModal = model<
+	IEmailDocument,
+	PaginateModel<IEmailDocument> & SoftDeleteModel<IEmailDocument> & IEmailModel
+>("Email", EmailSchema);
 
 export default EmailModal;
