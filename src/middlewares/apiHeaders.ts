@@ -1,11 +1,14 @@
 import { NextFunction, Request, Response } from "express";
 import createError from "http-errors";
-import vars from "../utils/vars";
+import {
+	isAPIAcceptableAcceptHeader,
+	isAPIAcceptableMediaTypeHeader,
+} from "../utils/helpers/server";
 
 const middleware = (req: Request, _res: Response, next: NextFunction) => {
 	next(
-		(req.get("Content-Type") !== vars.api.acceptableMediaType && createError.UnsupportedMediaType()) ||
-			(req.get("Accept") !== vars.api.acceptableMediaType && createError.NotAcceptable())
+		(!isAPIAcceptableMediaTypeHeader(req) && createError.UnsupportedMediaType()) ||
+			(!isAPIAcceptableAcceptHeader(req) && createError.NotAcceptable())
 	);
 };
 export default middleware;

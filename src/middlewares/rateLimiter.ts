@@ -7,7 +7,11 @@ const middleware = rateLimit({
 		uri: vars.db.url,
 		expireTimeMs: 1000 * 60 * vars.rateLimiter.timeLimitInMinutes, // should match windowMs option
 		collectionName: "rateLimit",
-		connectionOptions: { keepAlive: 1, useNewUrlParser: true, useUnifiedTopology: true },
+		connectionOptions: {
+			keepAlive: 1,
+			useNewUrlParser: true,
+			useUnifiedTopology: true,
+		},
 		errorHandler: console.error.bind(null, "rate-limit-mongo"),
 	}),
 	windowMs: 1000 * 60 * vars.rateLimiter.timeLimitInMinutes, // (n) minutes

@@ -7,7 +7,10 @@ const getNextVersion = (currentVersion) =>
 		conventionalRecommendedBump({ preset: "angular" }, (err, release) =>
 			err
 				? reject(err)
-				: resolve(semver.valid(release.releaseType) || semver.inc(currentVersion, release.releaseType))
+				: resolve(
+						semver.valid(release.releaseType) ||
+							semver.inc(currentVersion, release.releaseType)
+					)
 		);
 	});
 

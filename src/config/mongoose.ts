@@ -12,7 +12,14 @@ mongoose.connect(vars.db.url, {});
 mongoose.plugin(MongooseDelete, {
 	deletedAt: true,
 	deletedBy: true,
-	overrideMethods: ["findOne", "findOneAndUpdate", "update", "updateOne", "updateMany", "aggregate"],
+	overrideMethods: [
+		"findOne",
+		"findOneAndUpdate",
+		"update",
+		"updateOne",
+		"updateMany",
+		"aggregate",
+	],
 });
 mongoose.plugin(mongoosePagination);
 mongoose.plugin(mongooseAggregatePagination);
@@ -23,6 +30,8 @@ mongoose.connection
 	.once("open", () => console.log(chalk.blue("✅  Connected to the database")))
 	.on("error", (error) => {
 		console.error(error);
-		console.log(`⛔️  ${chalk.red("MongoDB connection error")}.\n Please make sure MongoDB server is running.`);
+		console.log(
+			`⛔️  ${chalk.red("MongoDB connection error")}.\n Please make sure MongoDB server is running.`
+		);
 		process.exit();
 	});

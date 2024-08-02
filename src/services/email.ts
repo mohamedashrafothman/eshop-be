@@ -14,13 +14,19 @@ type EmailParamsType = {
 	siteName?: string;
 } & Omit<IEmail, "to">;
 
-type EmailTransporterParamsType = { to: IUserDocument["email"]; html: string; text: string } & Omit<
-	EmailParamsType,
-	"to"
->;
+type EmailTransporterParamsType = {
+	to: IUserDocument["email"];
+	html: string;
+	text: string;
+} & Omit<EmailParamsType, "to">;
 
 const _HTMLGenerator = ({ filename = "", ...options }: EmailParamsType) =>
-	juice(pug.renderFile(`${process.cwd()}/views/emails/${filename}.pug`, { filename, ...options }));
+	juice(
+		pug.renderFile(`${process.cwd()}/views/emails/${filename}.pug`, {
+			filename,
+			...options,
+		})
+	);
 
 const _transporter = (data: EmailTransporterParamsType) =>
 	nodemailer
@@ -28,7 +34,10 @@ const _transporter = (data: EmailTransporterParamsType) =>
 			host: String(vars.email.host),
 			port: Number(vars.email.port),
 			secure: false, // true for 465, false for other ports
-			auth: { user: String(vars.email.user), pass: String(vars.email.pass) },
+			auth: {
+				user: String(vars.email.user),
+				pass: String(vars.email.pass),
+			},
 			tls: { rejectUnauthorized: false },
 		})
 		.sendMail(data);

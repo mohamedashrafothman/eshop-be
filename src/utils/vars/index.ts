@@ -9,9 +9,11 @@ type VarsTypes = {
 	isProduction: boolean;
 	app: {
 		name: string;
-		host: string;
 		port: string;
+		host: string;
+		protocol: string;
 		url: string;
+		frontEndUrl: string;
 	};
 	tokenTypes: {
 		jwt: "JWT";
@@ -27,7 +29,7 @@ type VarsTypes = {
 		database: string;
 		url: string;
 	};
-	cors: { allowedOrigins: string };
+	cors: { allowedOrigins: string[] };
 	session: {
 		secret: string;
 		timeoutInHours: number;
@@ -50,7 +52,10 @@ type VarsTypes = {
 			social: {
 				facebook: {
 					scope: ["email", "public_profile"];
-					redirect: { successRedirect: "/dashboard"; failureRedirect: "/dashboard/auth/login" };
+					redirect: {
+						successRedirect: "/dashboard";
+						failureRedirect: "/dashboard/auth/login";
+					};
 					clientId: string;
 					secret: string;
 					callbackUrl: "/dashboard/auth/facebook/redirect";
@@ -58,13 +63,21 @@ type VarsTypes = {
 				};
 				google: {
 					scope: "profile email";
-					redirect: { successRedirect: "/dashboard"; failureRedirect: "/dashboard/auth/login" };
+					redirect: {
+						successRedirect: "/dashboard";
+						failureRedirect: "/dashboard/auth/login";
+					};
 					clientId: string;
 					secret: string;
 					callbackUrl: "/dashboard/auth/google/redirect";
 					profileFields: ["r_basicprofile", "r_emailaddress"];
 				};
 			};
+		};
+		roles: {
+			user: string;
+			admin: string;
+			superAdmin: string;
 		};
 	};
 	password: {
@@ -89,9 +102,11 @@ const vars: VarsTypes = {
 	isProduction: process.env?.NODE_ENV?.trim() === "production" || false,
 	app: {
 		name: process.env?.APP_NAME || "",
+		port: process.env.APP_PORT || "",
 		host: process.env?.APP_HOST || "",
-		port: process.env?.APP_PORT || "",
+		protocol: process.env?.APP_PROTOCOL || "",
 		url: process.env?.APP_URL || "",
+		frontEndUrl: process.env?.APP_FRONT_END_URL || "",
 	},
 	tokenTypes: {
 		jwt: "JWT",
@@ -107,13 +122,19 @@ const vars: VarsTypes = {
 		database: process.env?.DB_DATABASE || "",
 		url: process.env?.DB_URL || "",
 	},
-	cors: { allowedOrigins: process.env?.CORS_ALLOWED_ORIGINS || "" },
+	cors: {
+		allowedOrigins: [
+			...((process.env?.CORS_ALLOWED_ORIGINS || "").split(",").filter(Boolean) || []),
+		],
+	},
 	session: {
 		secret: process.env?.SESSION_SECRET || "",
 		timeoutInHours: Number(process.env?.SESSION_TIMEOUT_IN_HOURS || 0) || 0,
 		dbCollectionName: process.env?.SESSION_DB_COLLECTION_NAME || "",
 	},
-	cookies: { maxAgeInHours: Number(process.env?.COOKIES_MAX_AGE_IN_HOURS || 0) || 0 },
+	cookies: {
+		maxAgeInHours: Number(process.env?.COOKIES_MAX_AGE_IN_HOURS || 0) || 0,
+	},
 	auth: {
 		strategies: {
 			locale: {
@@ -122,15 +143,20 @@ const vars: VarsTypes = {
 			},
 			jwt: {
 				accessTokenSecret: process.env?.JWT_ACCESS_TOKEN_SECRET || "",
-				accessTokenExpiresInMinutes: Number(process.env?.JWT_ACCESS_TOKEN_EXPIRES_IN_MINUTES || 0) || 0,
+				accessTokenExpiresInMinutes:
+					Number(process.env?.JWT_ACCESS_TOKEN_EXPIRES_IN_MINUTES || 0) || 0,
 				refreshTokenSecret: process.env?.JWT_REFRESH_TOKEN_SECRET || "",
-				refreshTokenExpiresInDays: Number(process.env?.JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS || 0) || 0,
+				refreshTokenExpiresInDays:
+					Number(process.env?.JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS || 0) || 0,
 				tokenType: "Bearer",
 			},
 			social: {
 				facebook: {
 					scope: ["email", "public_profile"],
-					redirect: { successRedirect: "/dashboard", failureRedirect: "/dashboard/auth/login" },
+					redirect: {
+						successRedirect: "/dashboard",
+						failureRedirect: "/dashboard/auth/login",
+					},
 					clientId: process.env?.FACEBOOK_CLIENT_ID || "",
 					secret: process.env?.FACEBOOK_CLIENT_SECRET || "",
 					callbackUrl: "/dashboard/auth/facebook/redirect",
@@ -138,13 +164,21 @@ const vars: VarsTypes = {
 				},
 				google: {
 					scope: "profile email",
-					redirect: { successRedirect: "/dashboard", failureRedirect: "/dashboard/auth/login" },
+					redirect: {
+						successRedirect: "/dashboard",
+						failureRedirect: "/dashboard/auth/login",
+					},
 					clientId: process.env?.GOOGLE_CLIENT_ID || "",
 					secret: process.env?.GOOGLE_CLIENT_SECRET || "",
 					callbackUrl: "/dashboard/auth/google/redirect",
 					profileFields: ["r_basicprofile", "r_emailaddress"],
 				},
 			},
+		},
+		roles: {
+			user: "USER",
+			admin: "ADMIN",
+			superAdmin: "SUPER_ADMIN",
 		},
 	},
 	password: {
@@ -157,7 +191,8 @@ const vars: VarsTypes = {
 		user: process.env?.EMAIL_USER || "",
 		pass: process.env?.EMAIL_PASS || "",
 		sender: process.env?.EMAIL_SENDER || "",
-		emailVerifyTokenExpiresInMinutes: Number(process.env?.EMAIL_VERIFY_TOKEN_EXPIRES_IN_MINUTES || 0) || 0,
+		emailVerifyTokenExpiresInMinutes:
+			Number(process.env?.EMAIL_VERIFY_TOKEN_EXPIRES_IN_MINUTES || 0) || 0,
 	},
 	rateLimiter: {
 		timeLimitInMinutes: Number(process.env?.RATE_LIMITER_TIME_LIMIT_IN_MINUTES || 0) || 0,

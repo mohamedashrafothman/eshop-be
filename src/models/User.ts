@@ -29,21 +29,43 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			index: true,
 			lowercase: true,
 			trim: true,
-			required: true,
-			validate: [isEmail, "Invalid Email Address"],
+			required: [true, "Email is required!"],
+			validate: [isEmail, "Invalid Email Address!"],
 		},
-		name: { type: String, trim: true, required: true },
-		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
+		name: {
+			type: String,
+			trim: true,
+			required: [true, "Name is required!"],
+		},
+		slug: {
+			type: String,
+			slug: "name",
+			unique: true,
+			index: true,
+			slugPaddingSize: 6,
+		},
 		password: { type: String, hidden: true },
 		picture: { type: String },
+		role: {
+			type: String,
+			enum: [...Object.values(vars.auth.roles)],
+			default: vars.auth.roles.user,
+			required: [true, "Role is required!"],
+		},
 		active: { type: Boolean, default: false },
-		verified: { type: Boolean, default: false },
+		emailVerified: { type: Boolean, default: false },
 		google: { type: String, default: undefined },
 		facebook: { type: String, default: undefined },
-		addresses: [{ type: Schema.Types.ObjectId, ref: "Address", autopopulate: true }],
 	},
 	{
-		toJSON: { virtual: true, transform: (_doc, { password, ...ret }) => ret },
+		toJSON: {
+			versionKey: false,
+			virtual: true,
+			transform: (_doc, { password, _id, ...ret }) => ({
+				id: _id,
+				...ret,
+			}),
+		},
 		timestamps: true,
 	}
 );
@@ -85,9 +107,9 @@ UserSchema.pre("save", async function (next) {
 });
 
 // modal definition
-const UserModal = model<IUserDocument, PaginateModel<IUserDocument> & SoftDeleteModel<IUserDocument> & IUserModel>(
-	"User",
-	UserSchema
-);
+const UserModal = model<
+	IUserDocument,
+	PaginateModel<IUserDocument> & SoftDeleteModel<IUserDocument> & IUserModel
+>("User", UserSchema);
 
 export default UserModal;

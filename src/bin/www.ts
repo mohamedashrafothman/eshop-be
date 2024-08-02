@@ -25,3 +25,11 @@ server
 				.trim()} mode.\n Press ${chalk.blue("CTRL-C")} to stop!\n`
 		);
 	});
+
+// handle rejections
+process.on("unhandledRejection", (error) => {
+	console.log(chalk.red("Unhandled Rejection occurred! shutting down... \n"), error);
+	server.close(() => {
+		process.exit(1);
+	});
+});

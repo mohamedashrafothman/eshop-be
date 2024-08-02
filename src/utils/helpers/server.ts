@@ -1,12 +1,18 @@
 import { Request } from "express";
-import { PaginateResult } from "mongoose";
+import { ValidationError } from "express-validator";
+import { Error, PaginateResult } from "mongoose";
 import vars from "../vars";
+import { groupBy } from "./index";
 
 export type FormatResponseObjectType<T> = {
-	status?: number;
+	success?: boolean;
+	status: number;
 	entities?: {
-		data?: T | T[];
-		meta?: { pagination: Omit<PaginateResult<unknown>, "docs" | "meta">; sort: { name: string; value: object }[] };
+		data: T | T[];
+		meta?: {
+			pagination: Omit<PaginateResult<unknown>, "docs" | "meta">;
+			sort: { name: string; value: object }[];
+		};
 	};
 	flashes?: { [key: string]: string[] };
 	error?: Error;
@@ -24,13 +30,54 @@ export const normalizePort = (val: string): number | string | boolean => {
 };
 
 /**
+ * check if request contains API Acceptable Media Type.
+ */
+export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
+	req.get("Content-Type") === vars.api.acceptableMediaType;
+
+/**
+ * check if request contains API Acceptable Accept.
+ */
+export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
+	req.get("Accept") === vars.api.acceptableMediaType;
+
+/**
  * check if request contains API Headers.
  */
 export const isAPIHeaders = (req: Request) =>
-	req.get("Content-Type") === vars.api.acceptableMediaType && req.get("Accept") === vars.api.acceptableMediaType;
+	isAPIAcceptableMediaTypeHeader(req) && isAPIAcceptableAcceptHeader(req);
 
 /**
  * format response object
  */
-export const formatResponseObject = <T = void>(options: FormatResponseObjectType<T>): FormatResponseObjectType<T> =>
-	options;
+export const formatResponseObject = <T = void>({
+	success = true,
+	status,
+	entities,
+	flashes,
+	error,
+	message,
+}: FormatResponseObjectType<T>): FormatResponseObjectType<T> => ({
+	success,
+	status,
+	entities,
+	flashes,
+	error,
+	message,
+});
+
+/**
+ * format validation error messages
+ */
+export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
+	const errorsGroupedByPath = groupBy<{
+		path?: string;
+		msg?: string;
+		message?: string;
+	}>(errors, "path");
+	const errorsPaths = Object.keys(errorsGroupedByPath).filter(Boolean);
+	const errorsMapped = errorsPaths.map((path: string) => ({
+		[path]: errorsGroupedByPath[path].map((error) => error?.msg || error?.message),
+	}));
+	return JSON.parse(JSON.stringify(errorsMapped));
+};

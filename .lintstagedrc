@@ -1,5 +1,3 @@
 {
-	"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
-		"npm run prettify"
-	]
+	"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": ["npm run prettify"]
 }
