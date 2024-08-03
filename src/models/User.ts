@@ -53,7 +53,12 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		google: { type: String, default: undefined },
 		facebook: { type: String, default: undefined },
 		addresses: [
-			{ type: Schema.Types.ObjectId, ref: "Address", autopopulate: true, default: [] },
+			{
+				type: Schema.Types.ObjectId,
+				ref: "Address",
+				default: [],
+				autopopulate: { maxDepth: 1 },
+			},
 		],
 	},
 	{

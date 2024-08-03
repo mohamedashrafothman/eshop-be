@@ -139,6 +139,58 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
+ * @summary Retrieves a paginated list of addresses.
+ * @description Fetches addresses based on provided query parameters and filters them based on user permissions.
+ *        Optionally searches by address name or street, filters by deleted status, and sorts based on various criteria.
+ *
+ * @param {Object} req - Express request object.
+ * @param {string} req.query.q - Optional search query string to match against address name or street (case-insensitive).
+ * @param {boolean} req.query.deleted - Optional flag to filter addresses by deleted status (true for deleted, false or omitted for active).
+ * @param {Object} req.query - Additional query parameters for pagination (e.g., page, limit, sort).
+ *
+ * @returns {object} 200 - Success response with a list of addresses and pagination meta information.
+ */
+export const getAddresses = async (req: Request, res: Response, next: NextFunction) => {
+	const { q, deleted, ...query } = req.query || {};
+	const querySearchFields = ["name", "street"];
+	const sort = [
+		{ name: "Name A-Z", value: { name: 1 } },
+		{ name: "Name Z-A", value: { name: -1 } },
+		{ name: "Created Date Ascending", value: { createdAt: 1 } },
+		{ name: "Created Date Descending", value: { createdAt: -1 } },
+	];
+
+	const [paginatedAddressesError, paginatedAddresses] = await to(
+		Address.paginate(
+			{
+				...((q && {
+					$or: querySearchFields.map((item) => ({
+						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
+					})),
+				}) ||
+					{}),
+				...((deleted && { deleted }) || {}),
+				user: { $ne: req?.user?._id || "" },
+			},
+			{ ...query }
+		)
+	);
+	if (paginatedAddressesError) return next(paginatedAddressesError);
+
+	const { docs, ...pagination } = paginatedAddresses;
+
+	return res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: {
+				data: [...(docs || [])],
+				meta: { pagination, sort },
+			},
+		})
+	);
+};
+
+/**
  * @summary Retrieves a single address.
  * @description Fetches an address based on the provided ID. If the user is authenticated, the address must belong to the user.
  *
@@ -180,14 +232,15 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
 	const isDefaultModified = "default" in req.body;
-	let [addressError, address] = await to(
-		Address.findOne({
-			_id: req.params.address,
-			...(req.user?.role === vars.auth.roles.user && { user: req.user._id }),
-		})
-	);
+	let [addressError, address] = await to(Address.findOne({ _id: req.params.address }));
 	if (addressError) return next(addressError);
 	if (!address) return next();
+
+	if (
+		req.user?.role === vars.auth.roles.user &&
+		address.user?.toString() !== req.user?._id?.toString()
+	)
+		return next(createError(httpStatus.UNAUTHORIZED));
 
 	let addressesError = null;
 	let addresses: IAddressDocument[] | undefined | null = [];
@@ -248,4 +301,58 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 		})
 	);
 };
-export const deleteSingleAddress = async (req: Request, res: Response, next: NextFunction) => {};
+
+/**
+ * @summary Deletes a single address.
+ * @description Deletes an address based on the provided ID. The user must have permission to delete the address.
+ *
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.address - The address ID.
+ *
+ * @returns {object} 200 - Success response with a success message.
+ */
+export const deleteSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
+	let [addressError, address] = await to(Address.findOne({ _id: req.params.address }));
+	if (addressError) return next(addressError);
+	if (!address) return next();
+
+	if (
+		req.user?.role === vars.auth.roles.user &&
+		address.user?.toString() !== req.user?._id?.toString()
+	)
+		return next(createError(httpStatus.UNAUTHORIZED));
+
+	const [userError, user] = await to(User.findOne({ _id: address.user }));
+	if (userError) return next(userError);
+	if (!user) return next();
+
+	let restOfUserAddresses: IAddressDocument[] = [
+		...((user.addresses as IAddressDocument[]).filter(
+			(address) => address._id?.toString() !== req.params.address
+		) || []),
+	];
+
+	if (restOfUserAddresses.length === 0) {
+		req.flash("danger", "Cannot delete the only address.");
+		return next();
+	}
+
+	const [deleteAddressError] = await to(Address.deleteById(address?._id, req?.user?.id));
+	if (deleteAddressError) return next(deleteAddressError);
+
+	if (address.default) {
+		const newDefaultAddress = [...(restOfUserAddresses || [])]?.sort(
+			(a, b) => b?.createdAt.getTime() - a?.createdAt.getTime()
+		)[0];
+
+		const [newDefaultAddressError] = await to(
+			Address.findOneAndUpdate({ _id: newDefaultAddress._id }, { $set: { default: true } })
+		);
+		if (newDefaultAddressError) return next(newDefaultAddressError);
+	}
+
+	req.flash("success", "Successfully Deleted.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
+	);
+};

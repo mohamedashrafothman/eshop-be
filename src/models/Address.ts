@@ -22,13 +22,22 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 		city: { type: String, trim: true, required: [true, "City is required!"] },
 		zip: { type: String },
 		default: { type: Boolean, default: false },
-		user: { type: Schema.Types.ObjectId, required: [true, "User is required!"], ref: "User" },
+		user: {
+			type: Schema.Types.ObjectId,
+			required: [true, "User is required!"],
+			ref: "User",
+			autopopulate: { maxDepth: 1 },
+		},
 	},
 	{
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
+			transform: (_doc, address) => {
+				// delete address.user.addresses;
+				const { _id, ...ret } = address;
+				return { id: _id, ...ret };
+			},
 		},
 		timestamps: true,
 	}

@@ -11,8 +11,10 @@ const router = Router();
 // Endpoints
 router
 	.route("/")
-	.all(permission.check(vars.auth.roles.user), allowMethods(["post"]))
+	.all(allowMethods(["post", "get"]))
+	.get(permission.check(vars.auth.roles.superAdmin), addressesController.getAddresses)
 	.post(
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
 		addressesController._validator("create"),
 		unprocessableEntityValidator,
 		addressesController.postNewAddress
