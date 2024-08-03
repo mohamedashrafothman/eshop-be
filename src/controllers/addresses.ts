@@ -1,6 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
+import createError from "http-errors";
 import httpStatus from "http-status";
 import Address, { type IAddressDocument } from "../models/Address";
 import User from "../models/User";
@@ -89,7 +90,7 @@ export const _validator = (method: string) => {
 					.notEmpty()
 					.withMessage("You must supply a city!"),
 				body("zip").trim().escape().optional(),
-				body("default").trim().escape().optional(),
+				body("default").isBoolean().optional(),
 			];
 		default:
 			return [];
@@ -107,6 +108,9 @@ export const _validator = (method: string) => {
  *   * @property {object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
+	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString())
+		return next(createError(httpStatus.UNAUTHORIZED));
+
 	const [userError, user] = await to(User.findOne({ _id: req.body.user }));
 	if (userError) return next(userError);
 	if (!user) return next();
@@ -175,7 +179,7 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  *   * @property {object} entities.data - The updated address object.
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
-	const isDefaultUpdate = "default" in req.body;
+	const isDefaultModified = "default" in req.body;
 	let [addressError, address] = await to(
 		Address.findOne({
 			_id: req.params.address,
@@ -188,7 +192,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 	let addressesError = null;
 	let addresses: IAddressDocument[] | undefined | null = [];
 
-	if (isDefaultUpdate && !Boolean(req.body.default)) {
+	if (isDefaultModified && !Boolean(req.body.default)) {
 		[addressesError, addresses] = await to(
 			Address.find({
 				user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
@@ -208,7 +212,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 	const [saveError, newAddress] = await to(address.save());
 	if (saveError) return next(saveError);
 
-	if (isDefaultUpdate) {
+	if (isDefaultModified) {
 		if (!Boolean(req.body.default)) {
 			const newDefaultAddress = [...(addresses || [])]?.sort(
 				(a, b) => b?.createdAt.getTime() - a?.createdAt.getTime()
