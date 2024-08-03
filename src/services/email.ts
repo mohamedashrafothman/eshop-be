@@ -12,7 +12,7 @@ type EmailParamsType = {
 	filename: string;
 	actionUrl?: string;
 	siteName?: string;
-} & Omit<IEmail, "to">;
+} & Omit<IEmail, "to" | "createdAt" | "updateAt">;
 
 type EmailTransporterParamsType = {
 	to: IUserDocument["email"];

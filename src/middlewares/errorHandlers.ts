@@ -15,6 +15,7 @@ const internalServerErrorHandler = (
 	res: Response,
 	_next: NextFunction
 ) => {
+	// destructuring the error object
 	const {
 		status: errorStatus = httpStatus.INTERNAL_SERVER_ERROR,
 		message: errorMessage = httpStatus["500_MESSAGE"],
@@ -24,11 +25,11 @@ const internalServerErrorHandler = (
 		name: errorName,
 		success: _success,
 		...errorRest
-	} = Object.assign({}, JSON.parse(JSON.stringify(error)));
+	} = Object.assign({}, JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))));
 
 	// default error message, and status
-	let message: string = errorMessage;
-	let status: number = errorStatus;
+	let message = errorMessage;
+	let status = errorStatus;
 
 	// handling database duplicate key error
 	if (errorCode === 11000) {

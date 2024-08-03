@@ -17,11 +17,11 @@ export const _validator = (method: string) => {
 		case "create":
 			return [
 				body("email")
+					.trim()
 					.notEmpty()
 					.withMessage("Email must supply an E-mail.")
 					.isEmail()
 					.withMessage("Email must be in an E-mail format.")
-					.trim()
 					.normalizeEmail({
 						gmail_remove_dots: false,
 						gmail_remove_subaddress: false,
@@ -52,12 +52,12 @@ export const _validator = (method: string) => {
 		case "update":
 			return [
 				body("email")
+					.trim()
 					.optional()
 					.notEmpty()
 					.withMessage("Email must supply an E-mail.")
 					.isEmail()
 					.withMessage("Email must be in an E-mail format.")
-					.trim()
 					.normalizeEmail({
 						gmail_remove_dots: false,
 						gmail_remove_subaddress: false,
@@ -66,10 +66,10 @@ export const _validator = (method: string) => {
 						icloud_remove_subaddress: false,
 					}),
 				body("name")
+					.trim()
 					.optional()
 					.notEmpty()
 					.withMessage("You must supply a name!")
-					.trim()
 					.escape(),
 				body("oldPassword")
 					.if(body("password").exists())
