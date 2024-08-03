@@ -19,11 +19,11 @@ export const _validator = (method: string) => {
 		case "login":
 			return [
 				body("email")
+					.trim()
 					.notEmpty()
 					.withMessage("You must be supply an Email!")
 					.isEmail()
 					.withMessage("Email must be in an E-mail format.")
-					.trim()
 					.normalizeEmail({
 						gmail_remove_dots: false,
 						gmail_remove_subaddress: false,
@@ -45,11 +45,11 @@ export const _validator = (method: string) => {
 		case "social-user":
 			return [
 				body("email")
+					.trim()
 					.notEmpty()
 					.withMessage("Email must supply an E-mail.")
 					.isEmail()
 					.withMessage("Email must be in an E-mail format.")
-					.trim()
 					.normalizeEmail({
 						gmail_remove_dots: false,
 						gmail_remove_subaddress: false,
@@ -57,12 +57,12 @@ export const _validator = (method: string) => {
 						yahoo_remove_subaddress: false,
 						icloud_remove_subaddress: false,
 					}),
-				body("name").notEmpty().withMessage("You must supply a name!").trim().escape(),
+				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
 				body("providerId").notEmpty().withMessage("Provider id can't be blank!").trim(),
 				body("providerToken")
+					.trim()
 					.notEmpty()
-					.withMessage("Provider access token can't be blank!")
-					.trim(),
+					.withMessage("Provider access token can't be blank!"),
 				body("picture").optional(),
 			];
 		case "refresh-token":
@@ -1140,7 +1140,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 	}
 
 	let userError = null;
-	let user;
+	let user: IUserDocument | null | undefined;
 
 	[userError, user] = await to(User.findOne({ _id: resetPasswordToken.user }));
 	if (userError) return next(userError);

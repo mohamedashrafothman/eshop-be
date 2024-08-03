@@ -4,4 +4,6 @@ export default interface Email {
 	subject: string;
 	html?: string;
 	text?: string;
+	createdAt: Date;
+	updateAt: Date;
 }

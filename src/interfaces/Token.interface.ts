@@ -5,4 +5,6 @@ export default interface Token {
 	kind: string;
 	token: string;
 	expireAt: Date;
+	createdAt: Date;
+	updateAt: Date;
 }

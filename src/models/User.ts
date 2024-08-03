@@ -32,11 +32,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			required: [true, "Email is required!"],
 			validate: [isEmail, "Invalid Email Address!"],
 		},
-		name: {
-			type: String,
-			trim: true,
-			required: [true, "Name is required!"],
-		},
+		name: { type: String, trim: true, required: [true, "Name is required!"] },
 		slug: {
 			type: String,
 			slug: "name",
@@ -56,15 +52,15 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		emailVerified: { type: Boolean, default: false },
 		google: { type: String, default: undefined },
 		facebook: { type: String, default: undefined },
+		addresses: [
+			{ type: Schema.Types.ObjectId, ref: "Address", autopopulate: true, default: [] },
+		],
 	},
 	{
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, { password, _id, ...ret }) => ({
-				id: _id,
-				...ret,
-			}),
+			transform: (_doc, { password, _id, ...ret }) => ({ id: _id, ...ret }),
 		},
 		timestamps: true,
 	}
