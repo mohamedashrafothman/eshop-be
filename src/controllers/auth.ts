@@ -804,7 +804,8 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		if (compareError) return next(compareError);
 		if (!isMatch) {
 			req.flash("danger", "Your credentials doesn't match our records.");
-			return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
+			const error = createError(httpStatus.UNPROCESSABLE_ENTITY);
+			return next({ ...(error || {}), status: error.status });
 		}
 
 		const [updateUserError] = await to(
@@ -1048,7 +1049,8 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
 	if (userError) return next(userError);
 	if (!user) {
 		req.flash("danger", "No account found with this email.");
-		return next(createError(httpStatus.NOT_FOUND));
+		const error = createError(httpStatus.NOT_FOUND);
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	const token = await user.createHashToken();
@@ -1136,7 +1138,8 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 	if (resetPasswordTokenError) return next(resetPasswordTokenError);
 	if (!resetPasswordToken) {
 		req.flash("danger", "token is invalid or has expired.");
-		return next(createError(httpStatus.NOT_FOUND));
+		const error = createError(httpStatus.NOT_FOUND);
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	let userError = null;
@@ -1203,7 +1206,8 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
 	if (verifyEmailTokenError) return next(verifyEmailTokenError);
 	if (!verifyEmailToken) {
 		req.flash("danger", "token is invalid or has expired.");
-		return next(createError(httpStatus.NOT_FOUND));
+		const error = createError(httpStatus.NOT_FOUND);
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	const [userError] = await to(
@@ -1252,7 +1256,8 @@ export const getResendEmailVerification = async (
 	if (userError) return next(userError);
 	if (!user) {
 		req.flash("danger", "Email Already Verified!");
-		return next(createError(httpStatus.NOT_FOUND));
+		const error = createError(httpStatus.NOT_FOUND);
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	const [userRefreshTokenError, userRefreshToken] = await to(

@@ -125,8 +125,10 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 	const { email } = req.body;
 	const [userError, user] = await to(User.findOne({ email }));
 	if (userError) return next(userError);
-	if (user && Object.keys(user)?.length)
-		return next(createError(httpStatus.CONFLICT, "Account already exists!"));
+	if (user && Object.keys(user)?.length) {
+		const error = createError(httpStatus.CONFLICT, "Account already exists!");
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	const [createdUserError, createdUser] = await to(
 		User.create({ ...(req?.body || {}), active: true })

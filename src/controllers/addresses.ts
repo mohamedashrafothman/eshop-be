@@ -108,8 +108,10 @@ export const _validator = (method: string) => {
  *   * @property {object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
-	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString())
-		return next(createError(httpStatus.UNAUTHORIZED));
+	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString()) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	const [userError, user] = await to(User.findOne({ _id: req.body.user }));
 	if (userError) return next(userError);
@@ -239,8 +241,10 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 	if (
 		req.user?.role === vars.auth.roles.user &&
 		address.user?.toString() !== req.user?._id?.toString()
-	)
-		return next(createError(httpStatus.UNAUTHORIZED));
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	let addressesError = null;
 	let addresses: IAddressDocument[] | undefined | null = [];
@@ -319,8 +323,10 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 	if (
 		req.user?.role === vars.auth.roles.user &&
 		address.user?.toString() !== req.user?._id?.toString()
-	)
-		return next(createError(httpStatus.UNAUTHORIZED));
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	const [userError, user] = await to(User.findOne({ _id: address.user }));
 	if (userError) return next(userError);

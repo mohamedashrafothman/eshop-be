@@ -1,3 +1,5 @@
+import { type RateLimitInfo } from "express-rate-limit";
+import { type UAParserInstance } from "ua-parser-js";
 import { type IUserDocument } from "../../models/User";
 import { type VarsTypes } from "../../utils/vars";
 
@@ -13,6 +15,8 @@ declare global {
 			prevPath?: string;
 			prevPrevPath?: string;
 			user: IUserDocument | undefined;
+			userAgent: UAParserInstance;
+			rateLimit: RateLimitInfo;
 		}
 	}
 }

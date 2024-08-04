@@ -19,6 +19,7 @@ import logger from "./middlewares/logger";
 import queryParser from "./middlewares/queryParser";
 import rateLimiter from "./middlewares/rateLimiter";
 import session from "./middlewares/session";
+import userAgent from "./middlewares/userAgent";
 import routes from "./routes";
 import { normalizePort } from "./utils/helpers";
 import vars from "./utils/vars";
@@ -64,6 +65,7 @@ app.use(compression()); // Gzip compressing can decrease the size of the respons
 app.use(csrf); // csrf protection MUST be defined after cookieParser and session middleware.
 app.use(flash());
 app.use(i18n.init); // i18n init parses req for language headers, cookies, etc.
+app.use(userAgent); // attach browser information to express application.
 app.use(locals);
 
 // Routes

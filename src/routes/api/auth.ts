@@ -2,6 +2,7 @@ import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../controllers/auth";
 import * as usersController from "../../controllers/users";
+import { loginRateLimiter } from "../../middlewares/rateLimiter";
 import unprocessableEntityValidator from "../../middlewares/validator";
 import vars from "../../utils/vars";
 
@@ -25,6 +26,7 @@ router
 	.route("/login")
 	.all(allowMethods(["post"]))
 	.post(
+		loginRateLimiter,
 		authController._validator("login"),
 		unprocessableEntityValidator,
 		authController.postLogin

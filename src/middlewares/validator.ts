@@ -8,7 +8,8 @@ const middleware = (req: Request, _res: Response, next: NextFunction) => {
 	const validationErrors = validationResult(req);
 	if (!validationErrors.isEmpty()) {
 		req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
-		return next(createError(httpStatus.UNPROCESSABLE_ENTITY));
+		const error = createError(httpStatus.UNPROCESSABLE_ENTITY);
+		return next({ ...(error || {}), status: error.status });
 	}
 	next();
 };

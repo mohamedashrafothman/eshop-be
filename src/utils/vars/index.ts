@@ -95,6 +95,8 @@ type VarsTypes = {
 	rateLimiter: {
 		timeLimitInMinutes: number;
 		maxRequests: number;
+		loginFailedAttemptsTimeInMinutes: number;
+		loginFailedAttemptsMaxNumber: number;
 	};
 };
 
@@ -197,6 +199,10 @@ const vars: VarsTypes = {
 	rateLimiter: {
 		timeLimitInMinutes: Number(process.env?.RATE_LIMITER_TIME_LIMIT_IN_MINUTES || 0) || 0,
 		maxRequests: Number(process.env?.RATE_LIMITER_MAX_REQUESTS || 0) || 0,
+		loginFailedAttemptsTimeInMinutes:
+			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_TIME_IN_MINUTES || 0) || 0,
+		loginFailedAttemptsMaxNumber:
+			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_MAX_NUMBER || 0) || 0,
 	},
 };
 

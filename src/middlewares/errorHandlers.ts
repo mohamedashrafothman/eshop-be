@@ -7,8 +7,13 @@ import {
 	isFunction,
 } from "../utils/helpers";
 
-const notFoundErrorHandler = (_req: Request, _res: Response, next: NextFunction) =>
-	next(createError(httpStatus.NOT_FOUND, "The resources you're looking for is Not found."));
+const notFoundErrorHandler = (_req: Request, _res: Response, next: NextFunction) => {
+	const error = createError(
+		httpStatus.NOT_FOUND,
+		"The resources you're looking for is Not found."
+	);
+	next({ ...(error || {}), status: error.status });
+};
 const internalServerErrorHandler = (
 	error: Error,
 	req: Request,
