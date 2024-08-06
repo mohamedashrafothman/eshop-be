@@ -230,6 +230,7 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  * @param {boolean} req.query.active - Filter users by active status (true/false).
  * @param {number} req.query.page - Page number for pagination (default: 1).
  * @param {number} req.query.limit - Number of users per page (default: 10).
+ * @param {string} req.query.offset - Number of users to skip (default: 0).
  * @param {string} req.query.sort - Sort option (available options: 'name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc').
  *
  * @returns {object} 200 - Success response containing a paginated list of users and sorting options.

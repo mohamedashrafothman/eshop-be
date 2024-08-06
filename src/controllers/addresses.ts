@@ -149,6 +149,10 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
  * @param {string} req.query.q - Optional search query string to match against address name or street (case-insensitive).
  * @param {boolean} req.query.deleted - Optional flag to filter addresses by deleted status (true for deleted, false or omitted for active).
  * @param {Object} req.query - Additional query parameters for pagination (e.g., page, limit, sort).
+ * @property {number} req.page - The page number to retrieve.
+ * @property {number} req.limit - The number of addresses per page.
+ * @property {string} req.offset - The number of addresses to skip.
+ * @property {string} req.sort - The sort order of the addresses (e.g., name, createdAt).
  *
  * @returns {object} 200 - Success response with a list of addresses and pagination meta information.
  */
