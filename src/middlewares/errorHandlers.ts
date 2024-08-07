@@ -1,11 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import createError from "http-errors";
 import httpStatus from "http-status";
-import {
-	formatResponseObject,
-	formatValidationErrorMessagesResponse,
-	isFunction,
-} from "../utils/helpers";
+import _ from "lodash";
+import { formatResponseObject, formatValidationErrorMessagesResponse } from "../utils/helpers";
 
 const notFoundErrorHandler = (_req: Request, _res: Response, next: NextFunction) => {
 	const error = createError(
@@ -52,7 +49,7 @@ const internalServerErrorHandler = (
 	if (errorName === "ValidationError") {
 		message = httpStatus["422_MESSAGE"];
 		status = httpStatus.UNPROCESSABLE_ENTITY;
-		if (isFunction(req.flash))
+		if (_.isFunction(req.flash))
 			req.flash(
 				"danger",
 				formatValidationErrorMessagesResponse(Object.values(errorRest.errors))
@@ -60,13 +57,13 @@ const internalServerErrorHandler = (
 	}
 
 	// return response
-	if (isFunction(req.flash)) req.flash("danger", message);
+	if (_.isFunction(req.flash)) req.flash("danger", message);
 	res.status(status).json(
 		formatResponseObject({
 			...(errorRest || {}),
 			success: false,
 			status,
-			...(isFunction(req.flash) ? { flashes: req.flash() } : { message }),
+			...(_.isFunction(req.flash) ? { flashes: req.flash() } : { message }),
 		})
 	);
 };

@@ -98,6 +98,10 @@ type VarsTypes = {
 		loginFailedAttemptsTimeInMinutes: number;
 		loginFailedAttemptsMaxNumber: number;
 	};
+	storage: {
+		uploadPath: string;
+		allowedFileSizeInMB: number;
+	};
 };
 
 const vars: VarsTypes = {
@@ -203,6 +207,10 @@ const vars: VarsTypes = {
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_TIME_IN_MINUTES || 0) || 0,
 		loginFailedAttemptsMaxNumber:
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_MAX_NUMBER || 0) || 0,
+	},
+	storage: {
+		uploadPath: process.env?.UPLOAD_STORAGE || "",
+		allowedFileSizeInMB: Number(process.env?.ATTACHMENT_MAX_SIZE_IN_MB || 0) || 0,
 	},
 };
 

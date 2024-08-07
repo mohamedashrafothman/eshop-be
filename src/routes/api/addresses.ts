@@ -1,4 +1,3 @@
-// import allowMethods from "allow-methods";
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as addressesController from "../../controllers/addresses";

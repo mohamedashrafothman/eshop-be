@@ -1,8 +1,8 @@
 import { Request } from "express";
 import { ValidationError } from "express-validator";
+import _ from "lodash";
 import { Error, PaginateResult } from "mongoose";
 import vars from "../vars";
-import { groupBy } from "./index";
 
 export type FormatResponseObjectType<T> = {
 	success?: boolean;
@@ -70,7 +70,7 @@ export const formatResponseObject = <T = void>({
  * format validation error messages
  */
 export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
-	const errorsGroupedByPath = groupBy<{
+	const errorsGroupedByPath = _.groupBy<{
 		path?: string;
 		msg?: string;
 		message?: string;
