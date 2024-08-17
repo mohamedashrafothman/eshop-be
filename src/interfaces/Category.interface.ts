@@ -5,7 +5,6 @@ export default interface Category {
 	name: string;
 	slug: string;
 	description: string;
-	picture: IAttachment;
 	icon: IAttachment;
 	parent: Types.ObjectId[] | Category[];
 	children: Types.ObjectId[] | Category[];

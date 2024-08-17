@@ -17,6 +17,8 @@ const internalServerErrorHandler = (
 	res: Response,
 	_next: NextFunction
 ) => {
+	// checking is req.flash is a function
+	const isFlashAFunction = _.isFunction(req.flash);
 	// destructuring the error object
 	const {
 		status: errorStatus = httpStatus.INTERNAL_SERVER_ERROR,
@@ -49,7 +51,7 @@ const internalServerErrorHandler = (
 	if (errorName === "ValidationError") {
 		message = httpStatus["422_MESSAGE"];
 		status = httpStatus.UNPROCESSABLE_ENTITY;
-		if (_.isFunction(req.flash))
+		if (isFlashAFunction)
 			req.flash(
 				"danger",
 				formatValidationErrorMessagesResponse(Object.values(errorRest.errors))
@@ -57,13 +59,13 @@ const internalServerErrorHandler = (
 	}
 
 	// return response
-	if (_.isFunction(req.flash)) req.flash("danger", message);
+	if (isFlashAFunction) req.flash("danger", message);
 	res.status(status).json(
 		formatResponseObject({
 			...(errorRest || {}),
 			success: false,
 			status,
-			...(_.isFunction(req.flash) ? { flashes: req.flash() } : { message }),
+			...(isFlashAFunction ? { flashes: req.flash() } : { message }),
 		})
 	);
 };

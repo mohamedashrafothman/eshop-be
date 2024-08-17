@@ -5,13 +5,14 @@ import authRouter from "./auth";
 import categoriesRouter from "./categories";
 import usersRouter from "./users";
 
+// defining express router
 const router = Router();
 
-// Nested routes
+// endpoints
 router.use("/auth", authRouter);
-router.use("/users", authController._passportJWTAuthenticate, usersRouter);
-router.use("/addresses", authController._passportJWTAuthenticate, addressesRouter);
-router.use("/categories", authController._passportJWTAuthenticate, categoriesRouter);
+router.use("/users", authController.passportJWTAuthenticate, usersRouter);
+router.use("/addresses", authController.passportJWTAuthenticate, addressesRouter);
+router.use("/categories", categoriesRouter);
 
-// Exporting router
+// exporting router
 export default router;

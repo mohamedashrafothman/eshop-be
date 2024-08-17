@@ -22,7 +22,7 @@ type VarsTypes = {
 		resetPassword: "RESET_PASSWORD";
 		verifyEmail: "VERIFY_EMAIL";
 	};
-	api: { acceptableMediaType: "application/json" };
+	api: { acceptableMediaType: string[] };
 	db: {
 		host: string;
 		port: string;
@@ -121,7 +121,7 @@ const vars: VarsTypes = {
 		resetPassword: "RESET_PASSWORD",
 		verifyEmail: "VERIFY_EMAIL",
 	},
-	api: { acceptableMediaType: "application/json" },
+	api: { acceptableMediaType: ["application/json", "multipart/form-data"] },
 	db: {
 		host: process.env?.DB_HOST || "",
 		port: process.env?.DB_PORT || "",

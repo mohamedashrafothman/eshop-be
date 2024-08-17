@@ -5,10 +5,9 @@ import {
 	isAPIAcceptableMediaTypeHeader,
 } from "../utils/helpers/server";
 
-const middleware = (req: Request, _res: Response, next: NextFunction) => {
+const middleware = (req: Request, _res: Response, next: NextFunction) =>
 	next(
 		(!isAPIAcceptableMediaTypeHeader(req) && createError.UnsupportedMediaType()) ||
 			(!isAPIAcceptableAcceptHeader(req) && createError.NotAcceptable())
 	);
-};
 export default middleware;

@@ -33,13 +33,13 @@ export const normalizePort = (val: string): number | string | boolean => {
  * check if request contains API Acceptable Media Type.
  */
 export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
-	req.get("Content-Type") === vars.api.acceptableMediaType;
+	vars.api.acceptableMediaType.some((item) => req.get("Content-Type")?.startsWith(item));
 
 /**
  * check if request contains API Acceptable Accept.
  */
 export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
-	req.get("Accept") === vars.api.acceptableMediaType;
+	vars.api.acceptableMediaType.some((item) => req.get("Accept")?.startsWith(item));
 
 /**
  * check if request contains API Headers.

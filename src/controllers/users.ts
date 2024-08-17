@@ -12,7 +12,7 @@ import emailService from "../services/email";
 import { formatResponseObject } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const _validator = (method: string) => {
+export const validator = (method: string) => {
 	switch (method) {
 		case "create":
 			return [
