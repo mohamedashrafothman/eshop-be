@@ -3,16 +3,15 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
 import multer, { FileFilterCallback } from "multer";
-import Attachment from "../models/Attachment";
+import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Category from "../models/Category";
 import StorageEngine from "../services/storage";
-import { formatResponseObject, handleFileToUpload } from "../utils/helpers";
+import { deleteFileFromDisk, formatResponseObject, handleFileToUpload } from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
 	switch (method) {
 		case "create":
-		case "update":
 			return [
 				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
 				body("description")
@@ -21,6 +20,23 @@ export const validator = (method: string) => {
 					.notEmpty()
 					.withMessage("You must supply a street!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
+				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
+			];
+		case "update":
+			return [
+				body("name")
+					.trim()
+					.escape()
+					.optional()
+					.notEmpty()
+					.withMessage("You must supply a name!"),
+				body("description")
+					.trim()
+					.escape()
+					.optional()
+					.notEmpty()
+					.withMessage("You must supply a street!"),
+				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
 		default:
@@ -43,8 +59,8 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
 		limits: { files: 1, fileSize: 1024 * 1024 * Number(vars.storage.allowedFileSizeInMB) },
 		fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
 			// supported image file mimetype
-			const isFileTypeValid = storageEngine.options.accept?.some((item) =>
-				file.mimetype?.startsWith(item)
+			const isFileTypeValid = storageEngine.options.accept.some((item) =>
+				file.mimetype.startsWith(item)
 			);
 
 			// throw error for invalid files
@@ -57,32 +73,39 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
 
 	imageUpload.single("icon")(req, res, async (err) => {
 		if (err) return next(err);
-		req.body.icon = req.file;
+		if (req.file) req.body.icon = req.file;
 		next();
 	});
 };
 
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
-	const [createdAttachmentError, createdAttachment] = await to(
-		Attachment.create(
-			handleFileToUpload(
-				req.body.icon,
-				`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+	let createdAttachmentError: Error | null;
+	let createdAttachment: IAttachmentDocument | undefined;
+	if (req.body?.icon) {
+		[createdAttachmentError, createdAttachment] = await to(
+			Attachment.create(
+				handleFileToUpload(
+					req.body.icon,
+					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+				)
 			)
-		)
-	);
-	if (createdAttachmentError) return next(createdAttachmentError);
+		);
+		if (createdAttachmentError) return next(createdAttachmentError);
+	}
 
 	const [createdCategoryError, createdCategory] = await to(
-		Category.create({ ...req.body, icon: createdAttachment?._id })
+		Category.create({
+			...(req.body || {}),
+			...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
+		})
 	);
 	if (createdCategoryError) return next(createdCategoryError);
 
 	if (req.body?.parent) {
-		const [updatedParentCategoryError, _updatedParentCategory] = await to(
+		const [updatedParentCategoryError] = await to(
 			Category.updateOne(
 				{ _id: req.body.parent },
-				{ $addToSet: { children: createdCategory?._id } }
+				{ $addToSet: { children: createdCategory._id } }
 			)
 		);
 		if (updatedParentCategoryError) return next(updatedParentCategoryError);
@@ -100,6 +123,7 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
 
 export const getCategories = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, deleted, ...query } = req.query || {};
+	const isFilteredByDeleted = "deleted" in req.query;
 	const querySearchFields = ["name", "description"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -117,10 +141,10 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 					})),
 				}) ||
 					{}),
-				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin]?.includes(
+				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					deleted && { deleted }) ||
+					isFilteredByDeleted && { deleted }) ||
 					{}),
 				parent: { $size: 0 },
 			},
@@ -142,8 +166,135 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 	);
 };
 
-export const getSingleCategory = async (req: Request, res: Response, next: NextFunction) => {};
+export const getSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
+	const { category: categoryIdentifier } = req.params || {};
+	const [categoryError, category] = await to(
+		Category.findOneWithDeleted({
+			$or: [
+				{ slug: categoryIdentifier },
+				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
+					? [{ _id: categoryIdentifier }]
+					: []),
+			],
+		})
+	);
+	if (categoryError) return next(categoryError);
+	if (!category) return next();
 
-export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {};
+	res.status(httpStatus.OK).json(
+		formatResponseObject({ status: httpStatus.OK, entities: { data: category } })
+	);
+};
 
-export const deleteSingleCategory = async (req: Request, res: Response, next: NextFunction) => {};
+export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
+	const { category: categoryIdentifier } = req.params || {};
+	let [categoryError, category] = await to(
+		Category.findOneWithDeleted({
+			$or: [
+				{ slug: categoryIdentifier },
+				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
+					? [{ _id: categoryIdentifier }]
+					: []),
+			],
+		})
+	);
+	if (categoryError) return next(categoryError);
+	if (!category) return next();
+
+	let createdAttachmentError: Error | null;
+	let createdAttachment: IAttachmentDocument | undefined;
+	if (req.body?.icon) {
+		const [categoryAttachmentError, categoryAttachment] = await to(
+			Attachment.findOne({ _id: category?.icon })
+		);
+		if (categoryAttachmentError) return next(categoryAttachmentError);
+
+		if (categoryAttachment?.id) {
+			const [deletedCategoryAttachmentError] = await to(
+				Attachment.deleteOne({ _id: categoryAttachment.id })
+			);
+			if (deletedCategoryAttachmentError) return next(deletedCategoryAttachmentError);
+
+			// delete file from disk if it exists
+			deleteFileFromDisk(categoryAttachment.path);
+		}
+
+		[createdAttachmentError, createdAttachment] = await to(
+			Attachment.create(
+				handleFileToUpload(
+					req.body.icon,
+					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+				)
+			)
+		);
+		if (createdAttachmentError) return next(createdAttachmentError);
+	}
+
+	category = Object.assign(category, {
+		...(req?.body || {}),
+		...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
+	});
+	if (!category) return next();
+
+	const [saveError, newCategory] = await to(category.save());
+	if (saveError) return next(saveError);
+
+	req.flash("success", "successfully updated.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: { ...(newCategory?.toJSON() || {}) } },
+			flashes: req.flash(),
+		})
+	);
+};
+
+export const deleteSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
+	const { category: categoryIdentifier } = req.params || {};
+	const [categoryError, category] = await to(
+		Category.findOne({
+			$or: [
+				{ slug: categoryIdentifier },
+				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
+					? [{ _id: categoryIdentifier }]
+					: []),
+			],
+		})
+	);
+	if (categoryError) return next(categoryError);
+	if (!category) return next();
+
+	const [deleteCategoryError] = await to(Category.deleteById(category._id, req?.user?.id));
+	if (deleteCategoryError) return next(deleteCategoryError);
+
+	req.flash("success", "Successfully Deleted.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			flashes: req.flash(),
+		})
+	);
+};
+
+export const restoreSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
+	const { category: categoryIdentifier } = req.params || {};
+	const singleCategoryQuery = {
+		$or: [
+			{ slug: categoryIdentifier },
+			...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: categoryIdentifier }] : []),
+		],
+		deleted: true,
+	};
+
+	const [categoryError, category] = await to(Category.findOneWithDeleted(singleCategoryQuery));
+	if (categoryError) return next(categoryError);
+	if (!category) return next();
+
+	const [restoreCategoryError] = await to(Category.restore(singleCategoryQuery));
+	if (restoreCategoryError) return next(restoreCategoryError);
+
+	req.flash("success", "Successfully Restored.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
+	);
+};

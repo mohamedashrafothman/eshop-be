@@ -241,6 +241,9 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  */
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, emailVerified, deleted, active, ...query } = req.query || {};
+	const isFilteredByDeleted = "deleted" in req.query;
+	const isFilteredByEmailVerified = "emailVerified" in req.query;
+	const isFilteredByActive = "active" in req.query;
 	const querySearchFields = ["name", "email"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -261,9 +264,9 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 					})),
 				}) ||
 					{}),
-				...((active && { active }) || {}),
-				...((emailVerified && { emailVerified }) || {}),
-				...((deleted && { deleted }) || {}),
+				...((isFilteredByActive && { active }) || {}),
+				...((isFilteredByEmailVerified && { emailVerified }) || {}),
+				...((isFilteredByDeleted && { deleted }) || {}),
 				_id: { $ne: req?.user?._id || "" },
 			},
 			{ ...query }
@@ -497,6 +500,7 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 			{ slug: userIdentifier },
 			...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
 		],
+		deleted: true,
 	};
 
 	const [userError, user] = await to(User.findOneWithDeleted(singleUserQuery));

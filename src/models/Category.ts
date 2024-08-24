@@ -14,7 +14,11 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 		name: { type: String, trim: true, index: true, required: [true, "Name is required!"] },
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		description: { type: String, required: [true, "Description is required!"] },
-		icon: { type: Schema.Types.ObjectId, ref: "Attachment" },
+		icon: {
+			type: Schema.Types.ObjectId,
+			ref: "Attachment",
+			required: [true, "Icon is required!"],
+		},
 		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
 		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
 	},

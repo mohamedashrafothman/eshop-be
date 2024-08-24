@@ -24,21 +24,23 @@ router
 	);
 router
 	.route("/:category")
-	.all(allowMethods(["get", "patch", "delete"]))
+	.all(
+		allowMethods(["get", "patch", "delete"]),
+		authController.passportJWTAuthenticate,
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+	)
 	.get(categoriesController.getSingleCategory)
 	.patch(
-		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 		categoriesController.uploadCategoryIcon,
 		categoriesController.validator("update"),
 		unprocessableEntityValidator,
 		categoriesController.updateSingleCategory
 	)
-	.delete(
-		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		categoriesController.deleteSingleCategory
-	);
+	.delete(categoriesController.deleteSingleCategory);
+router
+	.route("/:category/restore")
+	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
+	.patch(categoriesController.restoreSingleCategory);
 
 // exporting router
 export default router;

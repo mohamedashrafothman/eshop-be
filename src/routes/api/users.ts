@@ -11,7 +11,7 @@ const router = Router();
 // endpoints
 router
 	.route("/")
-	.all(permission.check(vars.auth.roles.superAdmin), allowMethods(["get", "post"]))
+	.all(allowMethods(["get", "post"]), permission.check(vars.auth.roles.superAdmin))
 	.get(usersController.getUsers)
 	.post(
 		usersController.validator("create"),
@@ -34,7 +34,7 @@ router
 	.delete(permission.check(vars.auth.roles.superAdmin), usersController.deleteSingleUser);
 router
 	.route("/:user/restore")
-	.all(permission.check(vars.auth.roles.superAdmin), allowMethods(["patch"]))
+	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
 	.patch(usersController.restoreSingleUser);
 
 // exporting router

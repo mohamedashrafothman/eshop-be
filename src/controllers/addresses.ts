@@ -158,6 +158,7 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
  */
 export const getAddresses = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, deleted, ...query } = req.query || {};
+	const isFilteredByDeleted = "deleted" in req.query;
 	const querySearchFields = ["name", "street"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -175,7 +176,7 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
 					})),
 				}) ||
 					{}),
-				...((deleted && { deleted }) || {}),
+				...((isFilteredByDeleted && { deleted }) || {}),
 				user: { $ne: req?.user?._id || "" },
 			},
 			{ ...query }
