@@ -1,11 +1,8 @@
 import csrf from "csurf";
 import { NextFunction, Request, Response } from "express";
-import vars from "../utils/vars";
+import { isAPIAcceptableMediaTypeHeader } from "../utils/helpers/server";
 
 const middleware = (req: Request, res: Response, next: NextFunction) =>
-	req.get("Content-Type") !== vars.api.acceptableMediaType ||
-	req.get("Accept") !== vars.api.acceptableMediaType
-		? csrf({ cookie: true })(req, res, next)
-		: next();
+	!isAPIAcceptableMediaTypeHeader(req) ? csrf({ cookie: true })(req, res, next) : next();
 
 export default middleware;

@@ -1,8 +1,8 @@
 import { Request } from "express";
 import { ValidationError } from "express-validator";
+import _ from "lodash";
 import { Error, PaginateResult } from "mongoose";
 import vars from "../vars";
-import { groupBy } from "./index";
 
 export type FormatResponseObjectType<T> = {
 	success?: boolean;
@@ -33,13 +33,13 @@ export const normalizePort = (val: string): number | string | boolean => {
  * check if request contains API Acceptable Media Type.
  */
 export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
-	req.get("Content-Type") === vars.api.acceptableMediaType;
+	vars.api.acceptableMediaType.some((item) => req.get("Content-Type")?.startsWith(item));
 
 /**
  * check if request contains API Acceptable Accept.
  */
 export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
-	req.get("Accept") === vars.api.acceptableMediaType;
+	vars.api.acceptableMediaType.some((item) => req.get("Accept")?.startsWith(item));
 
 /**
  * check if request contains API Headers.
@@ -70,7 +70,7 @@ export const formatResponseObject = <T = void>({
  * format validation error messages
  */
 export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
-	const errorsGroupedByPath = groupBy<{
+	const errorsGroupedByPath = _.groupBy<{
 		path?: string;
 		msg?: string;
 		message?: string;

@@ -22,7 +22,7 @@ type VarsTypes = {
 		resetPassword: "RESET_PASSWORD";
 		verifyEmail: "VERIFY_EMAIL";
 	};
-	api: { acceptableMediaType: "application/json" };
+	api: { acceptableMediaType: string[] };
 	db: {
 		host: string;
 		port: string;
@@ -98,6 +98,10 @@ type VarsTypes = {
 		loginFailedAttemptsTimeInMinutes: number;
 		loginFailedAttemptsMaxNumber: number;
 	};
+	storage: {
+		uploadPath: string;
+		allowedFileSizeInMB: number;
+	};
 };
 
 const vars: VarsTypes = {
@@ -117,7 +121,7 @@ const vars: VarsTypes = {
 		resetPassword: "RESET_PASSWORD",
 		verifyEmail: "VERIFY_EMAIL",
 	},
-	api: { acceptableMediaType: "application/json" },
+	api: { acceptableMediaType: ["application/json", "multipart/form-data"] },
 	db: {
 		host: process.env?.DB_HOST || "",
 		port: process.env?.DB_PORT || "",
@@ -203,6 +207,10 @@ const vars: VarsTypes = {
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_TIME_IN_MINUTES || 0) || 0,
 		loginFailedAttemptsMaxNumber:
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_MAX_NUMBER || 0) || 0,
+	},
+	storage: {
+		uploadPath: process.env?.UPLOAD_STORAGE || "",
+		allowedFileSizeInMB: Number(process.env?.ATTACHMENT_MAX_SIZE_IN_MB || 0) || 0,
 	},
 };
 

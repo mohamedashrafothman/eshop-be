@@ -14,7 +14,7 @@ import emailService from "../services/email";
 import { formatResponseObject } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const _validator = (method: string) => {
+export const validator = (method: string) => {
 	switch (method) {
 		case "login":
 			return [
@@ -432,7 +432,7 @@ export const _passportFacebookStrategy = async (
 	return done(null, newUser);
 };
 
-export const _passportJWTAuthenticate = (req: Request, res: Response, next: NextFunction) =>
+export const passportJWTAuthenticate = (req: Request, res: Response, next: NextFunction) =>
 	passport.authenticate("jwt", { session: false, failWithError: true })(req, res, next);
 
 export const _getSocialUser = (req: Request, res: Response, next: NextFunction) =>

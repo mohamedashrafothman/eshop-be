@@ -1,4 +1,3 @@
-// import allowMethods from "allow-methods";
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as addressesController from "../../controllers/addresses";
@@ -6,16 +5,17 @@ import permission from "../../middlewares/permission";
 import unprocessableEntityValidator from "../../middlewares/validator";
 import vars from "../../utils/vars";
 
+// defining express router
 const router = Router();
 
-// Endpoints
+// endpoints
 router
 	.route("/")
 	.all(allowMethods(["post", "get"]))
 	.get(permission.check(vars.auth.roles.superAdmin), addressesController.getAddresses)
 	.post(
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
-		addressesController._validator("create"),
+		addressesController.validator("create"),
 		unprocessableEntityValidator,
 		addressesController.postNewAddress
 	);
@@ -27,11 +27,11 @@ router
 	)
 	.get(addressesController.getSingleAddress)
 	.patch(
-		addressesController._validator("update"),
+		addressesController.validator("update"),
 		unprocessableEntityValidator,
 		addressesController.updateSingleAddress
 	)
 	.delete(addressesController.deleteSingleAddress);
 
-// Exporting router
+// exporting router
 export default router;

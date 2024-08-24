@@ -33,11 +33,7 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, address) => {
-				// delete address.user.addresses;
-				const { _id, ...ret } = address;
-				return { id: _id, ...ret };
-			},
+			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
 		},
 		timestamps: true,
 	}

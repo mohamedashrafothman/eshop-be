@@ -5,15 +5,16 @@ import permission from "../../middlewares/permission";
 import unprocessableEntityValidator from "../../middlewares/validator";
 import vars from "../../utils/vars";
 
+// defining express router
 const router = Router();
 
-// Endpoints
+// endpoints
 router
 	.route("/")
-	.all(permission.check(vars.auth.roles.superAdmin), allowMethods(["get", "post"]))
+	.all(allowMethods(["get", "post"]), permission.check(vars.auth.roles.superAdmin))
 	.get(usersController.getUsers)
 	.post(
-		usersController._validator("create"),
+		usersController.validator("create"),
 		unprocessableEntityValidator,
 		usersController.postNewUser
 	);
@@ -26,15 +27,15 @@ router
 	.all(allowMethods(["get", "patch", "delete"]))
 	.get(permission.check(vars.auth.roles.superAdmin), usersController.getSingleUser)
 	.patch(
-		usersController._validator("update"),
+		usersController.validator("update"),
 		unprocessableEntityValidator,
 		usersController.updateSingleUser
 	)
 	.delete(permission.check(vars.auth.roles.superAdmin), usersController.deleteSingleUser);
 router
 	.route("/:user/restore")
-	.all(permission.check(vars.auth.roles.superAdmin), allowMethods(["patch"]))
+	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
 	.patch(usersController.restoreSingleUser);
 
-// Exporting router
+// exporting router
 export default router;
