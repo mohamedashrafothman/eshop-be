@@ -32,14 +32,22 @@ export const normalizePort = (val: string): number | string | boolean => {
 /**
  * check if request contains API Acceptable Media Type.
  */
-export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean =>
-	vars.api.acceptableMediaType.some((item) => req.get("Content-Type")?.startsWith(item));
+export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean => {
+	const headerOption = req.get("Content-Type");
+	return headerOption
+		? vars.api.acceptableMediaType.some((item) => headerOption?.startsWith(item))
+		: false;
+};
 
 /**
  * check if request contains API Acceptable Accept.
  */
-export const isAPIAcceptableAcceptHeader = (req: Request): boolean =>
-	vars.api.acceptableMediaType.some((item) => req.get("Accept")?.startsWith(item));
+export const isAPIAcceptableAcceptHeader = (req: Request): boolean => {
+	const headerOption = req.get("Accept");
+	return headerOption
+		? vars.api.acceptableMediaType.some((item) => headerOption?.startsWith(item))
+		: false;
+};
 
 /**
  * check if request contains API Headers.
