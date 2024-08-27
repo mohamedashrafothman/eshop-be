@@ -18,6 +18,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
 			required: [true, "Icon is required!"],
+			autopopulate: true,
 		},
 		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
 		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
