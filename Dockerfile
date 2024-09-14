@@ -34,8 +34,7 @@ USER app
 
 # install dependencies
 # ci -> aliase for clean install, see the documentation [https://docs.npmjs.com/cli/v10/commands/npm-ci]
-# -f -> force
-RUN npm ci -f
+RUN npm ci --force --no-audit --no-fund
 
 # copy the rest of the files to the working directory
 COPY . .
