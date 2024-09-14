@@ -114,6 +114,8 @@ export const validator = (method: string) => {
  * @param {string} req.body.password - User's password (required).
  * @param {string} req.body.passwordConfirmation - User's password confirmation (required).
  * @param {string} req.body.role - User's role (optional, defaults to 'USER'). Valid roles include 'ADMIN', and 'USER'.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
  *   * @property {object} entities.data - The newly created user object.
@@ -232,6 +234,8 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  * @param {number} req.query.limit - Number of users per page (default: 10).
  * @param {string} req.query.offset - Number of users to skip (default: 0).
  * @param {string} req.query.sort - Sort option (available options: 'name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc').
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response containing a paginated list of users and sorting options.
  *   * @property {object} entities.data - An array of user objects.
@@ -293,6 +297,8 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  *
  * @param {Object} req - Express request object.
  * @param {string} req.params.user - User slug or ID.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response containing the user object.
  *   * @property {object} entities.data - The user object.
@@ -322,6 +328,10 @@ export const getSingleUser = async (req: Request, res: Response, next: NextFunct
  * @summary Retrieves the currently authenticated user.
  * @description Fetches the user associated with the current authentication token.
  *
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
  * @returns {object} 200 - Success response containing the user object.
  *   * @property {object} entities.data - The user object.
  */
@@ -350,6 +360,8 @@ export const getCurrentAuthenticatedUser = async (
  * @param {Object} req - Express request object.
  * @param {string} req.params.user - User slug or ID.
  * @param {Object} req.body - Update data for the user.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response containing the updated user object and a success message.
  *   * @property {object} entities.data - The updated user object.
@@ -447,6 +459,8 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  *
  * @param {Object} req - Express request object.
  * @param {string} req.params.user - User slug or ID.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response with a success message.
  */
@@ -487,10 +501,12 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 /**
  * @summary Restores a single deleted user.
  * @description Restores a previously deleted user based on the provided slug or ID.
-
+ *
  * @param {Object} req - Express request object.
  * @param {string} req.params.user - User slug or ID.
-
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
  * @returns {object} 200 - Success response with a success message.
  */
 export const restoreSingleUser = async (req: Request, res: Response, next: NextFunction) => {

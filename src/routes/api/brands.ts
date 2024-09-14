@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../controllers/auth";
-import * as categoriesController from "../../controllers/category";
+import * as brandsController from "../../controllers/brand";
 import permission from "../../middlewares/permission";
 import unprocessableEntityValidator from "../../middlewares/validator";
 import vars from "../../utils/vars";
@@ -13,38 +13,38 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(categoriesController.getCategories)
+	.get(brandsController.getBrands)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("create"),
+		brandsController.uploadBrandLogo,
+		brandsController.validator("create"),
 		unprocessableEntityValidator,
-		categoriesController.postNewCategory
+		brandsController.postNewBrand
 	);
 router
-	.route("/:category")
+	.route("/:brand")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(categoriesController.getSingleCategory)
+	.get(brandsController.getSingleBrand)
 	.patch(
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("update"),
+		brandsController.uploadBrandLogo,
+		brandsController.validator("update"),
 		unprocessableEntityValidator,
-		categoriesController.updateSingleCategory
+		brandsController.updateSingleBrand
 	)
-	.delete(categoriesController.deleteSingleCategory);
+	.delete(brandsController.deleteSingleBrand);
 router
-	.route("/:category/restore")
+	.route("/:brand/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
 		permission.check(vars.auth.roles.superAdmin)
 	)
-	.patch(categoriesController.restoreSingleCategory);
+	.patch(brandsController.restoreSingleBrand);
 
 // exporting router
 export default router;

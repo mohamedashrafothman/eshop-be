@@ -103,6 +103,8 @@ export const validator = (method: string) => {
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - Address data.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 201 - Created response with the newly created address.
  *   * @property {object} entities.data - The created address object.
@@ -153,6 +155,8 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
  * @property {number} req.limit - The number of addresses per page.
  * @property {string} req.offset - The number of addresses to skip.
  * @property {string} req.sort - The sort order of the addresses (e.g., name, createdAt).
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response with a list of addresses and pagination meta information.
  */
@@ -203,6 +207,8 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
  *
  * @param {Object} req - Express request object.
  * @param {string} req.params.address - The address ID.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response containing the address object.
  *   * @property {object} entities.data - The address object.
@@ -233,6 +239,8 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  * @param {Object} req - Express request object.
  * @param {string} req.params.address - The address ID.
  * @param {Object} req.body - Update data for the address.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response with the updated address data.
  *   * @property {object} entities.data - The updated address object.
@@ -317,6 +325,8 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
  *
  * @param {Object} req - Express request object.
  * @param {string} req.params.address - The address ID.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response with a success message.
  */

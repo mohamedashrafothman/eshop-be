@@ -18,7 +18,7 @@ export const validator = (method: string) => {
 					.trim()
 					.escape()
 					.notEmpty()
-					.withMessage("You must supply a street!"),
+					.withMessage("You must supply a description!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
@@ -35,7 +35,7 @@ export const validator = (method: string) => {
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a street!"),
+					.withMessage("You must supply a description!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
@@ -44,6 +44,20 @@ export const validator = (method: string) => {
 	}
 };
 
+/**
+ * @summary Uploads a category icon image.
+ * @description Handles the uploading of a category's icon image. The image is validated to be of type "image", and the upload is restricted to files with a maximum size defined in the configuration.
+ * The uploaded image is resized to be square, and the quality is set to 50%. The file name is hashed to ensure uniqueness.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.file - The uploaded file object containing details about the icon image.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response indicating the icon was uploaded successfully.
+ *   * @property {Object} req.body.icon - The uploaded icon file data.
+ *   * @throws {Error} 400 - Returns an error if the file type is invalid or the file size exceeds the limit.
+ */
 export const uploadCategoryIcon = async (req: Request, res: Response, next: NextFunction) => {
 	const storageEngine = new StorageEngine({
 		accept: ["image"],
@@ -78,6 +92,21 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
 	});
 };
 
+/**
+ * @summary Creates a new category.
+ * @description Handles the creation of a new category in the system. Optionally uploads and attaches a icon image if provided in the request.
+ * If a icon image is provided, it will be uploaded and linked to the category. The category is then saved to the database.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.body - The data for creating a new category. Optionally includes a `icon` file for category image.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 201 - Success response with the newly created category data.
+ *   * @property {object} entities.data - The created category object.
+ *   * @property {Array} flashes - Success message for category creation.
+ * @throws {Error} 500 - Returns an error if the category or icon creation fails.
+ */
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
 	let createdAttachmentError: Error | null;
 	let createdAttachment: IAttachmentDocument | undefined;
@@ -121,6 +150,23 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
 	);
 };
 
+/**
+ * @summary Retrieves a paginated list of categories.
+ * @description Fetches categories based on query parameters. Supports filtering by name, description, and deletion status. Also includes pagination and sorting options.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.query - The query parameters for filtering and pagination.
+ * @param {string} [req.query.q] - Search term for filtering categories by name or description.
+ * @param {boolean} [req.query.deleted] - Flag to include deleted categories.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with paginated categories and metadata.
+ *   * @property {Array} entities.data - List of retrieved brand objects.
+ *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
+ *   * @property {Array} entities.meta.sort - Available sort options for the categories.
+ * @throws {Error} 500 - Returns an error if the brand retrieval fails.
+ */
 export const getCategories = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, deleted, ...query } = req.query || {};
 	const isFilteredByDeleted = "deleted" in req.query;
@@ -166,6 +212,21 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 	);
 };
 
+/**
+ * @summary Retrieves a single category by identifier.
+ * @description Fetches a category based on the provided identifier, which can be either a slug or an ObjectId. Handles errors and returns the category data if found.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with the category data.
+ *   * @property {object} entities.data - The retrieved category object.
+ * @throws {Error} 500 - Returns an error if the category retrieval fails.
+ * @throws {Error} 404 - Returns an error if no category is found.
+ */
 export const getSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
 	const { category: categoryIdentifier } = req.params || {};
 	const [categoryError, category] = await to(
@@ -186,6 +247,24 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
 	);
 };
 
+/**
+ * @summary Updates a single category by identifier.
+ * @description Updates a category based on the provided identifier, which can be a slug or an ObjectId. Handles icon updates by replacing existing icons and manages file deletions. Returns the updated category data upon success.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {Object} req.body - The data to update the category with.
+ * @param {Object} [req.body.icon] - Optional icon data to update the category's icon.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with the updated category data.
+ *   * @property {object} entities.data - The updated category object.
+ *   * @property {string} flashes.success - Success message after the update.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the update process.
+ * @throws {Error} 404 - Returns an error if the category is not found.
+ */
 export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
 	const { category: categoryIdentifier } = req.params || {};
 	let [categoryError, category] = await to(
@@ -249,6 +328,21 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 	);
 };
 
+/**
+ * @summary Deletes a single category by identifier.
+ * @description Deletes a category based on the provided identifier, which can be a slug or an ObjectId. Upon successful deletion, returns a success message.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with a flash message.
+ *   * @property {string} flashes.success - Success message indicating the category was successfully deleted.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
+ * @throws {Error} 404 - Returns an error if the category is not found.
+ */
 export const deleteSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
 	const { category: categoryIdentifier } = req.params || {};
 	const [categoryError, category] = await to(
@@ -276,6 +370,21 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
 	);
 };
 
+/**
+ * @summary Restores a single category by identifier.
+ * @description Restores a category that has been soft-deleted, based on the provided identifier, which can be a slug or an ObjectId. Upon successful restoration, returns a success message.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with a flash message.
+ *   * @property {string} flashes.success - Success message indicating the category was successfully restored.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
+ * @throws {Error} 404 - Returns an error if the category is not found or if the category was not soft-deleted.
+ */
 export const restoreSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
 	const { category: categoryIdentifier } = req.params || {};
 	const singleCategoryQuery = {
