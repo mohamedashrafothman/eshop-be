@@ -1,10 +1,10 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
-import * as authController from "../../controllers/auth";
-import * as usersController from "../../controllers/users";
-import { loginRateLimiter } from "../../middlewares/rateLimiter";
-import unprocessableEntityValidator from "../../middlewares/validator";
-import vars from "../../utils/vars";
+import * as authController from "../../../controllers/auth";
+import * as usersController from "../../../controllers/users";
+import { loginRateLimiter } from "../../../middlewares/rateLimiter";
+import unprocessableEntityValidator from "../../../middlewares/validator";
+import vars from "../../../utils/vars";
 
 // defining express router
 const router = Router();

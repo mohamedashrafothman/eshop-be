@@ -1,10 +1,10 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
-import * as authController from "../../controllers/auth";
-import * as categoriesController from "../../controllers/category";
-import permission from "../../middlewares/permission";
-import unprocessableEntityValidator from "../../middlewares/validator";
-import vars from "../../utils/vars";
+import * as authController from "../../../controllers/auth";
+import * as categoriesController from "../../../controllers/category";
+import permission from "../../../middlewares/permission";
+import unprocessableEntityValidator from "../../../middlewares/validator";
+import vars from "../../../utils/vars";
 
 // defining express router
 const router = Router();
