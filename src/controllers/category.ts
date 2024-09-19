@@ -13,12 +13,20 @@ export const validator = (method: string) => {
 	switch (method) {
 		case "create":
 			return [
-				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
+				body("name")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
@@ -29,13 +37,17 @@ export const validator = (method: string) => {
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a name!"),
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];

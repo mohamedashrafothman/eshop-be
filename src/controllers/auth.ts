@@ -57,7 +57,13 @@ export const validator = (method: string) => {
 						yahoo_remove_subaddress: false,
 						icloud_remove_subaddress: false,
 					}),
-				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
+				body("name")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("providerId").notEmpty().withMessage("Provider id can't be blank!").trim(),
 				body("providerToken")
 					.trim()
@@ -431,6 +437,17 @@ export const _passportFacebookStrategy = async (
 	req.flash("success", "Welcome Back!");
 	return done(null, newUser);
 };
+
+export const passportJWTSerialize = (req: Request, res: Response, next: NextFunction) =>
+	passport.authenticate(
+		"jwt",
+		{ session: false, failWithError: true },
+		(err: any, user: IUserDocument | undefined) => {
+			if (err) return next(err);
+			if (user) req.user = user;
+			next();
+		}
+	)(req, res, next);
 
 export const passportJWTAuthenticate = (req: Request, res: Response, next: NextFunction) =>
 	passport.authenticate("jwt", { session: false, failWithError: true })(req, res, next);

@@ -11,10 +11,22 @@ export type IBrandModel = Model<IBrandDocument>;
 // schema definition
 const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 	{
-		name: { type: String, trim: true, index: true, required: [true, "Name is required!"] },
+		name: {
+			type: String,
+			trim: true,
+			index: true,
+			maxlength: 100,
+			required: [true, "Name is required!"],
+		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
-		description: { type: String, trim: true },
-		logo: { type: Schema.Types.ObjectId, ref: "Attachment", autopopulate: true },
+		description: { type: String, trim: true, maxlength: 1000 },
+		logo: {
+			type: Schema.Types.ObjectId,
+			ref: "Attachment",
+			autopopulate: { select: "-_id path alt" },
+		},
+		products: [{ type: Schema.Types.ObjectId, ref: "Product", default: [] }],
+		productsCount: { type: Number, default: 0 },
 	},
 	{
 		toJSON: {
@@ -25,6 +37,15 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 		timestamps: true,
 	}
 );
+
+BrandSchema.pre("save", function (next) {
+	// Check if products isn't modified.
+	if (!this.isModified("products")) return next();
+
+	// Replace products count with new products length number.
+	this.productsCount = this.products.length || 0;
+	next();
+});
 
 // modal definition
 const BrandModal = model<

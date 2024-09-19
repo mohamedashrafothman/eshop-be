@@ -16,6 +16,7 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 		name: { type: String },
 		extname: { type: String },
 		base: { type: String },
+		alt: { type: String, maxlength: 150, default: "" },
 	},
 	{
 		toJSON: {

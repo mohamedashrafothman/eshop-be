@@ -18,7 +18,7 @@ export const handleFileToUpload = (
 	size?: StorageOptions["sizes"][0]
 ): Pick<IAttachment, "path" | "dir" | "name" | "extname" | "base"> => {
 	// Get the file name.
-	const fileName = file.filename;
+	const fileName = file.filename || "";
 	// Split the file name into parts.
 	const nameParser = fileName.split(".");
 	// Get the file base.
@@ -26,7 +26,7 @@ export const handleFileToUpload = (
 	// Get the file extension.
 	const fileExtension = nameParser.slice(nameParser.length - 1)?.join("");
 	// Split the upload path into parts.
-	const uploadPath = file.destination.split(path.sep);
+	const uploadPath = (file?.destination || "")?.split(path.sep);
 	// Create a function to generate the URL path.
 	const urlPath = (size?: StorageOptions["sizes"][0]) =>
 		path

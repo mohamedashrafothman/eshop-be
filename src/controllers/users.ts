@@ -29,7 +29,13 @@ export const validator = (method: string) => {
 						yahoo_remove_subaddress: false,
 						icloud_remove_subaddress: false,
 					}),
-				body("name").notEmpty().withMessage("You must supply a name!").trim().escape(),
+				body("name")
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.trim()
+					.escape()
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("password")
 					.notEmpty()
 					.withMessage("Password can't be blank!")
@@ -70,7 +76,9 @@ export const validator = (method: string) => {
 					.optional()
 					.notEmpty()
 					.withMessage("You must supply a name!")
-					.escape(),
+					.escape()
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("oldPassword")
 					.if(body("password").exists())
 					.notEmpty()

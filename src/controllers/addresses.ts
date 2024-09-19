@@ -12,7 +12,13 @@ export const validator = (method: string) => {
 	switch (method) {
 		case "create":
 			return [
-				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
+				body("name")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("street").trim().escape().notEmpty().withMessage("You must supply a street!"),
 				body("building")
 					.notEmpty()
@@ -46,7 +52,9 @@ export const validator = (method: string) => {
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a name!"),
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("street")
 					.trim()
 					.escape()
