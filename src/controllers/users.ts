@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
+import isMongoId from "validator/lib/isMongoId";
 import Email from "../models/Email";
 import Session from "../models/Session";
 import Token from "../models/Token";
@@ -317,7 +318,7 @@ export const getSingleUser = async (req: Request, res: Response, next: NextFunct
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
@@ -388,7 +389,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
@@ -479,7 +480,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
@@ -522,7 +523,7 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 	const singleUserQuery = {
 		$or: [
 			{ slug: userIdentifier },
-			...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+			...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 		],
 		deleted: true,
 	};

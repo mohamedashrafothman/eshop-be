@@ -132,6 +132,7 @@ ProductSchema.pre("save", function (next) {
 	this.price.discount = (isSaleLessThanNormal && normal - sale) || 0;
 	this.price.percentage =
 		(isSaleLessThanNormal && Math.round((this.price.discount / normal) * 100)) || 0;
+
 	next();
 });
 

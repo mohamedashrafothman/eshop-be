@@ -89,3 +89,25 @@ export const formatValidationErrorMessagesResponse = (errors: ValidationError[])
 	}));
 	return JSON.parse(JSON.stringify(errorsMapped));
 };
+
+export const convertToDotNotation = (
+	obj: any,
+	prefix: string = "",
+	result: Record<string, any> = {}
+): Record<string, any> => {
+	for (const key in obj) {
+		if (Object.prototype.hasOwnProperty.call(obj, key)) {
+			const value = obj[key];
+			const newKey = prefix ? `${prefix}.${key}` : key;
+
+			if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+				// Recursively process nested objects
+				convertToDotNotation(value, newKey, result);
+			} else {
+				// Add key-value pair in dot notation
+				result[newKey] = value;
+			}
+		}
+	}
+	return result;
+};

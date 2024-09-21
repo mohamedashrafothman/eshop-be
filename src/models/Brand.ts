@@ -25,7 +25,14 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 			ref: "Attachment",
 			autopopulate: { select: "-_id path alt" },
 		},
-		products: [{ type: Schema.Types.ObjectId, ref: "Product", default: [] }],
+		products: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: "Product",
+				default: [],
+				autopopulate: { maxDepth: 1, select: "name slug" },
+			},
+		],
 		productsCount: { type: Number, default: 0 },
 	},
 	{

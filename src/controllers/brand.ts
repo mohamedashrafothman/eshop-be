@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
 import multer, { FileFilterCallback } from "multer";
+import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Brand from "../models/Brand";
 import StorageEngine from "../services/storage";
@@ -233,7 +234,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
 		Brand.findOneWithDeleted({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
@@ -269,7 +270,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		Brand.findOneWithDeleted({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
@@ -345,7 +346,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 		Brand.findOne({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
@@ -381,7 +382,7 @@ export const restoreSingleBrand = async (req: Request, res: Response, next: Next
 	const singleBrandQuery = {
 		$or: [
 			{ slug: brandIdentifier },
-			...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+			...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 		],
 		deleted: true,
 	};

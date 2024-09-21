@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
 import multer, { FileFilterCallback } from "multer";
+import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Category from "../models/Category";
 import StorageEngine from "../services/storage";
@@ -245,9 +246,7 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
 		Category.findOneWithDeleted({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
@@ -283,9 +282,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 		Category.findOneWithDeleted({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
@@ -361,9 +358,7 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
 		Category.findOne({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
@@ -402,7 +397,7 @@ export const restoreSingleCategory = async (req: Request, res: Response, next: N
 	const singleCategoryQuery = {
 		$or: [
 			{ slug: categoryIdentifier },
-			...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: categoryIdentifier }] : []),
+			...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 		],
 		deleted: true,
 	};
