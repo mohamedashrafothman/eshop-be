@@ -17,7 +17,7 @@ router
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		// productsController.uploadImages,
+		productsController.uploadImages,
 		productsController.validator("create"),
 		unprocessableEntityValidator,
 		productsController.postNewProduct
@@ -29,7 +29,7 @@ router
 	.patch(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
-		// productsController.uploadImages,
+		productsController.uploadImages,
 		productsController.validator("update"),
 		unprocessableEntityValidator,
 		productsController.updateSingleProduct

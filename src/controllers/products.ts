@@ -72,12 +72,12 @@ export const validator = (method: string) => {
 						});
 						return true;
 					}),
-				// body("thumbnail").notEmpty().withMessage("Thumbnail is required!"),
-				// body("images")
-				// 	.optional()
-				// 	.notEmpty()
-				// 	.isArray()
-				// 	.withMessage("at least one Image is required!"),
+				body("thumbnail").notEmpty().withMessage("Thumbnail is required!"),
+				body("images")
+					.optional()
+					.notEmpty()
+					.isArray()
+					.withMessage("at least one Image is required!"),
 				body("brand").notEmpty().withMessage("Brand is required!"),
 				body("category").notEmpty().withMessage("Category is required!"),
 			];
@@ -141,12 +141,12 @@ export const validator = (method: string) => {
 						});
 						return true;
 					}),
-				// body("thumbnail").optional().notEmpty().withMessage("Thumbnail is required!"),
-				// body("images")
-				// 	.optional()
-				// 	.isArray()
-				// 	.notEmpty()
-				// 	.withMessage("at least one Image is required!"),
+				body("thumbnail").optional().notEmpty().withMessage("Thumbnail is required!"),
+				body("images")
+					.optional()
+					.isArray()
+					.notEmpty()
+					.withMessage("at least one Image is required!"),
 				body("brand").optional().notEmpty().withMessage("Brand is required!"),
 				body("category").optional().notEmpty().withMessage("Category is required!"),
 			];
@@ -158,9 +158,10 @@ export const validator = (method: string) => {
 export const uploadImages = async (req: Request, res: Response, next: NextFunction) => {
 	const storageEngine = new StorageEngine({
 		accept: ["image"],
+		square: false,
 		quality: 50,
 		fileHashName: true,
-		responsive: true,
+		responsive: false, // FIXME: not working if set to true
 		uploadPath: `${vars.storage.uploadPath}/products`,
 		uploadBasePath: "",
 	});
@@ -173,10 +174,8 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 			const isFileTypeValid = storageEngine.options.accept.some((item) =>
 				file.mimetype.startsWith(item)
 			);
-
 			// throw error for invalid files
 			if (!isFileTypeValid) return cb(Error("That fileType isn't allowed!"));
-
 			// allow supported image files
 			cb(null, true);
 		},
@@ -192,15 +191,29 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 	});
 };
 
+/**
+ * @summary Creates a new product with associated images and categories.
+ * @description This function handles the uploading of a product's thumbnail and images, creates a new product in the database, and associates it with the specified category and brand. It sends a success response with the created product details, including associated category and brand information, or passes any errors to the next middleware.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.body - The request body containing product data.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 201 - Success response with the created product details.
+ *   * @property {Object} entities - Object containing the product data.
+ *   * @property {Object} entities.data - The created product with associated category and brand, if applicable.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
+ * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
+ */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
 	// upload images to storage
-	const attachments = [...(req.body?.thumbnail || []), ...(req.body?.images || [])];
-	let createdAttachmentsError: Error | null;
-	let createdAttachments: IAttachmentDocument[] | undefined;
-	if (attachments.length) {
-		[createdAttachmentsError, createdAttachments] = await to(
+	let createdThumbnailError: Error | null;
+	let createdThumbnail: IAttachmentDocument[] | undefined;
+	if (req.body?.thumbnail && req.body.thumbnail.length) {
+		[createdThumbnailError, createdThumbnail] = await to(
 			Promise.all(
-				attachments.map((image: Express.Multer.File) =>
+				req.body?.thumbnail.map((image: Express.Multer.File) =>
 					Attachment.create(
 						handleFileToUpload(
 							image,
@@ -210,16 +223,30 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 				)
 			)
 		);
-		if (createdAttachmentsError) return next(createdAttachmentsError);
+		if (createdThumbnailError) return next(createdThumbnailError);
+	}
+
+	let createdImagesError: Error | null;
+	let createdImages: IAttachmentDocument[] | undefined;
+	if (req.body?.images && req.body.images.length) {
+		[createdImagesError, createdImages] = await to(
+			Promise.all(
+				req.body?.images.map((image: Express.Multer.File) =>
+					Attachment.create(
+						handleFileToUpload(
+							image,
+							`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+						)
+					)
+				)
+			)
+		);
+		if (createdImagesError) return next(createdImagesError);
 	}
 
 	// create product
-	const files = createdAttachments?.map(({ _id }) => _id) as (
-		| IAttachmentDocument["_id"]
-		| undefined
-	)[];
-	const thumbnail = files?.[0] || undefined;
-	const images = files?.slice(1) || [];
+	const thumbnail = createdThumbnail?.map(({ _id }) => _id)?.[0] || undefined;
+	const images = createdImages?.map(({ _id }) => _id) || [];
 	const [createdProductError, createdProduct] = await to(
 		Product.create({
 			...(req.body || {}),

@@ -98,6 +98,7 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
 	});
 
 	imageUpload.single("logo")(req, res, async (err) => {
+		console.log("req.file: ", req.file);
 		if (err) return next(err);
 		if (req.file) req.body.logo = req.file;
 		next();
@@ -298,7 +299,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
 				handleFileToUpload(
-					req.body.icon,
+					req.body.logo,
 					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 				)
 			)
@@ -308,7 +309,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 
 	brand = Object.assign(brand, {
 		...(req?.body || {}),
-		...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
+		...(createdAttachment?._id ? { logo: createdAttachment._id } : {}),
 	});
 	if (!brand) return next();
 

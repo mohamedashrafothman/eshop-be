@@ -1,3 +1,4 @@
+import to from "await-to-js";
 import concat from "concat-stream";
 import crypto from "crypto";
 import { Request } from "express";
@@ -24,6 +25,8 @@ export interface StorageOptions {
 	fileHashName: boolean;
 }
 
+type Callback = (err: Error | null, result?: any) => void;
+
 class StorageEngine {
 	options: StorageOptions;
 	ALLOWED_IMAGES_FORMATS: string[] = ["jpg", "jpeg", "png", "bmp", "tiff", "gif"];
@@ -49,7 +52,7 @@ class StorageEngine {
 		this.options = _.forIn(
 			{
 				...this.DEFAULT_OPTIONS,
-				...(_.pick(opts, _.keys(this.DEFAULT_OPTIONS)) || {}),
+				...(_.pick(opts, Object.keys(this.DEFAULT_OPTIONS)) || {}),
 			},
 			(value, key, object) => {
 				switch (key) {
@@ -61,7 +64,9 @@ class StorageEngine {
 						break;
 					case "storage":
 						object[key] = (
-							_.includes(this.ALLOWED_STORAGE_SYSTEMS, value)
+							this.ALLOWED_STORAGE_SYSTEMS.includes(
+								value as StorageOptions["storage"]
+							)
 								? value
 								: this.DEFAULT_OPTIONS[key]
 						) as StorageOptions["storage"];
@@ -89,7 +94,7 @@ class StorageEngine {
 							String(val).toLowerCase()
 						) as StorageOptions["sizes"];
 						object[key] = (
-							value?.some((item) => _.includes(this.ALLOWED_IMAGE_SIZES, item))
+							value?.some((item) => this.ALLOWED_IMAGE_SIZES.includes(item))
 								? value
 								: this.DEFAULT_OPTIONS[key]
 						) as StorageOptions["sizes"];
@@ -99,7 +104,7 @@ class StorageEngine {
 							String(val).toLowerCase()
 						) as StorageOptions["accept"];
 						object[key] = (
-							value?.some((item) => _.includes(this.ALLOWED_OUTPUT_FORMATS, item))
+							value?.some((item) => this.ALLOWED_OUTPUT_FORMATS.includes(item))
 								? value
 								: this.DEFAULT_OPTIONS[key]
 						) as StorageOptions["accept"];
@@ -138,7 +143,7 @@ class StorageEngine {
 		return `${checksum}.${mime}`;
 	}
 
-	_createOutputStream(filepath: string, cb: (err: Error | null, result: any) => void) {
+	_createOutputStream(filepath: string, cb: Callback): NodeJS.WritableStream {
 		// create a reference for this to use in local functions
 		const that = this;
 		// create a writable stream from the filepath
@@ -158,7 +163,7 @@ class StorageEngine {
 		return output;
 	}
 
-	_createReadStream(filepath: string, cb: (err: Error | null, result: any) => void) {
+	_createReadStream(filepath: string, cb: Callback): NodeJS.ReadableStream {
 		// create a reference for this to use in local functions
 		const that = this;
 		// create a readable stream from the filepath
@@ -182,49 +187,40 @@ class StorageEngine {
 		sizes: string[],
 		clone: Jimp,
 		filename: string,
-		cb: (err: Error | null, result?: any) => void
+		cb: Callback
 	): { stream: NodeJS.WritableStream; image: Jimp }[] {
-		return _.map(sizes, (size) => {
-			const outputStream = this._createOutputStream(
-				path.join(
-					this.options.uploadPath,
-					`${filename.split(".")[0]}_${size}.${filename.split(".")[1]}`
-				),
-				cb
+		return sizes.map((size) => {
+			// get the size multiplier
+			const sizeMultiplier = size === "lg" ? 1 : size === "md" ? 0.7 : 0.3;
+			// get the filename without extension
+			const filenameWithNoExtension = filename.split(".")[0];
+			// get the filename extension
+			const filenameExtension = filename.split(".")[1];
+			// create the filepath
+			const filePath = path.join(
+				this.options.uploadPath,
+				`${filenameWithNoExtension}_${size}.${filenameExtension}`
 			);
-			let imageClone: Jimp = clone.clone();
-
-			switch (size) {
-				case "sm":
-					imageClone = imageClone.scale(0.3);
-					break;
-				case "md":
-					imageClone = imageClone.scale(0.7);
-					break;
-				default:
-					break;
-			}
-
+			// create a writable stream from the filepath
+			const outputStream = this._createOutputStream(filePath, cb);
+			// clone the image
+			const imageClone = clone.clone().scale(sizeMultiplier);
+			// return the output stream
 			return { stream: outputStream, image: imageClone };
 		});
 	}
 
-	_processImageFiles(
-		image: Jimp,
-		originalFile: any,
-		cb: (err: Error | null, result?: any) => void
-	) {
+	async _processImageFiles(image: Jimp, originalFile: Express.Multer.File, cb: Callback) {
 		// create a reference for this to use in local functions
 		const that = this;
-		let batch = [];
+
 		// the responsive sizes
-		const { sizes, threshold } = this.options;
 		const nameArray = originalFile.originalname.split(".");
 		const mimeType = nameArray[nameArray.length - 1];
 
-		if (!that.ALLOWED_IMAGES_FORMATS.includes(mimeType)) {
+		// check if image is an accepted format
+		if (!that.ALLOWED_IMAGES_FORMATS.includes(mimeType))
 			return cb(new Error("Unaccepted images file format"));
-		}
 
 		const originalFilename = `${slug(originalFile.originalname.split(".")[0])}.${mimeType}`;
 		const filename = this.options.fileHashName
@@ -238,17 +234,15 @@ class StorageEngine {
 		const { width, height } = clone.bitmap;
 		let square = Math.min(width, height);
 		// auto scale the image dimensions to fit the threshold requirement
-		if (threshold && square > threshold) {
+		if (this.options.threshold && square > this.options.threshold) {
 			clone =
 				square === width
-					? clone.resize(threshold, Jimp.AUTO)
-					: clone.resize(Jimp.AUTO, threshold);
+					? clone.resize(this.options.threshold, Jimp.AUTO)
+					: clone.resize(Jimp.AUTO, this.options.threshold);
 		}
 		// crop the image to a square if enabled
 		if (this.options.square) {
-			if (threshold) {
-				square = Math.min(square, threshold);
-			}
+			if (this.options.threshold) square = Math.min(square, this.options.threshold);
 			// fetch the new image dimensions and crop
 			clone = clone.crop(
 				(clone.bitmap.width - square) / 2,
@@ -258,41 +252,49 @@ class StorageEngine {
 			);
 		}
 		// convert the image to grayscale if enabled
-		if (this.options.grayscale) {
-			clone = clone.grayscale();
-		}
+		if (this.options.grayscale) clone = clone.grayscale();
 		// set the image output quality
 		clone = clone.quality(this.options.quality);
 
-		batch = [
-			...((this.options.responsive
-				? this._createImageBatch(this.options.sizes, clone, filename, cb)
-				: [
-						{
-							stream: this._createOutputStream(
-								path.join(this.options.uploadPath, filename),
-								cb
-							),
-							image: clone,
-						},
-					]) || []),
-		];
+		let batch = [];
+		// create the image batch
+		if (this.options.responsive) {
+			batch = this._createImageBatch(this.options.sizes, clone, filename, cb);
+		} else {
+			batch.push({
+				stream: this._createOutputStream(path.join(this.options.uploadPath, filename), cb),
+				image: clone,
+			});
+		}
 
 		// create a read stream from the buffer and pipe it to the output stream
-		_.each(batch, (current) =>
-			current.image.getBuffer(mime, (_err, buffer) =>
-				this.options.storage === "local"
-					? streamifier.createReadStream(buffer).pipe(current.stream)
-					: false
+		const [err] = await to(
+			Promise.all(
+				batch.map(
+					(singleBatch) =>
+						new Promise((resolve, reject) => {
+							singleBatch.image.getBuffer(mime, (err, buffer) => {
+								// if an error occurs, return it
+								if (err) return reject(err);
+								// Create a read stream from the buffer and pipe it to the output stream
+								const stream = streamifier
+									.createReadStream(buffer)
+									.pipe(singleBatch.stream);
+								stream.on("finish", (res) => resolve(res));
+								stream.on("error", (err) => {
+									cb(err);
+									reject(err);
+								});
+							});
+						})
+				)
 			)
 		);
+		// An error occurred in one of the image processing steps
+		if (err) return cb(err);
 	}
 
-	_processApplicationFiles(
-		file: Buffer,
-		originalFile: any,
-		cb: (err: Error | null, result?: any) => void
-	) {
+	_processApplicationFiles(file: Buffer, originalFile: Express.Multer.File, cb: Callback) {
 		// create a reference for this to use in local functions
 		const that = this;
 		// create a reference for this to use in local functions
@@ -300,9 +302,8 @@ class StorageEngine {
 		const nameArray = originalFile.originalname.split(".");
 		const mimeType = nameArray[nameArray.length - 1];
 
-		if (!that.ALLOWED_APPLICATIONS_FORMATS.includes(mimeType)) {
+		if (!that.ALLOWED_APPLICATIONS_FORMATS.includes(mimeType))
 			return cb(new Error("Unaccepted application file format"));
-		}
 
 		const originalFilename = `${slug(originalFile.originalname.split(".")[0])}.${mimeType}`;
 		const filename = this.options.fileHashName
@@ -315,42 +316,49 @@ class StorageEngine {
 		});
 
 		// process the batch sequence
-		_.each(batch, (current) => {
-			if (that.options.storage === "local") {
-				// create a read stream from the buffer and pipe it to the output stream
-				streamifier.createReadStream(current.file).pipe(current.stream);
-			}
+		batch.forEach((singleBatch) => {
+			// if storage is not local, return false
+			if (this.options.storage !== "local") return false;
+			// Create a read stream from the buffer and pipe it to the output stream
+			streamifier.createReadStream(singleBatch.file).pipe(singleBatch.stream);
 		});
 	}
 
-	_handleFile(_req: Request, file: any, cb: (err: Error | null, result?: any) => void) {
+	_handleFile(_req: Request, file: Express.Multer.File, cb: Callback) {
 		// create a reference for this to use in local functions
 		const that = this;
+
+		// check if any file were uploaded
+		if (!file) return cb(new Error("No files uploaded!"));
+
+		// check if the file is an image or application
+		if (!file.mimetype.startsWith("image") && !file.mimetype.startsWith("application"))
+			return cb(new Error(`Unaccepted file type: ${file.mimetype} in ${file.originalname}`));
+
 		// create a writable stream using concat-stream that will
 		// concatenate all the buffers written to it and pass the
 		// complete buffer to a callback fn
-		const fileManipulate = concat((fileData) => {
+		const fileManipulate = concat(async (fileData) => {
+			// application files
+			if (file.mimetype.startsWith("application"))
+				that._processApplicationFiles(fileData, file, cb);
+
+			// image files
 			if (file.mimetype.startsWith("image")) {
 				// read the fileBuffer buffer with Jimp
 				// it returns a promise
-				Jimp.read(fileData)
-					.then((fileBuffer) => {
-						// process the Jimp fileBuffer
-						that._processImageFiles(fileBuffer, file, cb);
-					})
-					.catch(cb);
-			} else if (file.mimetype.startsWith("application")) {
-				that._processApplicationFiles(fileData, file, cb);
-			} else {
-				return cb(new Error("Unaccepted file type."));
+				const [error, fileBuffer] = await to(Jimp.read(fileData));
+				if (error) return cb(error);
+				that._processImageFiles(fileBuffer, file, cb);
 			}
 		});
+
 		// write the uploaded file buffer to the fileManipulate stream
 		file.stream.pipe(fileManipulate);
 	}
 
-	_removeFile(_req: Request, file: any, cb: (err: Error | null, result?: any) => void) {
-		const filename = file.originalname;
+	_removeFile(_req: Request, file: any, cb: Callback) {
+		const { originalname: filename } = file;
 		const filePath = path.join(this.options.uploadPath, filename);
 		let paths: string[] = [];
 
@@ -362,13 +370,12 @@ class StorageEngine {
 
 		// create paths for responsive images
 		if (this.options.responsive) {
-			let pathsplit = path.parse(filePath);
-			let matches = pathsplit.base.match(/([a-zA-Z0-9\s_\\.\-\(\):])+(.+)$/i);
+			let pathSplit = path.parse(filePath);
+			let matches = pathSplit.base.match(/([a-zA-Z0-9\s_\\.\-\(\):])+(.+)$/i);
 			if (matches) {
-				paths = _.map(
-					["lg", "md", "sm"],
+				paths = ["lg", "md", "sm"].map(
 					(size) =>
-						`${path.format(pathsplit)}${path.sep}${matches[1]}_${size}.${matches[2]}`
+						`${path.format(pathSplit)}${path.sep}${matches[1]}_${size}.${matches[2]}`
 				);
 			}
 		} else {
@@ -376,7 +383,7 @@ class StorageEngine {
 		}
 
 		// delete the files from the filesystem
-		_.each(paths, (unlinkPath) => fs.unlink(unlinkPath, cb));
+		paths.forEach((unlinkPath) => fs.unlink(unlinkPath, cb));
 	}
 }
 

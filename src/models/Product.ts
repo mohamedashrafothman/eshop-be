@@ -77,21 +77,21 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 				required: [true, "Size is required!"],
 			},
 		],
-		// images: [
-		// 	{
-		// 		type: Schema.Types.ObjectId,
-		// 		ref: "Attachment",
-		// 		default: [],
-		// 		autopopulate: {select: "-_id path alt"},
-		// 		maxlength: vars.products.imagesMaxLength,
-		// 	},
-		// ],
-		// thumbnail: {
-		// 	type: Schema.Types.ObjectId,
-		// 	ref: "Attachment",
-		// 	required: [true, "Thumbnail is required!"],
-		// 	autopopulate: {select: "-_id path alt"},
-		// },
+		images: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: "Attachment",
+				default: [],
+				autopopulate: { select: "-_id path alt" },
+				maxlength: vars.products.imagesMaxLength,
+			},
+		],
+		thumbnail: {
+			type: Schema.Types.ObjectId,
+			ref: "Attachment",
+			required: [true, "Thumbnail is required!"],
+			autopopulate: { select: "-_id path alt" },
+		},
 		brand: {
 			type: Schema.Types.ObjectId,
 			ref: "Brand",
