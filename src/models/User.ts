@@ -32,7 +32,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			required: [true, "Email is required!"],
 			validate: [isEmail, "Invalid Email Address!"],
 		},
-		name: { type: String, trim: true, required: [true, "Name is required!"] },
+		name: { type: String, trim: true, maxlength: 100, required: [true, "Name is required!"] },
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		password: { type: String, hidden: true },
 		picture: { type: String },
@@ -59,7 +59,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, { password, _id, ...ret }) => ({ id: _id, ...ret }),
+			transform: (_doc, { password, ...ret }) => ret,
 		},
 		timestamps: true,
 	}

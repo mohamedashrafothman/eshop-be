@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
+import isMongoId from "validator/lib/isMongoId";
 import Email from "../models/Email";
 import Session from "../models/Session";
 import Token from "../models/Token";
@@ -29,7 +30,13 @@ export const validator = (method: string) => {
 						yahoo_remove_subaddress: false,
 						icloud_remove_subaddress: false,
 					}),
-				body("name").notEmpty().withMessage("You must supply a name!").trim().escape(),
+				body("name")
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.trim()
+					.escape()
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("password")
 					.notEmpty()
 					.withMessage("Password can't be blank!")
@@ -70,7 +77,9 @@ export const validator = (method: string) => {
 					.optional()
 					.notEmpty()
 					.withMessage("You must supply a name!")
-					.escape(),
+					.escape()
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("oldPassword")
 					.if(body("password").exists())
 					.notEmpty()
@@ -309,7 +318,7 @@ export const getSingleUser = async (req: Request, res: Response, next: NextFunct
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
@@ -380,7 +389,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
@@ -471,14 +480,14 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 		User.findOne({
 			$or: [
 				{ slug: userIdentifier },
-				...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
 	if (userError) return next(userError);
 	if (!user) return next();
 
-	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?.id));
+	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id));
 	if (deleteUserError) return next(deleteUserError);
 
 	const [deleteSessionsError] = await to(
@@ -514,7 +523,7 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 	const singleUserQuery = {
 		$or: [
 			{ slug: userIdentifier },
-			...(userIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: userIdentifier }] : []),
+			...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 		],
 		deleted: true,
 	};

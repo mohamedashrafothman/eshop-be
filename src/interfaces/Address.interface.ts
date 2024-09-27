@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import IUser from "./User.interface";
+import { IUserDocument } from "../models/User";
 
 export default interface Address {
 	name: string;
@@ -13,7 +13,7 @@ export default interface Address {
 	city: string;
 	zip?: string | null;
 	default: boolean;
-	user: Types.ObjectId | IUser;
+	user: Types.ObjectId | IUserDocument;
 	createdAt: Date;
 	updateAt: Date;
 }

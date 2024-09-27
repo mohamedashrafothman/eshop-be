@@ -11,27 +11,44 @@ export type ICategoryModel = Model<ICategoryDocument>;
 // schema definition
 const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new Schema(
 	{
-		name: { type: String, trim: true, index: true, required: [true, "Name is required!"] },
+		name: {
+			type: String,
+			trim: true,
+			index: true,
+			maxlength: 100,
+			required: [true, "Name is required!"],
+		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
-		description: { type: String, required: [true, "Description is required!"] },
+		description: {
+			type: String,
+			maxlength: 1000,
+			required: [true, "Description is required!"],
+		},
 		icon: {
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
 			required: [true, "Icon is required!"],
-			autopopulate: true,
+			autopopulate: { select: "path alt" },
 		},
-		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
-		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 1 } }],
+		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
+		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
+		products: [{ type: Schema.Types.ObjectId, ref: "Product", default: [] }],
+		productsCount: { type: Number, default: 0 },
 	},
 	{
-		toJSON: {
-			versionKey: false,
-			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
-		},
+		toJSON: { versionKey: false, virtual: true },
 		timestamps: true,
 	}
 );
+
+CategorySchema.pre("save", function (next) {
+	// Check if products isn't modified.
+	if (!this.isModified("products")) return next();
+
+	// Replace products count with new products length number.
+	this.productsCount = this.products.length || 0;
+	next();
+});
 
 // modal definition
 const CategoryModal = model<

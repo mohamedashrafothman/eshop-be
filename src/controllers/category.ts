@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
 import multer, { FileFilterCallback } from "multer";
+import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Category from "../models/Category";
 import StorageEngine from "../services/storage";
@@ -13,12 +14,20 @@ export const validator = (method: string) => {
 	switch (method) {
 		case "create":
 			return [
-				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
+				body("name")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
@@ -29,13 +38,17 @@ export const validator = (method: string) => {
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a name!"),
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
 				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
 			];
@@ -233,9 +246,7 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
 		Category.findOneWithDeleted({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
@@ -271,9 +282,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 		Category.findOneWithDeleted({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
@@ -284,13 +293,13 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 	let createdAttachment: IAttachmentDocument | undefined;
 	if (req.body?.icon) {
 		const [categoryAttachmentError, categoryAttachment] = await to(
-			Attachment.findOne({ _id: category?.icon })
+			Attachment.findOne({ _id: category?.icon?._id || category?.icon })
 		);
 		if (categoryAttachmentError) return next(categoryAttachmentError);
 
-		if (categoryAttachment?.id) {
+		if (categoryAttachment?._id) {
 			const [deletedCategoryAttachmentError] = await to(
-				Attachment.deleteOne({ _id: categoryAttachment.id })
+				Attachment.deleteOne({ _id: categoryAttachment._id })
 			);
 			if (deletedCategoryAttachmentError) return next(deletedCategoryAttachmentError);
 
@@ -349,16 +358,14 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
 		Category.findOne({
 			$or: [
 				{ slug: categoryIdentifier },
-				...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)
-					? [{ _id: categoryIdentifier }]
-					: []),
+				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
 		})
 	);
 	if (categoryError) return next(categoryError);
 	if (!category) return next();
 
-	const [deleteCategoryError] = await to(Category.deleteById(category._id, req?.user?.id));
+	const [deleteCategoryError] = await to(Category.deleteById(category._id, req?.user?._id));
 	if (deleteCategoryError) return next(deleteCategoryError);
 
 	req.flash("success", "Successfully Deleted.");
@@ -390,7 +397,7 @@ export const restoreSingleCategory = async (req: Request, res: Response, next: N
 	const singleCategoryQuery = {
 		$or: [
 			{ slug: categoryIdentifier },
-			...(categoryIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: categoryIdentifier }] : []),
+			...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 		],
 		deleted: true,
 	};

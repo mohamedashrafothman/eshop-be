@@ -13,7 +13,7 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(brandsController.getBrands)
+	.get(authController.passportJWTSerialize, brandsController.getBrands)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),

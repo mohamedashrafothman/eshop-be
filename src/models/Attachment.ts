@@ -16,13 +16,10 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 		name: { type: String },
 		extname: { type: String },
 		base: { type: String },
+		alt: { type: String, maxlength: 150, default: "" },
 	},
 	{
-		toJSON: {
-			versionKey: false,
-			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
-		},
+		toJSON: { versionKey: false, virtual: true },
 		timestamps: true,
 	}
 );

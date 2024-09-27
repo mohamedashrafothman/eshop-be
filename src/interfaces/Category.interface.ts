@@ -1,13 +1,17 @@
 import { Types } from "mongoose";
-import IAttachment from "./Attachment.interface";
+import { IAttachmentDocument } from "../models/Attachment";
+import { ICategoryDocument } from "../models/Category";
+import { IProductDocument } from "../models/Product";
 
 export default interface Category {
 	name: string;
 	slug: string;
 	description: string;
-	icon: IAttachment;
-	parent: Types.ObjectId[] | Category[];
-	children: Types.ObjectId[] | Category[];
+	icon: Types.ObjectId | IAttachmentDocument;
+	parent: (Types.ObjectId | ICategoryDocument)[];
+	children: (Types.ObjectId | ICategoryDocument)[];
+	products: (Types.ObjectId | IProductDocument)[];
+	productsCount: number;
 	createdAt: Date;
 	updateAt: Date;
 }

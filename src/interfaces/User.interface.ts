@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import IAddress from "./Address.interface";
+import { IAddressDocument } from "../models/Address";
 
 export default interface User {
 	email: string;
@@ -12,7 +12,7 @@ export default interface User {
 	emailVerified: boolean;
 	google?: string;
 	facebook?: string;
-	addresses: [Types.ObjectId | IAddress] | [];
+	addresses: (Types.ObjectId | IAddressDocument)[] | [];
 	createdAt: Date;
 	updateAt: Date;
 }

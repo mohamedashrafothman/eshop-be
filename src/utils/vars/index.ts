@@ -102,6 +102,10 @@ type VarsTypes = {
 		uploadPath: string;
 		allowedFileSizeInMB: number;
 	};
+	products: {
+		sizes: ["S", "M", "L", "XL", "XXL"];
+		imagesMaxLength: number;
+	};
 };
 
 const vars: VarsTypes = {
@@ -211,6 +215,10 @@ const vars: VarsTypes = {
 	storage: {
 		uploadPath: process.env?.UPLOAD_STORAGE || "",
 		allowedFileSizeInMB: Number(process.env?.ATTACHMENT_MAX_SIZE_IN_MB || 0) || 0,
+	},
+	products: {
+		sizes: ["S", "M", "L", "XL", "XXL"],
+		imagesMaxLength: 10,
 	},
 };
 

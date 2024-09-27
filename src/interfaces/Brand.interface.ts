@@ -1,10 +1,14 @@
-import IAttachment from "./Attachment.interface";
+import { Types } from "mongoose";
+import { IAttachmentDocument } from "../models/Attachment";
+import { IProductDocument } from "../models/Product";
 
 export default interface Category {
 	name: string;
 	slug: string;
 	description?: string;
-	logo?: IAttachment;
+	logo?: Types.ObjectId | IAttachmentDocument;
+	products: (Types.ObjectId | IProductDocument)[];
+	productsCount: number;
 	createdAt: Date;
 	updateAt: Date;
 }

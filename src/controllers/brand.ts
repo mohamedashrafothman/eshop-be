@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
 import multer, { FileFilterCallback } from "multer";
+import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Brand from "../models/Brand";
 import StorageEngine from "../services/storage";
@@ -13,13 +14,21 @@ export const validator = (method: string) => {
 	switch (method) {
 		case "create":
 			return [
-				body("name").trim().escape().notEmpty().withMessage("You must supply a name!"),
+				body("name")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Description must be at most 1000 characters long!"),
 				body("logo").notEmpty().withMessage("You must add an logo!"),
 			];
 		case "update":
@@ -29,13 +38,17 @@ export const validator = (method: string) => {
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a name!"),
+					.withMessage("You must supply a name!")
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("description")
 					.trim()
 					.escape()
 					.optional()
 					.notEmpty()
-					.withMessage("You must supply a description!"),
+					.withMessage("You must supply a description!")
+					.isLength({ max: 1000 })
+					.withMessage("Name must be at most 100 characters long!"),
 				body("logo").optional().notEmpty().withMessage("Logo can't be empty!"),
 			];
 		default:
@@ -85,6 +98,7 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
 	});
 
 	imageUpload.single("logo")(req, res, async (err) => {
+		console.log("req.file: ", req.file);
 		if (err) return next(err);
 		if (req.file) req.body.logo = req.file;
 		next();
@@ -221,7 +235,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
 		Brand.findOneWithDeleted({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
@@ -257,7 +271,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		Brand.findOneWithDeleted({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
@@ -272,9 +286,9 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		);
 		if (brandAttachmentError) return next(brandAttachmentError);
 
-		if (brandAttachment?.id) {
+		if (brandAttachment?._id) {
 			const [deletedBrandAttachmentError] = await to(
-				Attachment.deleteOne({ _id: brandAttachment.id })
+				Attachment.deleteOne({ _id: brandAttachment._id })
 			);
 			if (deletedBrandAttachmentError) return next(deletedBrandAttachmentError);
 
@@ -285,7 +299,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
 				handleFileToUpload(
-					req.body.icon,
+					req.body.logo,
 					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 				)
 			)
@@ -295,7 +309,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 
 	brand = Object.assign(brand, {
 		...(req?.body || {}),
-		...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
+		...(createdAttachment?._id ? { logo: createdAttachment._id } : {}),
 	});
 	if (!brand) return next();
 
@@ -333,14 +347,14 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 		Brand.findOne({
 			$or: [
 				{ slug: brandIdentifier },
-				...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
 		})
 	);
 	if (brandError) return next(brandError);
 	if (!brand) return next();
 
-	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?.id));
+	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
 
 	req.flash("success", "Successfully Deleted.");
@@ -369,7 +383,7 @@ export const restoreSingleBrand = async (req: Request, res: Response, next: Next
 	const singleBrandQuery = {
 		$or: [
 			{ slug: brandIdentifier },
-			...(brandIdentifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: brandIdentifier }] : []),
+			...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 		],
 		deleted: true,
 	};
