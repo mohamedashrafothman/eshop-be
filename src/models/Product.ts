@@ -82,7 +82,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 				type: Schema.Types.ObjectId,
 				ref: "Attachment",
 				default: [],
-				autopopulate: { select: "-_id path alt" },
+				autopopulate: { select: "path alt" },
 				maxlength: vars.products.imagesMaxLength,
 			},
 		],
@@ -90,7 +90,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
 			required: [true, "Thumbnail is required!"],
-			autopopulate: { select: "-_id path alt" },
+			autopopulate: { select: "path alt" },
 		},
 		brand: {
 			type: Schema.Types.ObjectId,
@@ -109,11 +109,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
 	},
 	{
-		toJSON: {
-			versionKey: false,
-			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
-		},
+		toJSON: { versionKey: false, virtual: true },
 		timestamps: true,
 	}
 );

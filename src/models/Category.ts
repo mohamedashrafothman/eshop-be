@@ -28,7 +28,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
 			required: [true, "Icon is required!"],
-			autopopulate: { select: "-_id path alt" },
+			autopopulate: { select: "path alt" },
 		},
 		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
 		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
@@ -36,11 +36,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 		productsCount: { type: Number, default: 0 },
 	},
 	{
-		toJSON: {
-			versionKey: false,
-			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
-		},
+		toJSON: { versionKey: false, virtual: true },
 		timestamps: true,
 	}
 );

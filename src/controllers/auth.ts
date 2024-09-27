@@ -778,7 +778,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
 	const { provider } = req.params || {};
-	const _id = req.user?.id || "";
+	const _id = req.user?._id || "";
 
 	const [deleteTokenError] = await to(
 		Token.deleteOne({

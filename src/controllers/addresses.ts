@@ -366,7 +366,7 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 		return next();
 	}
 
-	const [deleteAddressError] = await to(Address.deleteById(address?._id, req?.user?.id));
+	const [deleteAddressError] = await to(Address.deleteById(address?._id, req?.user?._id));
 	if (deleteAddressError) return next(deleteAddressError);
 
 	if (address.default) {

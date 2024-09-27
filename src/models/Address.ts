@@ -30,11 +30,7 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 		},
 	},
 	{
-		toJSON: {
-			versionKey: false,
-			virtual: true,
-			transform: (_doc, { _id, ...ret }) => ({ id: _id, ...ret }),
-		},
+		toJSON: { versionKey: false, virtual: true },
 		timestamps: true,
 	}
 );

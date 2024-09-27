@@ -1,13 +1,13 @@
 import { Types } from "mongoose";
-import IAttachment from "./Attachment.interface";
-import IProduct from "./Product.interface";
+import { IAttachmentDocument } from "../models/Attachment";
+import { IProductDocument } from "../models/Product";
 
 export default interface Category {
 	name: string;
 	slug: string;
 	description?: string;
-	logo?: Types.ObjectId | IAttachment;
-	products: Types.ObjectId[] | IProduct[];
+	logo?: Types.ObjectId | IAttachmentDocument;
+	products: (Types.ObjectId | IProductDocument)[];
 	productsCount: number;
 	createdAt: Date;
 	updateAt: Date;

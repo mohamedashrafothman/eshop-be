@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
+import { IAttachmentDocument } from "../models/Attachment";
+import { IBrandDocument } from "../models/Brand";
+import { ICategoryDocument } from "../models/Category";
+import { IUserDocument } from "../models/User";
 import vars from "../utils/vars";
-import IAttachment from "./Attachment.interface";
-import IBrand from "./Brand.interface";
-import ICategory from "./Category.interface";
-import IUser from "./User.interface";
 
 export default interface Product {
 	name: string;
@@ -13,11 +13,11 @@ export default interface Product {
 	quantity: number;
 	colors: { name: string; value: string }[];
 	sizes: typeof vars.products.sizes;
-	images?: Types.ObjectId[] | IAttachment[];
-	thumbnail: Types.ObjectId | IAttachment;
-	brand: Types.ObjectId | IBrand;
-	category: Types.ObjectId | ICategory;
-	user: Types.ObjectId | IUser;
+	images?: (Types.ObjectId | IAttachmentDocument)[];
+	thumbnail: Types.ObjectId | IAttachmentDocument;
+	brand: Types.ObjectId | IBrandDocument;
+	category: Types.ObjectId | ICategoryDocument;
+	user: Types.ObjectId | IUserDocument;
 	createdAt: Date;
 	updateAt: Date;
 }

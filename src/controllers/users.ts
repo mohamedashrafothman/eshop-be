@@ -487,7 +487,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 	if (userError) return next(userError);
 	if (!user) return next();
 
-	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?.id));
+	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id));
 	if (deleteUserError) return next(deleteUserError);
 
 	const [deleteSessionsError] = await to(

@@ -11,7 +11,7 @@ import Brand, { IBrandDocument } from "../models/Brand";
 import Category, { ICategoryDocument } from "../models/Category";
 import Product from "../models/Product";
 import StorageEngine from "../services/storage";
-import { formatResponseObject, handleFileToUpload } from "../utils/helpers";
+import { deleteFileFromDisk, formatResponseObject, handleFileToUpload } from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -161,7 +161,7 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 		square: false,
 		quality: 50,
 		fileHashName: true,
-		responsive: false, // FIXME: not working if set to true
+		responsive: false, // FIXME: not working if set to true with multiple files and multiple fields
 		uploadPath: `${vars.storage.uploadPath}/products`,
 		uploadBasePath: "",
 	});
@@ -186,7 +186,13 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 		{ name: "images", maxCount: vars.products.imagesMaxLength },
 	])(req, res, async (err) => {
 		if (err) return next(err);
-		if (req.files) req.body = { ...req.body, ...(req.files || {}) };
+		if (req.files) {
+			const { thumbnail, images } = req.files as {
+				thumbnail: Express.Multer.File[];
+				images: Express.Multer.File[];
+			};
+			req.body = { ...req.body, thumbnail: thumbnail[0], images };
+		}
 		next();
 	});
 };
@@ -209,17 +215,13 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
 	// upload images to storage
 	let createdThumbnailError: Error | null;
-	let createdThumbnail: IAttachmentDocument[] | undefined;
-	if (req.body?.thumbnail && req.body.thumbnail.length) {
+	let createdThumbnail: IAttachmentDocument | undefined;
+	if (req.body?.thumbnail) {
 		[createdThumbnailError, createdThumbnail] = await to(
-			Promise.all(
-				req.body?.thumbnail.map((image: Express.Multer.File) =>
-					Attachment.create(
-						handleFileToUpload(
-							image,
-							`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-						)
-					)
+			Attachment.create(
+				handleFileToUpload(
+					req.body.thumbnail,
+					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 				)
 			)
 		);
@@ -245,13 +247,13 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 	}
 
 	// create product
-	const thumbnail = createdThumbnail?.map(({ _id }) => _id)?.[0] || undefined;
+	const thumbnail = createdThumbnail?._id || undefined;
 	const images = createdImages?.map(({ _id }) => _id) || [];
 	const [createdProductError, createdProduct] = await to(
 		Product.create({
 			...(req.body || {}),
-			...(thumbnail ? { thumbnail: thumbnail } : {}),
-			...(images?.length ? { images: images } : {}),
+			...(thumbnail ? { thumbnail } : {}),
+			...(images?.length ? { images } : {}),
 			user: req.user?._id,
 		})
 	);
@@ -455,6 +457,23 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
 	);
 };
 
+/**
+ * @summary Updates an existing product by its identifier.
+ * @description This endpoint updates a product's details, including its thumbnail, images, category, and brand. The product can be identified by a slug or MongoDB ObjectId. If images or thumbnails are provided, the old ones are replaced. The method also updates related category and brand associations if specified.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {string} req.params.product - The product identifier, either a slug or MongoDB ObjectId.
+ * @param {Object} req.body - The request body containing the product data.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with the updated product details.
+ *    * @property {Object} entities - Contains the updated product data.
+ *    * @property {Object} entities.data - The updated product.
+ * @throws {Error} 500 - Internal server error if there's a problem updating the product.
+ * @throws {Error} 404 - Product not found.
+ */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
 	const { product: productIdentifier } = req.params || {};
 	let [productError, product] = await to(
@@ -468,7 +487,71 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 	if (productError) return next(productError);
 	if (!product) return next();
 
-	// TODO: Handle file upload
+	let createdThumbnailError: Error | null;
+	let createdThumbnail: IAttachmentDocument | undefined;
+	if (req.body?.thumbnail) {
+		const [productThumbnailError, productThumbnail] = await to(
+			Attachment.findOne({ _id: product?.thumbnail?._id || product?.thumbnail })
+		);
+		if (productThumbnailError) return next(productThumbnailError);
+
+		if (productThumbnail?._id) {
+			const [deletedProductThumbnailError] = await to(
+				Attachment.deleteOne({ _id: productThumbnail._id })
+			);
+			if (deletedProductThumbnailError) return next(deletedProductThumbnailError);
+
+			// delete file from disk if it exists
+			deleteFileFromDisk(productThumbnail.path);
+		}
+
+		[createdThumbnailError, createdThumbnail] = await to(
+			Attachment.create(
+				handleFileToUpload(
+					req.body.thumbnail,
+					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+				)
+			)
+		);
+		if (createdThumbnailError) return next(createdThumbnailError);
+	}
+
+	let createdImagesError: Error | null;
+	let createdImages: IAttachmentDocument[] | undefined;
+	if (req.body?.images && req.body.images.length) {
+		const [productImagesError, productImages] = await to(
+			Attachment.find({
+				_id: {
+					$in: product?.images?.map((singleImage) => singleImage?._id || singleImage),
+				},
+			})
+		);
+		if (productImagesError) return next(productImagesError);
+
+		if (productImages?.length) {
+			const [deletedProductThumbnailError] = await to(
+				Attachment.delete({ _id: { $in: productImages.map((_id) => _id) } })
+			);
+			if (deletedProductThumbnailError) return next(deletedProductThumbnailError);
+
+			// delete file from disk if it exists
+			productImages?.forEach(({ path }) => path && deleteFileFromDisk(path));
+		}
+
+		[createdImagesError, createdImages] = await to(
+			Promise.all(
+				req.body?.images.map((image: Express.Multer.File) =>
+					Attachment.create(
+						handleFileToUpload(
+							image,
+							`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+						)
+					)
+				)
+			)
+		);
+		if (createdImagesError) return next(createdImagesError);
+	}
 
 	// update product's category if category is provided
 	let updatedProductCategoryError: Error | null;
@@ -512,7 +595,11 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	product = Object.assign(product, { ...(req?.body || {}) });
+	product = Object.assign(product, {
+		...(req?.body || {}),
+		...(createdThumbnail?._id ? { thumbnail: createdThumbnail._id } : {}),
+		...(createdImages?.length ? { images: createdImages?.map(({ _id }) => _id) } : {}),
+	});
 	if (!product) return next();
 
 	const [saveError, newProduct] = await to(product.save());
@@ -556,7 +643,7 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 	if (productError) return next(productError);
 	if (!product) return next();
 
-	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?.id));
+	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?._id));
 	if (deleteProductError) return next(deleteProductError);
 
 	req.flash("success", "Successfully Deleted.");

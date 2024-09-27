@@ -293,13 +293,13 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 	let createdAttachment: IAttachmentDocument | undefined;
 	if (req.body?.icon) {
 		const [categoryAttachmentError, categoryAttachment] = await to(
-			Attachment.findOne({ _id: category?.icon })
+			Attachment.findOne({ _id: category?.icon?._id || category?.icon })
 		);
 		if (categoryAttachmentError) return next(categoryAttachmentError);
 
-		if (categoryAttachment?.id) {
+		if (categoryAttachment?._id) {
 			const [deletedCategoryAttachmentError] = await to(
-				Attachment.deleteOne({ _id: categoryAttachment.id })
+				Attachment.deleteOne({ _id: categoryAttachment._id })
 			);
 			if (deletedCategoryAttachmentError) return next(deletedCategoryAttachmentError);
 
@@ -365,7 +365,7 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
 	if (categoryError) return next(categoryError);
 	if (!category) return next();
 
-	const [deleteCategoryError] = await to(Category.deleteById(category._id, req?.user?.id));
+	const [deleteCategoryError] = await to(Category.deleteById(category._id, req?.user?._id));
 	if (deleteCategoryError) return next(deleteCategoryError);
 
 	req.flash("success", "Successfully Deleted.");

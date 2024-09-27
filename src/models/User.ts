@@ -59,7 +59,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, { password, _id, ...ret }) => ({ id: _id, ...ret }),
+			transform: (_doc, { password, ...ret }) => ret,
 		},
 		timestamps: true,
 	}

@@ -286,9 +286,9 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 		);
 		if (brandAttachmentError) return next(brandAttachmentError);
 
-		if (brandAttachment?.id) {
+		if (brandAttachment?._id) {
 			const [deletedBrandAttachmentError] = await to(
-				Attachment.deleteOne({ _id: brandAttachment.id })
+				Attachment.deleteOne({ _id: brandAttachment._id })
 			);
 			if (deletedBrandAttachmentError) return next(deletedBrandAttachmentError);
 
@@ -354,7 +354,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 	if (brandError) return next(brandError);
 	if (!brand) return next();
 
-	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?.id));
+	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
 
 	req.flash("success", "Successfully Deleted.");
