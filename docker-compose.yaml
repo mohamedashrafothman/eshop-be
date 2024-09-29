@@ -12,17 +12,14 @@ services:
             context: .
             # specify the file name (optional)
             dockerfile: Dockerfile
-
         # api service depends on the mongodb service so the mongodb service will be started before the api service
         depends_on:
             - mongodb
-
         # specify the port mapping from host to the container
         # this is similar to the -p flag in `docker run` command
         # first port is the port on host machine and the second is the port inside the container
         ports:
             - 8088:8088
-
         # specify the volumes to mount
         # what this does is it mounts the current directory to the `/app` directory inside the container.
         # due to this, any changes made to the files in the current directory will be reflected inside the container. It is similar to the -v flag in `docker run` command.
@@ -35,12 +32,10 @@ services:
             # we also mount the node_modules directory inside the container at /app/node_modules. This is done to avoid installing the node_modules inside the container.
             # node_modules will be installed on the host machine and mounted inside the container
             - /app/node_modules
-
         # keep stdin open to allow for interactive commands
         stdin_open: true
         # allocate a pseudo-TTY for the container (helps with running interactive processes like watching files)
         tty: true
-
         # this is for docker compose watch mode
         # anything mentioned under develop will be watched for changes by docker compose watch and it will perform the action mentioned
         develop:
@@ -55,7 +50,6 @@ services:
                 - path: .
                   target: /src
                   action: sync
-
         # specify the network to use for the db service
         networks:
             - eshop-mongodb-network
@@ -68,22 +62,29 @@ services:
         # but for the db service, we're using the image from docker hub so we specify the image as "image: mongo:latest"
         # you can find the image name and tag for mongodb from docker hub here: https://hub.docker.com/_/mongo
         image: mongo:7
-
         # specify the ports to expose for the db service
         # generally, we do this in api service using mongodb atlas. But for demo purposes, we're using a local mongodb instance
         # usually, mongodb runs on port 27017. So we're exposing the port 27017 on the host machine and mapping it to the port 27017 inside the container
         ports:
             - "27017:27017"
-
         # specify the volumes to mount for the db service
         # we're mounting the volume named "anime" inside the container at /data/db directory
         # this is done so that the data inside the mongodb container is persisted even if the container is stopped
         volumes:
             - eshop:/data/db
-
         # specify the network to use for the db service
         networks:
             - eshop-mongodb-network
+        # Adding the command to enable replica set
+        command: ["mongod", "--port", "27017", "--replSet", "rs0", "--bind_ip_all"]
+        # Adding the healthcheck command
+        healthcheck:
+            test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'eshop-db:27017'}]}) }" | mongosh --port 27017 --quiet
+            interval: 5s
+            timeout: 30s
+            start_period: 0s
+            start_interval: 1s
+            retries: 30
 
 # define the volumes to be used by the services
 volumes:

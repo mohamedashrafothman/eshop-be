@@ -9,6 +9,7 @@ import vars from "../utils/vars";
 
 mongoose.Promise = global.Promise;
 mongoose.connect(vars.db.url, {});
+console.log("vars.db.url: ", vars.db.url);
 mongoose.plugin(MongooseDelete, {
 	deletedAt: true,
 	deletedBy: true,

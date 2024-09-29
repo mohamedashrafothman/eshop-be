@@ -4,6 +4,7 @@ import { body } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
+import mongoose from "mongoose";
 import passport, { type Profile } from "passport";
 import { type VerifiedCallback } from "passport-jwt";
 import { type IVerifyOptions } from "passport-local";
@@ -11,7 +12,7 @@ import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -189,23 +190,32 @@ export const _passportGoogleStrategy = async (
 	profile: Profile,
 	done: (error: any, user?: any, info?: any) => void
 ) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	if (req.isAuthenticated()) {
-		const [existsUserError, existsUser] = await to(User.findOne({ google: profile?.id }));
-		if (existsUserError) return done(existsUserError);
-		if (existsUser) {
-			req.flash(
-				"danger",
-				"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
-			);
-			return done(null);
+		const [existsUserError, existsUser] = await to(
+			User.findOne({ google: profile?.id }).session(session)
+		);
+		if (existsUserError || existsUser) {
+			handleTransactionError(session);
+			if (existsUser)
+				req.flash(
+					"danger",
+					"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
+				);
+			return done(existsUserError || null);
 		}
 
 		let userError = null;
 		let user;
 
-		[userError, user] = await to(User.findOne({ _id: req.user._id }));
-		if (userError) return done(userError);
-		if (!user) return done(new Error("No User Found"));
+		[userError, user] = await to(User.findOne({ _id: req.user._id }).session(session));
+		if (userError || !user) {
+			handleTransactionError(session);
+			return done(userError || new Error("No User Found"));
+		}
 
 		user = Object.assign(user, {
 			...(profile?.id ? { google: profile.id } : {}),
@@ -215,66 +225,94 @@ export const _passportGoogleStrategy = async (
 		});
 
 		const [tokenError, token] = await to(
-			Token.findOne({ user: user._id, kind: vars.tokenTypes.google })
+			Token.findOne({ user: user._id, kind: vars.tokenTypes.google }).session(session)
 		);
-		if (tokenError) return done(tokenError);
+		if (tokenError) {
+			handleTransactionError(session);
+			return done(tokenError);
+		}
 
 		let newRefreshTokenError;
 
 		if (!token) {
 			[newRefreshTokenError] = await to(
-				Token.create({
-					user: user._id,
-					token: accessToken,
-					kind: vars.tokenTypes.google,
-				})
+				Token.create(
+					[{ user: user._id, token: accessToken, kind: vars.tokenTypes.google }],
+					{ session }
+				)
 			);
 		} else {
 			[newRefreshTokenError] = await to(
 				Token.updateOne(
 					{ user: user._id, kind: vars.tokenTypes.google },
 					{ $set: { token: accessToken } }
-				)
+				).session(session)
 			);
 		}
 
-		if (newRefreshTokenError) return done(newRefreshTokenError);
+		if (newRefreshTokenError) {
+			handleTransactionError(session);
+			return done(newRefreshTokenError);
+		}
 
-		const [saveError] = await to(user.save());
-		if (saveError) return done(saveError);
+		const [saveError] = await to(user.save({ session }));
+		if (saveError) {
+			handleTransactionError(session);
+			return done(saveError);
+		}
+
+		// Commit the transaction
+		await session.commitTransaction();
+		session.endSession();
 
 		req.flash("success", "Google Account has been linked!");
 		return done(null, user);
 	}
 
-	const [existsUserError, existsUser] = await to(User.findOne({ google: profile?.id }));
-	if (existsUserError) return done(existsUserError);
+	const [existsUserError, existsUser] = await to(
+		User.findOne({ google: profile?.id }).session(session)
+	);
+	if (existsUserError) {
+		handleTransactionError(session);
+		return done(existsUserError);
+	}
 	if (existsUser) {
 		const [updatedUserError] = await to(
 			User.updateOne(
 				{ _id: existsUser?._id },
 				{ $set: { active: true, emailVerified: true } }
-			)
+			).session(session)
 		);
-		if (updatedUserError) return done(updatedUserError);
+		if (updatedUserError) {
+			handleTransactionError(session);
+			return done(updatedUserError);
+		}
 
-		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }));
-		if (userError) return done(userError);
+		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
+		if (userError) {
+			handleTransactionError(session);
+			return done(userError);
+		}
+
+		// Commit the transaction
+		await session.commitTransaction();
+		session.endSession();
 
 		req.flash("success", "Welcome Back!");
 		return done(null, user);
 	}
 
 	const [existsEmailError, existsEmail] = await to(
-		User.findOne({ email: profile?.emails?.[0]?.value || "" })
+		User.findOne({ email: profile?.emails?.[0]?.value || "" }).session(session)
 	);
-	if (existsEmailError) return done(existsEmailError);
-	if (existsEmail) {
-		req.flash(
-			"danger",
-			`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
-		);
-		return done(null);
+	if (existsEmailError || existsEmail) {
+		handleTransactionError(session);
+		if (existsEmail)
+			req.flash(
+				"danger",
+				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
+			);
+		return done(existsEmailError || null);
 	}
 
 	const user = {
@@ -285,17 +323,25 @@ export const _passportGoogleStrategy = async (
 		emailVerified: true,
 	};
 
-	const [newUserError, newUser] = await to(User.create(user));
-	if (newUserError) return done(newUserError);
+	const [newUserError, newUser] = await to(User.create([user], { session }));
+	if (newUserError) {
+		handleTransactionError(session);
+		return done(newUserError);
+	}
 
 	const [newRefreshTokenError] = await to(
-		Token.create({
-			user: newUser._id,
-			token: accessToken,
-			kind: vars.tokenTypes.google,
+		Token.create([{ user: newUser[0]._id, token: accessToken, kind: vars.tokenTypes.google }], {
+			session,
 		})
 	);
-	if (newRefreshTokenError) return done(newRefreshTokenError);
+	if (newRefreshTokenError) {
+		handleTransactionError(session);
+		return done(newRefreshTokenError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Welcome Back!");
 	return done(null, newUser);

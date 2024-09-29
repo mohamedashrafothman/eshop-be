@@ -4,13 +4,14 @@ import { body } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
+import mongoose from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
 import Email from "../models/Email";
 import Session from "../models/Session";
 import Token from "../models/Token";
 import User from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -133,41 +134,65 @@ export const validator = (method: string) => {
  *      * @property {string} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { email } = req.body;
-	const [userError, user] = await to(User.findOne({ email }));
-	if (userError) return next(userError);
-	if (user && Object.keys(user)?.length) {
-		const error = createError(httpStatus.CONFLICT, "Account already exists!");
-		return next({ ...(error || {}), status: error.status });
+	const [userError, existsUser] = await to(User.findOne({ email }).session(session));
+	if (userError || existsUser) {
+		handleTransactionError(session);
+		let error;
+		if (existsUser) error = createError(httpStatus.CONFLICT, "Account already exists!");
+		return next(
+			userError || (existsUser && error && { ...(error || {}), status: error.status }) || null
+		);
 	}
 
 	const [createdUserError, createdUser] = await to(
-		User.create({ ...(req?.body || {}), active: true })
+		User.create([{ ...(req?.body || {}), active: true }], { session })
 	);
-	if (createdUserError) return next(createdUserError);
+	if (createdUserError) {
+		handleTransactionError(session);
+		return next(createdUserError);
+	}
 
-	const token = await createdUser.createHashToken();
+	const token = await createdUser[0].createHashToken();
 	const [newVerifyEmailTokenError] = await to(
-		Token.create({
-			user: createdUser._id,
-			token,
-			kind: vars.tokenTypes.verifyEmail,
-			expireAt: Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
-		})
+		Token.create(
+			[
+				{
+					user: createdUser[0]._id,
+					token,
+					kind: vars.tokenTypes.verifyEmail,
+					expireAt: Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
+				},
+			],
+			{ session }
+		)
 	);
-	if (newVerifyEmailTokenError) return next(newVerifyEmailTokenError);
+	if (newVerifyEmailTokenError) {
+		handleTransactionError(session);
+		return next(newVerifyEmailTokenError);
+	}
 
 	const [sendEmailError, sendEmail] = await emailService.send({
-		to: createdUser,
+		to: createdUser[0],
 		from: vars.email.sender,
 		filename: "verify-user",
 		subject: `[${vars.app.name}] Verify User Account.`,
 		actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 	});
-	if (sendEmailError) return next(sendEmailError);
+	if (sendEmailError) {
+		handleTransactionError(session);
+		return next(sendEmailError);
+	}
 
-	const [newEmailError] = await to(Email.create(sendEmail));
-	if (newEmailError) return next(newEmailError);
+	const [newEmailError] = await to(Email.create([sendEmail], { session }));
+	if (newEmailError) {
+		handleTransactionError(session);
+		return next(newEmailError);
+	}
 
 	req.flash(
 		"success",
@@ -180,44 +205,56 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 	if (!req.isAuthenticated()) {
 		accessToken = jsonwebtoken.sign(
 			{
-				sub: createdUser._id.toString(),
+				sub: createdUser[0]._id.toString(),
 				iat: Math.floor(Date.now() / 1000),
 			},
 			vars.auth.strategies.jwt.accessTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 		);
 		refreshToken = jsonwebtoken.sign(
 			{
-				sub: createdUser._id.toString(),
+				sub: createdUser[0]._id.toString(),
 				iat: Math.floor(Date.now() / 1000),
 			},
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 		);
 
 		const [newRefreshTokenError] = await to(
-			Token.create({
-				user: createdUser._id,
-				token: refreshToken,
-				kind: vars.tokenTypes.jwt,
-				expireAt:
-					Date.now() +
-					1000 * 60 * 60 * 24 * vars.auth.strategies.jwt.refreshTokenExpiresInDays,
-			})
+			Token.create(
+				[
+					{
+						user: createdUser[0]._id,
+						token: refreshToken,
+						kind: vars.tokenTypes.jwt,
+						expireAt:
+							Date.now() +
+							1000 *
+								60 *
+								60 *
+								24 *
+								vars.auth.strategies.jwt.refreshTokenExpiresInDays,
+					},
+				],
+				{ session }
+			)
 		);
-		if (newRefreshTokenError) return next(newRefreshTokenError);
+		if (newRefreshTokenError) {
+			handleTransactionError(session);
+			return next(newRefreshTokenError);
+		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
 			entities: {
 				data: {
-					...(createdUser?.toJSON() || {}),
+					...(createdUser[0]?.toJSON() || {}),
 					...(!req.isAuthenticated() ? { accessToken } : {}),
 					...(!req.isAuthenticated() ? { refreshToken } : {}),
 					...(!req.isAuthenticated()
@@ -376,6 +413,10 @@ export const getCurrentAuthenticatedUser = async (
  *   * @property {object} entities.data - The updated user object.
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { user: userIdentifier } = req.params || {};
 	const {
 		oldPassword: _oldPassword,
@@ -391,15 +432,20 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 				{ slug: userIdentifier },
 				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
-		})
+		}).session(session)
 	);
-	if (userError) return next(userError);
-	if (!user) return next();
+	if (userError || !user) {
+		handleTransactionError(session);
+		return next(userError || null);
+	}
 
 	if (reqBody?.email && user?.email) isEmailModified = reqBody.email !== user.email || false;
 	if (reqBody?.password) {
 		user.comparePassword(reqBody.password, (comparePasswordError, isMatch) => {
-			if (comparePasswordError) return next(comparePasswordError);
+			if (comparePasswordError) {
+				handleTransactionError(session);
+				return next(comparePasswordError);
+			}
 			isPasswordModified = !isMatch;
 		});
 	}
@@ -408,22 +454,37 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		...(reqBody || {}),
 		...(isEmailModified ? { emailVerified: false } : {}),
 	});
-	if (!user) return next();
+	if (!user) {
+		handleTransactionError(session);
+		return next();
+	}
 
-	const [saveError, newUser] = await to(user.save());
-	if (saveError) return next(saveError);
+	const [saveError, newUser] = await to(user.save({ session }));
+	if (saveError) {
+		handleTransactionError(session);
+		return next(saveError);
+	}
 
 	if (isEmailModified) {
 		const token = await newUser.createHashToken();
 		const [newVerifyEmailToken] = await to(
-			Token.create({
-				user: newUser._id,
-				token,
-				kind: vars.tokenTypes.verifyEmail,
-				expireAt: Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
-			})
+			Token.create(
+				[
+					{
+						user: newUser._id,
+						token,
+						kind: vars.tokenTypes.verifyEmail,
+						expireAt:
+							Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
+					},
+				],
+				{ session }
+			)
 		);
-		if (newVerifyEmailToken) return next(newVerifyEmailToken);
+		if (newVerifyEmailToken) {
+			handleTransactionError(session);
+			return next(newVerifyEmailToken);
+		}
 
 		const [sendEmailError, sendEmail] = await emailService.send({
 			to: newUser,
@@ -432,10 +493,16 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 			subject: `[${vars.app.name}] Verify User Account.`,
 			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
 		});
-		if (sendEmailError) return next(sendEmailError);
+		if (sendEmailError) {
+			handleTransactionError(session);
+			return next(sendEmailError);
+		}
 
-		const [newEmailError] = await to(Email.create(sendEmail));
-		if (newEmailError) return next(newEmailError);
+		const [newEmailError] = await to(Email.create([sendEmail], { session }));
+		if (newEmailError) {
+			handleTransactionError(session);
+			return next(newEmailError);
+		}
 	}
 
 	if (isPasswordModified) {
@@ -446,11 +513,21 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 			subject: `[${vars.app.name}] Password Updated Successfully.`,
 			siteName: vars.app.name,
 		});
-		if (sendEmailError) return next(sendEmailError);
+		if (sendEmailError) {
+			handleTransactionError(session);
+			return next(sendEmailError);
+		}
 
-		const [newEmailError] = await to(Email.create(sendEmail));
-		if (newEmailError) return next(newEmailError);
+		const [newEmailError] = await to(Email.create([sendEmail], { session }));
+		if (newEmailError) {
+			handleTransactionError(session);
+			return next(newEmailError);
+		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(
@@ -474,6 +551,10 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  * @returns {object} 200 - Success response with a success message.
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { user: userIdentifier } = req.params || {};
 
 	const [userError, user] = await to(
@@ -482,21 +563,36 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 				{ slug: userIdentifier },
 				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
-		})
+		}).session(session)
 	);
-	if (userError) return next(userError);
-	if (!user) return next();
+	if (userError || !user) {
+		handleTransactionError(session);
+		return next(userError || null);
+	}
 
-	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id));
-	if (deleteUserError) return next(deleteUserError);
+	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id).session(session));
+	if (deleteUserError) {
+		handleTransactionError(session);
+		return next(deleteUserError);
+	}
 
 	const [deleteSessionsError] = await to(
-		Session.delete({ "session.passport.user._id": user?._id })
+		Session.delete({ "session.passport.user._id": user?._id }).session(session)
 	);
-	if (deleteSessionsError) return next(deleteSessionsError);
+	if (deleteSessionsError) {
+		handleTransactionError(session);
+		return next(deleteSessionsError);
+	}
 
-	const [deleteTokenError] = await to(Token.delete({ user: user?._id }));
-	if (deleteTokenError) return next(deleteTokenError);
+	const [deleteTokenError] = await to(Token.delete({ user: user?._id }).session(session));
+	if (deleteTokenError) {
+		handleTransactionError(session);
+		return next(deleteTokenError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(

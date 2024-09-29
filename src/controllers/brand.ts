@@ -2,12 +2,18 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
+import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Brand from "../models/Brand";
 import StorageEngine from "../services/storage";
-import { deleteFileFromDisk, formatResponseObject, handleFileToUpload } from "../utils/helpers";
+import {
+	deleteFileFromDisk,
+	formatResponseObject,
+	handleFileToUpload,
+	handleTransactionError,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -121,33 +127,55 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
  * @throws {Error} 500 - Returns an error if the brand or logo creation fails.
  */
 export const postNewBrand = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	let createdAttachmentError: Error | null;
-	let createdAttachment: IAttachmentDocument | undefined;
+	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.logo) {
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.logo,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.logo,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdAttachmentError) return next(createdAttachmentError);
+		if (createdAttachmentError) {
+			handleTransactionError(session);
+			return next(createdAttachmentError);
+		}
 	}
 
 	const [createdBrandError, createdBrand] = await to(
-		Brand.create({
-			...(req.body || {}),
-			...(createdAttachment?._id ? { logo: createdAttachment._id } : {}),
-		})
+		Brand.create(
+			[
+				{
+					...(req.body || {}),
+					...(createdAttachment?.[0]?._id ? { logo: createdAttachment[0]._id } : {}),
+				},
+			],
+			{ session }
+		)
 	);
-	if (createdBrandError) return next(createdBrandError);
+	if (createdBrandError) {
+		handleTransactionError(session);
+		return next(createdBrandError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Brand created successfully.");
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdBrand },
+			entities: { data: createdBrand?.[0] || {} },
 			flashes: req.flash(),
 		})
 	);
@@ -266,6 +294,10 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
 export const updateSingleBrand = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { brand: brandIdentifier } = req.params || {};
 	let [brandError, brand] = await to(
 		Brand.findOneWithDeleted({
@@ -273,24 +305,32 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 				{ slug: brandIdentifier },
 				...(isMongoId(brandIdentifier) ? [{ _id: brandIdentifier }] : []),
 			],
-		})
+		}).session(session)
 	);
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) {
+		handleTransactionError(session);
+		return next(brandError || null);
+	}
 
 	let createdAttachmentError: Error | null;
-	let createdAttachment: IAttachmentDocument | undefined;
+	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.logo) {
 		const [brandAttachmentError, brandAttachment] = await to(
-			Attachment.findOne({ _id: brand?.logo })
+			Attachment.findOne({ _id: brand?.logo }).session(session)
 		);
-		if (brandAttachmentError) return next(brandAttachmentError);
+		if (brandAttachmentError) {
+			handleTransactionError(session);
+			return next(brandAttachmentError);
+		}
 
 		if (brandAttachment?._id) {
 			const [deletedBrandAttachmentError] = await to(
-				Attachment.deleteOne({ _id: brandAttachment._id })
+				Attachment.deleteOne({ _id: brandAttachment._id }).session(session)
 			);
-			if (deletedBrandAttachmentError) return next(deletedBrandAttachmentError);
+			if (deletedBrandAttachmentError) {
+				handleTransactionError(session);
+				return next(deletedBrandAttachmentError);
+			}
 
 			// delete file from disk if it exists
 			deleteFileFromDisk(brandAttachment.path);
@@ -298,23 +338,39 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.logo,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.logo,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdAttachmentError) return next(createdAttachmentError);
+		if (createdAttachmentError) {
+			handleTransactionError(session);
+			return next(createdAttachmentError);
+		}
 	}
 
 	brand = Object.assign(brand, {
 		...(req?.body || {}),
-		...(createdAttachment?._id ? { logo: createdAttachment._id } : {}),
+		...(createdAttachment?.[0]?._id ? { logo: createdAttachment[0]._id } : {}),
 	});
-	if (!brand) return next();
+	if (!brand) {
+		handleTransactionError(session);
+		return next();
+	}
 
-	const [saveError, newBrand] = await to(brand.save());
-	if (saveError) return next(saveError);
+	const [saveError, newBrand] = await to(brand.save({ session }));
+	if (saveError) {
+		handleTransactionError(session);
+		return next(saveError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(
