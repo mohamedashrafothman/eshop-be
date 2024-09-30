@@ -2,12 +2,18 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
+import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Category from "../models/Category";
 import StorageEngine from "../services/storage";
-import { deleteFileFromDisk, formatResponseObject, handleFileToUpload } from "../utils/helpers";
+import {
+	deleteFileFromDisk,
+	formatResponseObject,
+	handleFileToUpload,
+	handleTransactionError,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -121,37 +127,62 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
  * @throws {Error} 500 - Returns an error if the category or icon creation fails.
  */
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	let createdAttachmentError: Error | null;
-	let createdAttachment: IAttachmentDocument | undefined;
+	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.icon) {
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.icon,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.icon,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdAttachmentError) return next(createdAttachmentError);
+		if (createdAttachmentError) {
+			handleTransactionError(session);
+			return next(createdAttachmentError);
+		}
 	}
 
 	const [createdCategoryError, createdCategory] = await to(
-		Category.create({
-			...(req.body || {}),
-			...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
-		})
+		Category.create(
+			[
+				{
+					...(req.body || {}),
+					...(createdAttachment?.[0]?._id ? { icon: createdAttachment[0]._id } : {}),
+				},
+			],
+			{ session }
+		)
 	);
-	if (createdCategoryError) return next(createdCategoryError);
+	if (createdCategoryError) {
+		handleTransactionError(session);
+		return next(createdCategoryError);
+	}
 
-	if (req.body?.parent) {
+	if (req.body?.parent && createdCategory?.[0]?._id) {
 		const [updatedParentCategoryError] = await to(
 			Category.updateOne(
 				{ _id: req.body.parent },
-				{ $addToSet: { children: createdCategory._id } }
-			)
+				{ $addToSet: { children: createdCategory[0]._id } }
+			).session(session)
 		);
-		if (updatedParentCategoryError) return next(updatedParentCategoryError);
+		if (updatedParentCategoryError) {
+			handleTransactionError(session);
+			return next(updatedParentCategoryError);
+		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Category created successfully.");
 	res.status(httpStatus.CREATED).json(
@@ -277,6 +308,10 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
 export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { category: categoryIdentifier } = req.params || {};
 	let [categoryError, category] = await to(
 		Category.findOneWithDeleted({
@@ -284,24 +319,32 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 				{ slug: categoryIdentifier },
 				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),
 			],
-		})
+		}).session(session)
 	);
-	if (categoryError) return next(categoryError);
-	if (!category) return next();
+	if (categoryError || !category) {
+		handleTransactionError(session);
+		return next(categoryError || null);
+	}
 
 	let createdAttachmentError: Error | null;
-	let createdAttachment: IAttachmentDocument | undefined;
+	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.icon) {
 		const [categoryAttachmentError, categoryAttachment] = await to(
-			Attachment.findOne({ _id: category?.icon?._id || category?.icon })
+			Attachment.findOne({ _id: category?.icon?._id || category?.icon }).session(session)
 		);
-		if (categoryAttachmentError) return next(categoryAttachmentError);
+		if (categoryAttachmentError) {
+			handleTransactionError(session);
+			return next(categoryAttachmentError);
+		}
 
 		if (categoryAttachment?._id) {
 			const [deletedCategoryAttachmentError] = await to(
-				Attachment.deleteOne({ _id: categoryAttachment._id })
+				Attachment.deleteOne({ _id: categoryAttachment._id }).session(session)
 			);
-			if (deletedCategoryAttachmentError) return next(deletedCategoryAttachmentError);
+			if (deletedCategoryAttachmentError) {
+				handleTransactionError(session);
+				return next(deletedCategoryAttachmentError);
+			}
 
 			// delete file from disk if it exists
 			deleteFileFromDisk(categoryAttachment.path);
@@ -309,23 +352,39 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.icon,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.icon,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdAttachmentError) return next(createdAttachmentError);
+		if (createdAttachmentError) {
+			handleTransactionError(session);
+			return next(createdAttachmentError);
+		}
 	}
 
 	category = Object.assign(category, {
 		...(req?.body || {}),
-		...(createdAttachment?._id ? { icon: createdAttachment._id } : {}),
+		...(createdAttachment?.[0]?._id ? { icon: createdAttachment[0]._id } : {}),
 	});
-	if (!category) return next();
+	if (!category) {
+		handleTransactionError(session);
+		return next();
+	}
 
-	const [saveError, newCategory] = await to(category.save());
-	if (saveError) return next(saveError);
+	const [saveError, newCategory] = await to(category.save({ session }));
+	if (saveError) {
+		handleTransactionError(session);
+		return next(saveError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(

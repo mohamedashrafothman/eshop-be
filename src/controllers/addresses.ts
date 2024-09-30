@@ -3,9 +3,10 @@ import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
+import mongoose from "mongoose";
 import Address, { type IAddressDocument } from "../models/Address";
 import User from "../models/User";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -118,27 +119,52 @@ export const validator = (method: string) => {
  *   * @property {object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString()) {
+		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	const [userError, user] = await to(User.findOne({ _id: req.body.user }));
-	if (userError) return next(userError);
-	if (!user) return next();
+	const [userError, user] = await to(User.findOne({ _id: req.body.user }).session(session));
+	if (userError || !user) {
+		handleTransactionError(session);
+		return next(userError || null);
+	}
 
 	const [createdAddressError, createdAddress] = await to(
-		Address.create({
-			...(req?.body || {}),
-			default: Boolean(![...(user?.addresses || [])].length),
-		})
+		Address.create(
+			[
+				{
+					...(req?.body || {}),
+					default: Boolean(![...(user?.addresses || [])].length),
+				},
+			],
+			{ session }
+		)
 	);
-	if (createdAddressError) return next(createdAddressError);
+	if (createdAddressError) {
+		handleTransactionError(session);
+		return next(createdAddressError);
+	}
 
 	const [updatedUserError, _updatedUser] = await to(
-		User.updateOne({ _id: req.body.user }, { $addToSet: { addresses: createdAddress?._id } })
+		User.updateOne(
+			{ _id: req.body.user },
+			{ $addToSet: { addresses: createdAddress?.[0]?._id } }
+		).session(session)
 	);
-	if (updatedUserError) return next(updatedUserError);
+	if (updatedUserError) {
+		handleTransactionError(session);
+		return next(updatedUserError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Address created successfully.");
 	res.status(httpStatus.CREATED).json(
@@ -254,15 +280,24 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  *   * @property {object} entities.data - The updated address object.
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const isDefaultModified = "default" in req.body;
-	let [addressError, address] = await to(Address.findOne({ _id: req.params.address }));
-	if (addressError) return next(addressError);
-	if (!address) return next();
+	let [addressError, address] = await to(
+		Address.findOne({ _id: req.params.address }).session(session)
+	);
+	if (addressError || !address) {
+		handleTransactionError(session);
+		return next(addressError || null);
+	}
 
 	if (
 		req.user?.role === vars.auth.roles.user &&
 		address.user?.toString() !== req.user?._id?.toString()
 	) {
+		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -275,20 +310,27 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 			Address.find({
 				user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
 				_id: { $ne: req.params.address },
-			})
+			}).session(session)
 		);
-		if (addressesError) return next(addressesError);
-		if (addresses?.length === 0) {
-			req.flash("danger", "Cannot set the only address to non-default");
-			return next();
+		if (addressesError || !addresses?.length) {
+			handleTransactionError(session);
+			if (!addresses?.length)
+				req.flash("danger", "Cannot set the only address to non-default");
+			return next(addressesError || null);
 		}
 	}
 
 	address = Object.assign(address, { ...(req.body || {}) });
-	if (!address) return next();
+	if (!address) {
+		handleTransactionError(session);
+		return next();
+	}
 
-	const [saveError, newAddress] = await to(address.save());
-	if (saveError) return next(saveError);
+	const [saveError, newAddress] = await to(address.save({ session }));
+	if (saveError) {
+		handleTransactionError(session);
+		return next(saveError);
+	}
 
 	if (isDefaultModified) {
 		if (!Boolean(req.body.default)) {
@@ -300,9 +342,12 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 				Address.findOneAndUpdate(
 					{ _id: newDefaultAddress._id },
 					{ $set: { default: true } }
-				)
+				).session(session)
 			);
-			if (newDefaultAddressError) return next(newDefaultAddressError);
+			if (newDefaultAddressError) {
+				handleTransactionError(session);
+				return next(newDefaultAddressError);
+			}
 		} else {
 			const [updateManyError] = await to(
 				Address.updateMany(
@@ -311,11 +356,18 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 						_id: { $ne: req.params.address },
 					},
 					{ $set: { default: false } }
-				)
+				).session(session)
 			);
-			if (updateManyError) return next(updateManyError);
+			if (updateManyError) {
+				handleTransactionError(session);
+				return next(updateManyError);
+			}
 		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(
@@ -339,21 +391,32 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
  * @returns {object} 200 - Success response with a success message.
  */
 export const deleteSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
-	let [addressError, address] = await to(Address.findOne({ _id: req.params.address }));
-	if (addressError) return next(addressError);
-	if (!address) return next();
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	let [addressError, address] = await to(
+		Address.findOne({ _id: req.params.address }).session(session)
+	);
+	if (addressError || !address) {
+		handleTransactionError(session);
+		return next(addressError || null);
+	}
 
 	if (
 		req.user?.role === vars.auth.roles.user &&
 		address.user?.toString() !== req.user?._id?.toString()
 	) {
+		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	const [userError, user] = await to(User.findOne({ _id: address.user }));
-	if (userError) return next(userError);
-	if (!user) return next();
+	const [userError, user] = await to(User.findOne({ _id: address.user }).session(session));
+	if (userError || !user) {
+		handleTransactionError(session);
+		return next(userError || null);
+	}
 
 	let restOfUserAddresses: IAddressDocument[] = [
 		...((user.addresses as IAddressDocument[]).filter(
@@ -361,13 +424,19 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 		) || []),
 	];
 
-	if (restOfUserAddresses.length === 0) {
+	if (!restOfUserAddresses.length) {
+		handleTransactionError(session);
 		req.flash("danger", "Cannot delete the only address.");
 		return next();
 	}
 
-	const [deleteAddressError] = await to(Address.deleteById(address?._id, req?.user?._id));
-	if (deleteAddressError) return next(deleteAddressError);
+	const [deleteAddressError] = await to(
+		Address.deleteById(address?._id, req?.user?._id).session(session)
+	);
+	if (deleteAddressError) {
+		handleTransactionError(session);
+		return next(deleteAddressError);
+	}
 
 	if (address.default) {
 		const newDefaultAddress = [...(restOfUserAddresses || [])]?.sort(
@@ -375,10 +444,20 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 		)[0];
 
 		const [newDefaultAddressError] = await to(
-			Address.findOneAndUpdate({ _id: newDefaultAddress._id }, { $set: { default: true } })
+			Address.findOneAndUpdate(
+				{ _id: newDefaultAddress._id },
+				{ $set: { default: true } }
+			).session(session)
 		);
-		if (newDefaultAddressError) return next(newDefaultAddressError);
+		if (newDefaultAddressError) {
+			handleTransactionError(session);
+			return next(newDefaultAddressError);
+		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(

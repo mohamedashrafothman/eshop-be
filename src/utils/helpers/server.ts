@@ -1,7 +1,7 @@
 import { Request } from "express";
 import { ValidationError } from "express-validator";
 import _ from "lodash";
-import { Error, PaginateResult } from "mongoose";
+import { ClientSession, Error, PaginateResult } from "mongoose";
 import vars from "../vars";
 
 export type FormatResponseObjectType<T> = {
@@ -110,4 +110,9 @@ export const convertToDotNotation = (
 		}
 	}
 	return result;
+};
+
+export const handleTransactionError = async (session: ClientSession) => {
+	await session.abortTransaction();
+	session.endSession();
 };

@@ -2,6 +2,7 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
 import httpStatus from "http-status";
+import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isHexColor from "validator/lib/isHexColor";
 import isMongoId from "validator/lib/isMongoId";
@@ -11,7 +12,12 @@ import Brand, { IBrandDocument } from "../models/Brand";
 import Category, { ICategoryDocument } from "../models/Category";
 import Product from "../models/Product";
 import StorageEngine from "../services/storage";
-import { deleteFileFromDisk, formatResponseObject, handleFileToUpload } from "../utils/helpers";
+import {
+	deleteFileFromDisk,
+	formatResponseObject,
+	handleFileToUpload,
+	handleTransactionError,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 export const validator = (method: string) => {
@@ -213,79 +219,116 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
  * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
  */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	// upload images to storage
 	let createdThumbnailError: Error | null;
-	let createdThumbnail: IAttachmentDocument | undefined;
+	let createdThumbnail: IAttachmentDocument[] | undefined;
 	if (req.body?.thumbnail) {
 		[createdThumbnailError, createdThumbnail] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.thumbnail,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.thumbnail,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdThumbnailError) return next(createdThumbnailError);
+		if (createdThumbnailError) {
+			handleTransactionError(session);
+			return next(createdThumbnailError);
+		}
 	}
 
 	let createdImagesError: Error | null;
 	let createdImages: IAttachmentDocument[] | undefined;
 	if (req.body?.images && req.body.images.length) {
 		[createdImagesError, createdImages] = await to(
-			Promise.all(
+			Attachment.create(
 				req.body?.images.map((image: Express.Multer.File) =>
-					Attachment.create(
-						handleFileToUpload(
-							image,
-							`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-						)
+					handleFileToUpload(
+						image,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 					)
-				)
+				),
+				{ session }
 			)
 		);
-		if (createdImagesError) return next(createdImagesError);
+		if (createdImagesError) {
+			handleTransactionError(session);
+			return next(createdImagesError);
+		}
 	}
 
 	// create product
-	const thumbnail = createdThumbnail?._id || undefined;
+	const thumbnail = createdThumbnail?.[0]?._id || undefined;
 	const images = createdImages?.map(({ _id }) => _id) || [];
 	const [createdProductError, createdProduct] = await to(
-		Product.create({
-			...(req.body || {}),
-			...(thumbnail ? { thumbnail } : {}),
-			...(images?.length ? { images } : {}),
-			user: req.user?._id,
-		})
+		Product.create(
+			[
+				{
+					...(req.body || {}),
+					...(thumbnail ? { thumbnail } : {}),
+					...(images?.length ? { images } : {}),
+					user: req.user?._id,
+				},
+			],
+			{ session }
+		)
 	);
-	if (createdProductError) return next(createdProductError);
+	if (createdProductError) {
+		handleTransactionError(session);
+		return next(createdProductError);
+	}
 
 	// add product to category
 	let newCategory: ICategoryDocument | undefined;
 	let saveCategoryError: Error | null;
-	let [categoryError, category] = await to(Category.findOne({ _id: req.body.category }));
-	if (categoryError) return next(categoryError);
+	let [categoryError, category] = await to(
+		Category.findOne({ _id: req.body.category }).session(session)
+	);
+	if (categoryError) {
+		handleTransactionError(session);
+		return next(categoryError);
+	}
 	if (category) {
 		category = Object.assign(category, {
-			products: [...(category?.products || []), createdProduct?._id],
+			products: [...(category?.products || []), createdProduct?.[0]?._id],
 		});
-
-		[saveCategoryError, newCategory] = await to(category.save());
-		if (saveCategoryError) return next(saveCategoryError);
+		[saveCategoryError, newCategory] = await to(category.save({ session }));
+		if (saveCategoryError) {
+			handleTransactionError(session);
+			return next(saveCategoryError);
+		}
 	}
 
 	// add product to brand
 	let newBrand: IBrandDocument | undefined;
 	let saveBrandError: Error | null;
-	let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }));
-	if (brandError) return next(brandError);
+	let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }).session(session));
+	if (brandError) {
+		handleTransactionError(session);
+		return next(brandError);
+	}
 	if (brand) {
 		brand = Object.assign(brand, {
-			products: [...(brand?.products || []), createdProduct?._id],
+			products: [...(brand?.products || []), createdProduct?.[0]?._id],
 		});
 
-		[saveBrandError, newBrand] = await to(brand.save());
-		if (saveBrandError) return next(saveBrandError);
+		[saveBrandError, newBrand] = await to(brand.save({ session }));
+		if (saveBrandError) {
+			handleTransactionError(session);
+			return next(saveBrandError);
+		}
 	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
 
 	req.flash("success", "Product created successfully.");
 	res.status(httpStatus.CREATED).json(
@@ -293,7 +336,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 			status: httpStatus.CREATED,
 			entities: {
 				data: {
-					...(createdProduct?.toJSON() || {}),
+					...(createdProduct?.[0]?.toJSON() || {}),
 					...(newCategory && { category: newCategory }),
 					...(newBrand && { brand: newBrand }),
 				},
@@ -475,31 +518,50 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
  * @throws {Error} 404 - Product not found.
  */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
+	// Start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
 	const { product: productIdentifier } = req.params || {};
+
 	let [productError, product] = await to(
 		Product.findOneWithDeleted({
 			$or: [
 				{ slug: productIdentifier },
 				...(isMongoId(productIdentifier) ? [{ _id: productIdentifier }] : []),
 			],
-		})
+		}).session(session)
 	);
-	if (productError) return next(productError);
-	if (!product) return next();
+	if (productError) {
+		handleTransactionError(session);
+		return next(productError);
+	}
+	if (!product) {
+		handleTransactionError(session);
+		return next();
+	}
 
 	let createdThumbnailError: Error | null;
-	let createdThumbnail: IAttachmentDocument | undefined;
+	let createdThumbnail: IAttachmentDocument[] | undefined;
 	if (req.body?.thumbnail) {
 		const [productThumbnailError, productThumbnail] = await to(
-			Attachment.findOne({ _id: product?.thumbnail?._id || product?.thumbnail })
+			Attachment.findOne({ _id: product?.thumbnail?._id || product?.thumbnail }).session(
+				session
+			)
 		);
-		if (productThumbnailError) return next(productThumbnailError);
+		if (productThumbnailError) {
+			handleTransactionError(session);
+			return next(productThumbnailError);
+		}
 
 		if (productThumbnail?._id) {
 			const [deletedProductThumbnailError] = await to(
-				Attachment.deleteOne({ _id: productThumbnail._id })
+				Attachment.deleteOne({ _id: productThumbnail._id }).session(session)
 			);
-			if (deletedProductThumbnailError) return next(deletedProductThumbnailError);
+			if (deletedProductThumbnailError) {
+				handleTransactionError(session);
+				return next(deletedProductThumbnailError);
+			}
 
 			// delete file from disk if it exists
 			deleteFileFromDisk(productThumbnail.path);
@@ -507,13 +569,19 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 
 		[createdThumbnailError, createdThumbnail] = await to(
 			Attachment.create(
-				handleFileToUpload(
-					req.body.thumbnail,
-					`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-				)
+				[
+					handleFileToUpload(
+						req.body.thumbnail,
+						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
+					),
+				],
+				{ session }
 			)
 		);
-		if (createdThumbnailError) return next(createdThumbnailError);
+		if (createdThumbnailError) {
+			handleTransactionError(session);
+			return next(createdThumbnailError);
+		}
 	}
 
 	let createdImagesError: Error | null;
@@ -524,89 +592,132 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 				_id: {
 					$in: product?.images?.map((singleImage) => singleImage?._id || singleImage),
 				},
-			})
+			}).session(session)
 		);
-		if (productImagesError) return next(productImagesError);
+		if (productImagesError) {
+			handleTransactionError(session);
+			return next(productImagesError);
+		}
 
 		if (productImages?.length) {
-			const [deletedProductThumbnailError] = await to(
-				Attachment.delete({ _id: { $in: productImages.map((_id) => _id) } })
+			const [deletedProductImagesError] = await to(
+				Attachment.deleteMany({ _id: { $in: productImages.map((_id) => _id) } }).session(
+					session
+				)
 			);
-			if (deletedProductThumbnailError) return next(deletedProductThumbnailError);
+			if (deletedProductImagesError) {
+				handleTransactionError(session);
+				return next(deletedProductImagesError);
+			}
 
-			// delete file from disk if it exists
+			// delete files from disk if they exist
 			productImages?.forEach(({ path }) => path && deleteFileFromDisk(path));
 		}
 
-		[createdImagesError, createdImages] = await to(
-			Promise.all(
-				req.body?.images.map((image: Express.Multer.File) =>
-					Attachment.create(
-						handleFileToUpload(
-							image,
-							`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
-						)
-					)
-				)
+		const handledImages = req.body?.images.map((image: Express.Multer.File) =>
+			handleFileToUpload(
+				image,
+				`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 			)
 		);
-		if (createdImagesError) return next(createdImagesError);
+
+		[createdImagesError, createdImages] = await to(
+			Attachment.create(handledImages, { session })
+		);
+		if (createdImagesError) {
+			handleTransactionError(session);
+			return next(createdImagesError);
+		}
 	}
 
 	// update product's category if category is provided
-	let updatedProductCategoryError: Error | null;
 	if (req.body?.category && req.body.category !== product.category) {
 		const [categoryUpdateError] = await to(
-			Category.updateOne({ _id: product.category }, { $pull: { products: product._id } })
+			Category.updateOne(
+				{ _id: product.category },
+				{ $pull: { products: product._id } }
+			).session(session)
 		);
-		if (categoryUpdateError) return next(categoryUpdateError);
+		if (categoryUpdateError) {
+			handleTransactionError(session);
+			return next(categoryUpdateError);
+		}
 
-		let [categoryError, category] = await to(Category.findOne({ _id: req.body.category }));
-		if (categoryError) return next(categoryError);
+		let [categoryError, category] = await to(
+			Category.findOne({ _id: req.body.category }).session(session)
+		);
+		if (categoryError) {
+			handleTransactionError(session);
+			return next(categoryError);
+		}
 
 		if (category) {
 			category = Object.assign(category, {
 				products: [...(category?.products || []), product?._id],
 			});
 
-			[updatedProductCategoryError] = await to(category.save());
-			if (updatedProductCategoryError) return next(updatedProductCategoryError);
+			const [updatedProductCategoryError] = await to(category.save({ session }));
+			if (updatedProductCategoryError) {
+				handleTransactionError(session);
+				return next(updatedProductCategoryError);
+			}
 		}
 	}
 
 	// update product's brand if brand is provided
-	let updatedProductBrandError: Error | null;
 	if (req.body?.brand && req.body.brand !== product.brand) {
 		const [brandUpdateError] = await to(
-			Brand.updateOne({ _id: product.brand }, { $pull: { products: product._id } })
+			Brand.updateOne({ _id: product.brand }, { $pull: { products: product._id } }).session(
+				session
+			)
 		);
-		if (brandUpdateError) return next(brandUpdateError);
+		if (brandUpdateError) {
+			handleTransactionError(session);
+			return next(brandUpdateError);
+		}
 
-		let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }));
-		if (brandError) return next(brandError);
+		let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }).session(session));
+		if (brandError) {
+			handleTransactionError(session);
+			return next(brandError);
+		}
 
 		if (brand) {
 			brand = Object.assign(brand, {
 				products: [...(brand?.products || []), product?._id],
 			});
 
-			[updatedProductBrandError] = await to(brand.save());
-			if (updatedProductBrandError) return next(updatedProductBrandError);
+			const [updatedProductBrandError] = await to(brand.save({ session }));
+			if (updatedProductBrandError) {
+				handleTransactionError(session);
+				return next(updatedProductBrandError);
+			}
 		}
 	}
 
+	// update product with new data
 	product = Object.assign(product, {
 		...(req?.body || {}),
-		...(createdThumbnail?._id ? { thumbnail: createdThumbnail._id } : {}),
+		...(createdThumbnail?.[0]?._id ? { thumbnail: createdThumbnail[0]._id } : {}),
 		...(createdImages?.length ? { images: createdImages?.map(({ _id }) => _id) } : {}),
 	});
-	if (!product) return next();
+	if (!product) {
+		handleTransactionError(session);
+		return next();
+	}
 
-	const [saveError, newProduct] = await to(product.save());
-	if (saveError) return next(saveError);
+	const [saveError, newProduct] = await to(product.save({ session }));
+	if (saveError) {
+		handleTransactionError(session);
+		return next(saveError);
+	}
 
-	req.flash("success", "successfully updated.");
-	res.status(httpStatus.OK).json(
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash("success", "Product successfully updated.");
+	return res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: { ...(newProduct?.toJSON() || {}) } },
@@ -640,8 +751,7 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 			],
 		})
 	);
-	if (productError) return next(productError);
-	if (!product) return next();
+	if (productError || !product) return next(productError || null);
 
 	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?._id));
 	if (deleteProductError) return next(deleteProductError);
@@ -678,8 +788,7 @@ export const restoreSingleProduct = async (req: Request, res: Response, next: Ne
 	};
 
 	const [productError, product] = await to(Product.findOneWithDeleted(singleProductQuery));
-	if (productError) return next(productError);
-	if (!product) return next();
+	if (productError || !product) return next(productError || null);
 
 	const [restoreProductError] = await to(Product.restore(singleProductQuery));
 	if (restoreProductError) return next(restoreProductError);
