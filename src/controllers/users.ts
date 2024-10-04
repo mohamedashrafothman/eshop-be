@@ -134,7 +134,7 @@ export const validator = (method: string) => {
  *      * @property {string} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -245,7 +245,7 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -413,7 +413,7 @@ export const getCurrentAuthenticatedUser = async (
  *   * @property {object} entities.data - The updated user object.
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -525,7 +525,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -551,7 +551,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  * @returns {object} 200 - Success response with a success message.
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -590,7 +590,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 		return next(deleteTokenError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

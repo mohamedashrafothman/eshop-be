@@ -220,7 +220,7 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
  * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
  */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -337,7 +337,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -529,7 +529,7 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
  * @throws {Error} 404 - Product not found.
  */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -723,7 +723,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		return next(saveError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

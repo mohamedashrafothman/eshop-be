@@ -195,7 +195,7 @@ export const _passportGoogleStrategy = async (
 	profile: Profile,
 	done: GoogleVerifyCallback
 ) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -266,7 +266,7 @@ export const _passportGoogleStrategy = async (
 			return done(saveError);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -299,7 +299,7 @@ export const _passportGoogleStrategy = async (
 			return done(userError || null);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -344,7 +344,7 @@ export const _passportGoogleStrategy = async (
 		return done(newRefreshTokenError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -359,7 +359,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	profile,
 	done: (verifyError: Error | null, user?: Express.User | false, options?: IVerifyOptions) => void
 ) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -450,7 +450,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 			return done(saveError);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -483,7 +483,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 			return done(userError || null);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -540,7 +540,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 		return done(newRefreshTokenError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -594,7 +594,7 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  *   * @property {object} entities.data - The user data.
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -721,7 +721,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 			return next(newRefreshTokenError);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -846,7 +846,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 			return next(newRefreshTokenError);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -953,7 +953,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		return next(newRefreshTokenError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -984,7 +984,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  * @returns {object} 200 - Success response with a success message.
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1010,7 +1010,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
 		return next(updateUserError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1035,7 +1035,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  *   * @property {object} entities.data - The user data.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1147,7 +1147,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 			return next(newRefreshTokenError);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -1177,7 +1177,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  * @returns {object} 200 - Success response with a success message.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1214,7 +1214,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
 			return next(err);
 		}
 
-		// Commit the transaction
+		// commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -1241,7 +1241,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  *   * @property {object} entities.data - The data containing new tokens.
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1311,7 +1311,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
 				return next(newRefreshTokenError);
 			}
 
-			// Commit the transaction
+			// commit the transaction
 			await session.commitTransaction();
 			session.endSession();
 
@@ -1341,7 +1341,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  * @returns {object} 200 - Success response with a success message.
  */
 export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1428,7 +1428,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
 		return next(newEmailError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1451,7 +1451,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  * @returns {object} 200 - Success response with a success message.
  */
 export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1522,7 +1522,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 		return next(newEmailError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1545,7 +1545,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  * @returns {object} 200 - Success response with a success message.
  */
 export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1590,7 +1590,7 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
 		return next(deleteVerifyEmailTokenError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1614,7 +1614,7 @@ export const getResendEmailVerification = async (
 	res: Response,
 	next: NextFunction
 ) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1703,7 +1703,7 @@ export const getResendEmailVerification = async (
 		return next(newEmailError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

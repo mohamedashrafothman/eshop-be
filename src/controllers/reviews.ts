@@ -7,7 +7,6 @@ import mongoose from "mongoose";
 import Product, { type IProductDocument } from "../models/Product";
 import Review from "../models/Review";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
-import vars from "../utils/vars";
 
 export const validator = (method: string) => {
 	switch (method) {
@@ -37,7 +36,6 @@ export const validator = (method: string) => {
 					)
 					.toInt(),
 				body("product").notEmpty().withMessage("Product is required!"),
-				body("user").notEmpty().withMessage("User is required!"),
 			];
 		case "update":
 			return [
@@ -67,7 +65,6 @@ export const validator = (method: string) => {
 					)
 					.toInt(),
 				body("product").optional().notEmpty().withMessage("Product is required!"),
-				body("user").optional().notEmpty().withMessage("User is required!"),
 			];
 		default:
 			return [];
@@ -75,20 +72,19 @@ export const validator = (method: string) => {
 };
 
 export const postNewReview = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
-	const session = await mongoose.startSession();
-	session.startTransaction();
+	// TODO: add order functionality
 
-	if (
-		!req.user ||
-		([vars.auth.roles.user].includes(req.user.role) &&
-			req.body.user !== req.user._id?.toString())
-	) {
-		handleTransactionError(session);
+	// check if user logged in
+	if (!req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
+	// start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	// check if product exists
 	let existsProductError: Error | null;
 	let existsProduct: IProductDocument | undefined | null;
 	[existsProductError, existsProduct] = await to(
@@ -99,8 +95,9 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 		return next(existsProductError || null);
 	}
 
+	// check if review exists
 	const [existsReviewError, existsReview] = await to(
-		Review.findOne({ user: req.body.user, product: req.body.product }).session(session)
+		Review.findOne({ user: req.user._id, product: req.body.product }).session(session)
 	);
 	if (existsReviewError || existsReview) {
 		handleTransactionError(session);
@@ -113,7 +110,10 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 		);
 	}
 
-	const [createdReviewError, createdReview] = await to(Review.create([req.body], { session }));
+	// create review
+	const [createdReviewError, createdReview] = await to(
+		Review.create([{ ...(req.body || {}), user: req.user._id }], { session })
+	);
 	if (createdReviewError) {
 		handleTransactionError(session);
 		return next(createdReviewError);
@@ -142,7 +142,7 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 		return next(updateProductError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -156,12 +156,22 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 	);
 };
 
-export const getReviews = async (req: Request, res: Response, next: NextFunction) => {};
+export const getReviews = async (req: Request, res: Response, next: NextFunction) => {
+	// TODO: Implement get reviews functionality.
+};
 
-export const getSingleReview = async (req: Request, res: Response, next: NextFunction) => {};
+export const getSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+	// TODO: Implement get single review functionality.
+};
 
-export const updateSingleReview = async (req: Request, res: Response, next: NextFunction) => {};
+export const updateSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+	// TODO: Implement update single review functionality.
+};
 
-export const deleteSingleReview = async (req: Request, res: Response, next: NextFunction) => {};
+export const deleteSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+	// TODO: Implement delete single review functionality.
+};
 
-export const restoreSingleReview = async (req: Request, res: Response, next: NextFunction) => {};
+export const restoreSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+	// TODO: Implement restore single review functionality.
+};
