@@ -16,7 +16,11 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 		name: { type: String },
 		extname: { type: String },
 		base: { type: String },
-		alt: { type: String, maxlength: 150, default: "" },
+		alt: {
+			type: String,
+			maxlength: [150, "Alternative text can't be greater than 150 characters!"],
+			default: "",
+		},
 	},
 	{
 		toJSON: { versionKey: false, virtual: true },

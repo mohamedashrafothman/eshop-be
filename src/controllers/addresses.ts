@@ -123,7 +123,11 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
-	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString()) {
+	if (
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
+			req.body.user !== req.user._id?.toString())
+	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });

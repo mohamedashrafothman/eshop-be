@@ -18,7 +18,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			type: String,
 			trim: true,
 			index: true,
-			maxlength: 100,
+			maxlength: [100, "Name can't be greater than 100 characters!"],
 			required: [true, "Name is required!"],
 		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
@@ -26,27 +26,30 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			type: String,
 			trim: true,
 			index: true,
-			maxlength: 1000,
+			maxlength: [1000, "Description can't be greater than 1000 characters!"],
 			required: [true, "Description is required!"],
 		},
 		quantity: {
 			type: Number,
-			min: 0,
+			min: [0, "Quantity can't be less than 0!"],
 			default: 1,
-			validator: [isInt, "Quantity must be an integer number!"],
+			validator: [
+				(value: IProduct["quantity"]) => isInt(String(value)),
+				"Quantity must be an integer number!",
+			],
 		},
 		price: {
 			normal: {
 				type: Number,
 				index: 0,
 				default: 0,
-				min: 0,
+				min: [0, "Normal price can't be less than 0!"],
 				required: [true, "Normal price is required!"],
 			},
 			sale: {
 				type: Number,
 				default: null,
-				min: 0,
+				min: [0, "Sale price can't be less than 0!"],
 				validate: [
 					function (this: IProductDocument, value: IProduct["price"]["sale"]) {
 						return value === null || value === undefined || value < this.price.normal;
@@ -54,8 +57,17 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 					"Sale price must be less than normal price!",
 				],
 			},
-			discount: { type: Number, default: 0, min: 0 },
-			percentage: { type: Number, default: 0, min: 0, max: 100 },
+			discount: {
+				type: Number,
+				default: 0,
+				min: [0, "Discount price can't be less than 0!"],
+			},
+			percentage: {
+				type: Number,
+				default: 0,
+				min: [0, "Percentage price can't be less than 0!"],
+				max: [100, "Price percentage can't be greater than 5!"],
+			},
 		},
 		colors: [
 			{
@@ -83,7 +95,10 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 				ref: "Attachment",
 				default: [],
 				autopopulate: { select: "path alt" },
-				maxlength: vars.products.imagesMaxLength,
+				maxlength: [
+					vars.products.imagesMaxLength,
+					`Maximum ${vars.products.imagesMaxLength} images allowed!`,
+				],
 			},
 		],
 		thumbnail: {
@@ -97,16 +112,32 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			ref: "Brand",
 			index: true,
 			required: [true, "Brand is required!"],
-			autopopulate: { maxDepth: 1, select: "_id name slug description" },
+			autopopulate: { maxDepth: 1, select: "name slug description" },
 		},
 		category: {
 			type: Schema.Types.ObjectId,
 			ref: "Category",
 			index: true,
 			required: [true, "Category is required!"],
-			autopopulate: { maxDepth: 1, select: "_id name slug description" },
+			autopopulate: { maxDepth: 1, select: "name slug description" },
 		},
 		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
+		reviews: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: "Review",
+				default: [],
+				autopopulate: { maxDepth: 1, select: "title slug rating comment" },
+			},
+		],
+		averageRating: {
+			type: Number,
+			default: 0,
+			min: [0, "Average rating can't be less than 0!"],
+			max: [5, "Average rating can't be greater than 5!"],
+			index: true,
+		},
+		reviewCount: { type: Number, default: 0, index: true },
 	},
 	{
 		toJSON: { versionKey: false, virtual: true },

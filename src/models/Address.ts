@@ -11,7 +11,12 @@ export type IAddressModel = Model<IAddressDocument>;
 // schema definition
 const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Schema(
 	{
-		name: { type: String, trim: true, maxlength: 100, required: [true, "Name is required!"] },
+		name: {
+			type: String,
+			trim: true,
+			maxlength: [100, "Name can't be greater than 100 characters!"],
+			required: [true, "Name is required!"],
+		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		street: { type: String, trim: true, required: [true, "Street is required!"] },
 		building: { type: Number, required: [true, "Building is required!"] },
