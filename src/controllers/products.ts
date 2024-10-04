@@ -1,6 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body } from "express-validator";
+import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -219,9 +220,19 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
  * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
  */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
+
+	if (
+		!req.user ||
+		([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role) &&
+			req.body.user !== req.user._id?.toString())
+	) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	// upload images to storage
 	let createdThumbnailError: Error | null;
@@ -274,7 +285,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 					...(req.body || {}),
 					...(thumbnail ? { thumbnail } : {}),
 					...(images?.length ? { images } : {}),
-					user: req.user?._id,
+					user: req.user._id,
 				},
 			],
 			{ session }
@@ -297,7 +308,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 	}
 	if (category) {
 		category = Object.assign(category, {
-			products: [...(category?.products || []), createdProduct?.[0]?._id],
+			products: [...(category.products || []), createdProduct[0]._id],
 		});
 		[saveCategoryError, newCategory] = await to(category.save({ session }));
 		if (saveCategoryError) {
@@ -316,7 +327,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 	}
 	if (brand) {
 		brand = Object.assign(brand, {
-			products: [...(brand?.products || []), createdProduct?.[0]?._id],
+			products: [...(brand.products || []), createdProduct[0]._id],
 		});
 
 		[saveBrandError, newBrand] = await to(brand.save({ session }));
@@ -326,7 +337,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -336,7 +347,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 			status: httpStatus.CREATED,
 			entities: {
 				data: {
-					...(createdProduct?.[0]?.toJSON() || {}),
+					...(createdProduct[0].toJSON() || {}),
 					...(newCategory && { category: newCategory }),
 					...(newBrand && { brand: newBrand }),
 				},
@@ -518,7 +529,7 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
  * @throws {Error} 404 - Product not found.
  */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -712,7 +723,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		return next(saveError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

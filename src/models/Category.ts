@@ -15,13 +15,13 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 			type: String,
 			trim: true,
 			index: true,
-			maxlength: 100,
+			maxlength: [100, "Name can't be greater than 100 characters!"],
 			required: [true, "Name is required!"],
 		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		description: {
 			type: String,
-			maxlength: 1000,
+			maxlength: [1000, "Description can't be greater than 1000 characters!"],
 			required: [true, "Description is required!"],
 		},
 		icon: {

@@ -9,7 +9,6 @@ import vars from "../utils/vars";
 
 mongoose.Promise = global.Promise;
 mongoose.connect(vars.db.url, {});
-console.log("vars.db.url: ", vars.db.url);
 mongoose.plugin(MongooseDelete, {
 	deletedAt: true,
 	deletedBy: true,
@@ -36,3 +35,14 @@ mongoose.connection
 		);
 		process.exit();
 	});
+
+// register models
+import "../models/Attachment";
+import "../models/Brand";
+import "../models/Category";
+import "../models/Email";
+import "../models/Product";
+import "../models/Review";
+import "../models/Session";
+import "../models/Token";
+import "../models/User";

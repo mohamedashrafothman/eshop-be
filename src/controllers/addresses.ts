@@ -119,11 +119,15 @@ export const validator = (method: string) => {
  *   * @property {object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
-	if (req.user?.role === vars.auth.roles.user && req.body.user !== req.user?._id?.toString()) {
+	if (
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
+			req.body.user !== req.user._id?.toString())
+	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -162,7 +166,7 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
 		return next(updatedUserError);
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -280,7 +284,7 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  *   * @property {object} entities.data - The updated address object.
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -365,7 +369,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -391,7 +395,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
  * @returns {object} 200 - Success response with a success message.
  */
 export const deleteSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
-	// Start transaction
+	// start transaction
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -455,7 +459,7 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	// Commit the transaction
+	// commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

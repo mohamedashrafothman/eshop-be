@@ -5,6 +5,7 @@ import authRouter from "./auth";
 import brandsRouter from "./brands";
 import categoriesRouter from "./categories";
 import productsRouter from "./products";
+import reviewsRouter from "./reviews";
 import usersRouter from "./users";
 
 // defining express router
@@ -17,6 +18,7 @@ router.use("/addresses", authController.passportJWTAuthenticate, addressesRouter
 router.use("/categories", categoriesRouter);
 router.use("/brands", brandsRouter);
 router.use("/products", productsRouter);
+router.use("/reviews", reviewsRouter);
 
 // exporting router
 export default router;
