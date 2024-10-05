@@ -677,24 +677,14 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		}
 
 		const accessToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.accessTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 		);
 		const refreshToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 		);
 
 		const [newRefreshTokenError] = await to(
@@ -768,24 +758,14 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		}
 
 		const accessToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.accessTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 		);
 		const refreshToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 		);
 
 		const [userRefreshTokenError, userRefreshToken] = await to(
@@ -921,16 +901,12 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 	const accessToken = jsonwebtoken.sign(
 		{ sub: newUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 		vars.auth.strategies.jwt.accessTokenSecret,
-		{
-			expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m`,
-		}
+		{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 	);
 	const refreshToken = jsonwebtoken.sign(
 		{ sub: newUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 		vars.auth.strategies.jwt.refreshTokenSecret,
-		{
-			expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
-		}
+		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 	);
 
 	const [newRefreshTokenError] = await to(
@@ -1070,24 +1046,14 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		}
 
 		const accessToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.accessTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 		);
 		const refreshToken = jsonwebtoken.sign(
-			{
-				sub: user._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{
-				expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
-			}
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 		);
 
 		const [userRefreshTokenError, userRefreshToken] = await to(
@@ -1282,7 +1248,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
 			const refreshToken = jsonwebtoken.sign(
 				{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
 				vars.auth.strategies.jwt.refreshTokenSecret,
-				{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
+				{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 			);
 
 			const [newRefreshTokenError] = await to(

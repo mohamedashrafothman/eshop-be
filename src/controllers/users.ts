@@ -204,20 +204,14 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 
 	if (!req.isAuthenticated()) {
 		accessToken = jsonwebtoken.sign(
-			{
-				sub: createdUser[0]._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.accessTokenSecret,
 			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
 		);
 		refreshToken = jsonwebtoken.sign(
-			{
-				sub: createdUser[0]._id.toString(),
-				iat: Math.floor(Date.now() / 1000),
-			},
+			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
 		);
 
 		const [newRefreshTokenError] = await to(
