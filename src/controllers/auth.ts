@@ -397,19 +397,14 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 					}
 				: {}),
 			...(!user?.picture
-				? {
-						picture: `https://graph.facebook.com/${profile.id}/picture?type=large`,
-					}
+				? { picture: `https://graph.facebook.com/${profile.id}/picture?type=large` }
 				: {}),
 			emailVerified: true,
 			active: true,
 		});
 
 		const [tokenError, token] = await to(
-			Token.findOne({
-				user: user._id,
-				kind: vars.tokenTypes.facebook,
-			}).session(session)
+			Token.findOne({ user: user._id, kind: vars.tokenTypes.facebook }).session(session)
 		);
 		if (tokenError) {
 			handleTransactionError(session);
