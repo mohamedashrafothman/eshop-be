@@ -17,7 +17,10 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 		product: {
 			type: Schema.Types.ObjectId,
 			ref: "Product",
-			autopopulate: { maxDepth: 2, select: "name slug thumbnail colors sizes price" },
+			autopopulate: {
+				maxDepth: 2,
+				select: "name slug thumbnail colors sizes price quantity",
+			},
 		},
 		color: { type: String, index: true, required: [true, "Color name is required!"] },
 		size: {

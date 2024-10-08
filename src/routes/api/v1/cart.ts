@@ -9,23 +9,19 @@ const router = Router();
 // endpoints
 router
 	.route("/")
-	.all(allowMethods(["post"]))
-	.post(cartController.validator("add"), unprocessableEntityValidator, cartController.addToCart);
+	.all(allowMethods(["post", "get", "delete"]))
+	.get(cartController.getSingleCart)
+	.post(cartController.validator("add"), unprocessableEntityValidator, cartController.addToCart)
+	.delete(cartController.emptyCart);
 
 router
-	.route("/:cart")
-	.all(allowMethods(["get", "patch", "delete"]))
-	.get(cartController.getSingleCart)
+	.route("/:cartItem")
+	.all(allowMethods(["patch", "delete"]))
 	.patch(
 		cartController.validator("update"),
 		unprocessableEntityValidator,
 		cartController.updateCart
 	)
-	.delete(cartController.emptyCart);
-
-router
-	.route("/:cart/:product")
-	.all(allowMethods(["delete"]))
 	.delete(cartController.removeFromCart);
 
 // exporting router

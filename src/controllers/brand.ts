@@ -104,7 +104,6 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
 	});
 
 	imageUpload.single("logo")(req, res, async (err) => {
-		console.log("req.file: ", req.file);
 		if (err) return next(err);
 		if (req.file) req.body.logo = req.file;
 		next();
@@ -231,7 +230,7 @@ export const getBrands = async (req: Request, res: Response, next: NextFunction)
 
 	const { docs, ...pagination } = paginatedBrands;
 
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: {

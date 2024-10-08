@@ -1556,7 +1556,7 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
 	session.endSession();
 
 	req.flash("success", "Your account has been Verified");
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			flashes: req.flash(),

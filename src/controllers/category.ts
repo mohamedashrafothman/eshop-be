@@ -245,7 +245,7 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 
 	const { docs, ...pagination } = paginatedCategories;
 
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: {

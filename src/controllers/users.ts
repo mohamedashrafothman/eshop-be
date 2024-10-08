@@ -320,7 +320,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 
 	const { docs, ...pagination } = paginatedUsers;
 
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: {
