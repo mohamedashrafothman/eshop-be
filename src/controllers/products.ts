@@ -463,7 +463,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 
 	const { docs, ...pagination } = paginatedProducts;
 
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: [...(docs || [])], meta: { pagination, sort } },
@@ -728,7 +728,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 	session.endSession();
 
 	req.flash("success", "Product successfully updated.");
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: { ...(newProduct?.toJSON() || {}) } },

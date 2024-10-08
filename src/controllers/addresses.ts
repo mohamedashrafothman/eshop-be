@@ -228,7 +228,7 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
 
 	const { docs, ...pagination } = paginatedAddresses;
 
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: {

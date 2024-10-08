@@ -397,19 +397,14 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 					}
 				: {}),
 			...(!user?.picture
-				? {
-						picture: `https://graph.facebook.com/${profile.id}/picture?type=large`,
-					}
+				? { picture: `https://graph.facebook.com/${profile.id}/picture?type=large` }
 				: {}),
 			emailVerified: true,
 			active: true,
 		});
 
 		const [tokenError, token] = await to(
-			Token.findOne({
-				user: user._id,
-				kind: vars.tokenTypes.facebook,
-			}).session(session)
+			Token.findOne({ user: user._id, kind: vars.tokenTypes.facebook }).session(session)
 		);
 		if (tokenError) {
 			handleTransactionError(session);
@@ -1561,7 +1556,7 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
 	session.endSession();
 
 	req.flash("success", "Your account has been Verified");
-	return res.status(httpStatus.OK).json(
+	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
 			flashes: req.flash(),

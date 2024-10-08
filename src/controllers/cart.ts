@@ -1,0 +1,527 @@
+import to from "await-to-js";
+import { NextFunction, Request, Response } from "express";
+import { body } from "express-validator";
+import createError, { HttpError } from "http-errors";
+import httpStatus from "http-status";
+import mongoose, { Types } from "mongoose";
+import ICartItem from "../interfaces/CartItem.interface";
+import Cart, { ICartDocument } from "../models/Cart";
+import CartItem, { ICartItemDocument } from "../models/CartItem";
+import Product, { IProductDocument } from "../models/Product";
+import { formatResponseObject, handleTransactionError } from "../utils/helpers";
+
+export const validator = (method: string) => {
+	switch (method) {
+		case "add":
+			return [
+				body("product")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("You must supply a product id!"),
+				body("quantity")
+					.isNumeric()
+					.withMessage("You must supply a quantity!")
+					.isInt({ min: 1 })
+					.withMessage("quantity must be an integer greater than or equal 1!")
+					.toInt(),
+				body("color").trim().escape().notEmpty().withMessage("You must supply a color!"),
+				body("size").trim().escape().notEmpty().withMessage("You must supply a size!"),
+			];
+		case "update":
+			return [
+				body("quantity")
+					.isNumeric()
+					.withMessage("You must supply a quantity!")
+					.isInt({ min: 1 })
+					.withMessage("quantity must be an integer greater than or equal 1!")
+					.toInt(),
+			];
+		default:
+			return [];
+	}
+};
+
+/**
+ * @summary Checks the product stock availability.
+ * @description Validates if the product has sufficient stock to fulfill the requested quantity. It ensures that the product has a defined quantity, is not out of stock, and has enough items available in the stock for the given quantity.
+ *
+ * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
+ * @param {number} [quantity=0] - The requested quantity to check against the product's stock.
+ *
+ * @returns {HttpError|null} - Returns an error if the product has no stock quantity, is out of stock, or the requested quantity exceeds the available stock. Returns `null` if there are no issues.
+ * @throws {Error} 500 - Returns an error if the product object does not contain a valid quantity field.
+ * @throws {Error} 400 - Returns an error if the product is out of stock or does not have enough stock to fulfill the request.
+ */
+const _checkProductStock = (
+	product: Partial<IProductDocument>,
+	quantity: number = 0
+): HttpError | null => {
+	// check if product has quantity
+	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
+		return createError(httpStatus.INTERNAL_SERVER_ERROR, "passed product has no quantity");
+
+	// check if product is out of stock
+	if (product.quantity === 0)
+		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
+
+	// check if there's enough product quantity in the stock
+	if (product.quantity - quantity < 0)
+		return createError(
+			httpStatus.BAD_REQUEST,
+			"There're no enough product quantity in the stock"
+		);
+
+	// no error
+	return null;
+};
+
+/**
+ * @summary Adds a product to the user's cart.
+ * @description Handles adding a product to the user's cart. If the cart does not exist, a new cart and cart item are created. If the product already exists in the cart, the quantity is updated. The method checks product stock before performing any updates, and all operations are performed within a MongoDB transaction to ensure data consistency.
+ *
+ * @param {Object} req - Express request object containing user and product details.
+ * @param {Object} req.user - The logged-in user object.
+ * @param {Object} req.body - Request body containing product details.
+ * @param {string} req.body.product - The ID of the product to add to the cart.
+ * @param {number} req.body.quantity - The quantity of the product to add.
+ * @param {string} req.body.color - The color of the product.
+ * @param {string} req.body.size - The size of the product.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 201 - Success response indicating the product was added to the cart.
+ * @property {Object} res.body.data - The updated or newly created cart data.
+ * @throws {Error} 400 - Returns an error if the product is out of stock or if the request data is invalid.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the product or cart is not found.
+ */
+export const addToCart = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	const { product, quantity, color, size } = req.body;
+
+	const [existsProductError, existsProduct] = await to(
+		Product.findOne({
+			_id: product,
+			sizes: { $in: [size] },
+			$or: [{ "colors.name": color }, { "colors.value": color }],
+		}).session(session)
+	);
+	if (existsProductError || !existsProduct) {
+		handleTransactionError(session);
+		return next(existsProductError || null);
+	}
+
+	// check if cart exists
+	let carts: ICartDocument[] | undefined;
+	let cartsError: Error | null;
+	[cartsError, carts] = await to(Cart.find({ user: req.user._id }).session(session));
+	if (cartsError) {
+		handleTransactionError(session);
+		return next(cartsError);
+	}
+
+	// handle no cart
+	if (!carts || !carts.length) {
+		const noStockError = _checkProductStock(existsProduct?.toJSON(), quantity);
+		if (noStockError) {
+			handleTransactionError(session);
+			return next({ ...(noStockError || {}), status: noStockError.status });
+		}
+
+		// create cart item
+		const [cartItemError, cartItem] = await to(
+			CartItem.create([{ product, color, size, quantity }], { session })
+		);
+		if (cartItemError || !cartItem) {
+			handleTransactionError(session);
+			return next(cartItemError || null);
+		}
+
+		// create cart
+		const [newCartError, newCart] = await to(
+			Cart.create([{ user: req.user._id, items: [cartItem[0]._id] }], { session })
+		);
+		if (newCartError || !newCart) {
+			handleTransactionError(session);
+			return next(newCartError || null);
+		}
+
+		// commit the transaction
+		await session.commitTransaction();
+		session.endSession();
+
+		req.flash("success", "Product added to cart successfully.");
+		return res.status(httpStatus.CREATED).json(
+			formatResponseObject({
+				status: httpStatus.CREATED,
+				entities: { data: newCart[0].toJSON() },
+				flashes: req.flash(),
+			})
+		);
+	}
+
+	let cart = carts?.[0] as ICartDocument;
+	let items = [...(cart?.items || [])] as ICartItem[];
+	const itemIndex = items.findIndex(
+		(item) =>
+			(item?.product?._id && item.product._id?.toString() === product) ||
+			(Types.ObjectId.isValid(item?.product?.toString()) &&
+				item?.product?.toString() === product)
+	);
+
+	if (itemIndex > -1) {
+		let cartItem = items[itemIndex] as ICartItemDocument;
+		cartItem = Object.assign(cartItem, { quantity: cartItem.quantity + quantity });
+
+		const noStockError = _checkProductStock(existsProduct?.toJSON(), cartItem.quantity);
+		if (noStockError) {
+			handleTransactionError(session);
+			return next({ ...(noStockError || {}), status: noStockError.status });
+		}
+
+		const [saveCartItemError] = await to(cartItem.save({ session }));
+		if (saveCartItemError) {
+			handleTransactionError(session);
+			return next(saveCartItemError);
+		}
+
+		items = [
+			...(items.slice(0, itemIndex) || []),
+			cartItem._id,
+			...(items.slice(itemIndex + 1) || []),
+		] as ICartItem[];
+	} else {
+		const noStockError = _checkProductStock(existsProduct?.toJSON(), quantity);
+		if (noStockError) {
+			handleTransactionError(session);
+			return next({ ...(noStockError || {}), status: noStockError.status });
+		}
+
+		const [newCartItemError, newCartItem] = await to(
+			CartItem.create([{ product, color, size, quantity }], { session })
+		);
+		if (newCartItemError || !newCartItem) {
+			handleTransactionError(session);
+			return next(newCartItemError || null);
+		}
+
+		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
+	}
+
+	cart = Object.assign(cart, { items }) as ICartDocument;
+
+	const [saveCartError] = await to(cart.save({ session }));
+	if (saveCartError) {
+		handleTransactionError(session);
+		return next(saveCartError);
+	}
+
+	// commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash("success", "Product added to cart successfully.");
+	res.status(httpStatus.CREATED).json(
+		formatResponseObject({
+			status: httpStatus.CREATED,
+			entities: { data: cart.toJSON() },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Retrieves the current user's cart.
+ * @description Fetches the cart associated with the currently logged-in user. If no cart is found for the user, an empty object is returned. This method ensures the user is authenticated before proceeding to retrieve the cart.
+ *
+ * @param {Object} req - Express request object containing user details.
+ * @param {Object} req.user - The logged-in user object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with the user's cart data.
+ * @property {Object} res.body.data - The cart object, or an empty object if no cart exists for the user.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 500 - Returns an error if there is an issue retrieving the cart from the database.
+ */
+export const getSingleCart = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// get cart for current logged in user
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
+	if (cartError) return next(cartError);
+
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: { ...(cart?.toJSON() || {}) } },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Removes a product from the user's cart.
+ * @description Handles the removal of a specific product from the logged-in user's cart. The method checks for the user's authentication, verifies that the product exists in the cart, and then proceeds to remove it. If the cart becomes empty after the removal, the entire cart is deleted.
+ *
+ * @param {Object} req - Express request object containing parameters and user details.
+ * @param {Object} req.user - The logged-in user object.
+ * @param {string} req.params.cartItem - The ID of the cart item to remove.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response indicating the product was removed from the cart.
+ * @property {Object} res.body.data - The updated cart data, or an empty object if the cart was deleted.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ */
+export const removeFromCart = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	const { cartItem: cartItemId } = req.params;
+
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
+	if (cartError || !cart) {
+		handleTransactionError(session);
+		return next(cartError || null);
+	}
+
+	const cartItems = [...(cart?.items || [])].map((item) =>
+		(item?.id || item)?.toString()
+	) as string[];
+
+	if (!cartItems || !cartItems?.includes(cartItemId)) {
+		handleTransactionError(session);
+		return next();
+	}
+
+	const [cartItemError, cartItem] = await to(
+		CartItem.findOne({ _id: cartItemId }).session(session)
+	);
+	if (cartItemError || !cartItem) {
+		handleTransactionError(session);
+		return next(cartItemError || null);
+	}
+
+	const [deleteCartItemError] = await to(
+		CartItem.deleteOne({ _id: cartItem?._id }).session(session)
+	);
+	if (deleteCartItemError) {
+		handleTransactionError(session);
+		return next(deleteCartItemError);
+	}
+
+	const cartFilteredItems = cartItems.filter((item) => item && item !== cartItemId);
+	const isCartItemsEmpty = cartFilteredItems.length === 0;
+	let newCart: ICartDocument | null = null;
+
+	if (isCartItemsEmpty) {
+		const [deleteCartError] = await to(Cart.deleteOne({ _id: cart._id }).session(session));
+		if (deleteCartError) {
+			handleTransactionError(session);
+			return next(deleteCartError);
+		}
+	} else {
+		newCart = Object.assign(cart, { items: cartFilteredItems }) as ICartDocument;
+		const [saveCartError] = await to(newCart.save({ session }));
+		if (saveCartError) {
+			handleTransactionError(session);
+			return next(saveCartError);
+		}
+	}
+
+	// commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash("success", "Product removed from cart successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: newCart || {} },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Updates the quantity of a product in the user's cart.
+ * @description Handles the update of a specific cart item's quantity for the logged-in user. The method checks if the user is authenticated, verifies the existence of the cart item and the product's stock, and updates the quantity of the cart item. If the cart item exists in the cart, it is updated with the new quantity.
+ *
+ * @param {Object} req - Express request object containing parameters and user details.
+ * @param {Object} req.user - The logged-in user object.
+ * @param {string} req.params.cartItem - The ID of the cart item to update.
+ * @param {Object} req.body.quantity - The new quantity for the cart item.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response indicating the cart was updated successfully.
+ * @property {Object} res.body.data - The updated cart data.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the cart item or product does not exist.
+ * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ */
+export const updateCart = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	const { cartItem: cartItemId } = req.params;
+	const { quantity } = req.body;
+
+	const [cartItemError, cartItem] = await to(
+		CartItem.findOne({ _id: cartItemId }).populate("product").session(session)
+	);
+	if (cartItemError || !cartItem) {
+		handleTransactionError(session);
+		return next(cartItemError || null);
+	}
+
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
+	if (cartError || !cart) {
+		handleTransactionError(session);
+		return next(cartError || null);
+	}
+
+	const product = cartItem.product as IProductDocument;
+	const newCartItem = Object.assign(cartItem, { quantity });
+	let cartItems = [
+		...(cart.items?.map((item) => (item?._id || item)?.toString()) || []),
+	] as string[];
+	const itemIndex = cartItems.indexOf(cartItem?._id?.toString() || cartItem?._id || "");
+
+	const noStockError = _checkProductStock(product?.toJSON(), newCartItem.quantity);
+	if (noStockError) {
+		handleTransactionError(session);
+		return next({ ...(noStockError || {}), status: noStockError.status });
+	}
+
+	const [saveCartItemError] = await to(newCartItem.save({ session }));
+	if (saveCartItemError) {
+		handleTransactionError(session);
+		return next(saveCartItemError);
+	}
+
+	if (itemIndex <= -1) {
+		handleTransactionError(session);
+		return next();
+	}
+
+	cartItems = [
+		...(cartItems.slice(0, itemIndex) || []),
+		cartItem._id,
+		...(cartItems.slice(itemIndex + 1) || []),
+	] as string[];
+
+	const newCart = Object.assign(cart, { items: cartItems }) as ICartDocument;
+
+	const [saveCartError, updatedCart] = await to(newCart.save({ session }));
+	if (saveCartError) {
+		handleTransactionError(session);
+		return next(saveCartError);
+	}
+
+	// commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash("success", "Cart updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedCart.toJSON() },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Empties the user's cart.
+ * @description Clears all items from the cart of the currently logged-in user by deleting both the cart items and the cart document itself. The method checks if the user is authenticated and uses a transaction to ensure the atomicity of the deletion process.
+ *
+ * @param {Object} req - Express request object containing the logged-in user details.
+ * @param {Object} req.user - The logged-in user object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response indicating the cart was cleared successfully.
+ * @property {Object} res.body.data - Empty object after the cart is cleared.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the cart or cart items are not found.
+ * @throws {Error} 500 - Returns an error if there is an issue during the transaction or database operations.
+ */
+export const emptyCart = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// start transaction
+	const session = await mongoose.startSession();
+	session.startTransaction();
+
+	// get cart for current logged in user
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
+	if (cartError || !cart) {
+		handleTransactionError(session);
+		return next(cartError || null);
+	}
+
+	const cartItemsIds = [...(cart?.items || [])].map((item) => item?._id || item);
+	const [deleteCartItemsError] = await to(
+		CartItem.deleteMany({ _id: { $in: cartItemsIds } }).session(session)
+	);
+	if (deleteCartItemsError) {
+		handleTransactionError(session);
+		return next(deleteCartItemsError);
+	}
+
+	const [deleteCartError] = await to(Cart.deleteOne({ _id: cart._id }).session(session));
+	if (deleteCartError) {
+		handleTransactionError(session);
+		return next(deleteCartError);
+	}
+
+	// commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash("success", "Cart cleared successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: {} },
+			flashes: req.flash(),
+		})
+	);
+};
