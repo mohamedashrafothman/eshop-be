@@ -35,10 +35,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 		products: [{ type: Schema.Types.ObjectId, ref: "Product", default: [] }],
 		productsCount: { type: Number, default: 0 },
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 CategorySchema.pre("save", function (next) {

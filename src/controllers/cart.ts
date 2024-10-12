@@ -8,6 +8,7 @@ import ICartItem from "../interfaces/CartItem.interface";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Product, { IProductDocument } from "../models/Product";
+import Tax from "../models/Tax";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
 export const validator = (method: string) => {
@@ -44,7 +45,9 @@ export const validator = (method: string) => {
 
 /**
  * @summary Checks the product stock availability.
- * @description Validates if the product has sufficient stock to fulfill the requested quantity. It ensures that the product has a defined quantity, is not out of stock, and has enough items available in the stock for the given quantity.
+ * @description Validates if the product has sufficient stock to fulfill the requested quantity.
+ * It ensures that the product has a defined quantity, is not out of stock,
+ * and has enough items available in the stock for the given quantity.
  *
  * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
  * @param {number} [quantity=0] - The requested quantity to check against the product's stock.
@@ -77,24 +80,26 @@ const _checkProductStock = (
 };
 
 /**
- * @summary Adds a product to the user's cart.
- * @description Handles adding a product to the user's cart. If the cart does not exist, a new cart and cart item are created. If the product already exists in the cart, the quantity is updated. The method checks product stock before performing any updates, and all operations are performed within a MongoDB transaction to ensure data consistency.
+ * @summary Adds a product to the user's shopping cart.
+ * @description This method adds a product to the user's cart or creates a new cart if one does not exist.
+ * It handles product stock validation, cart item creation or update, and applies applicable taxes based on
+ * product categories or global tax rules. The method performs all operations within a transaction to ensure
+ * data integrity.
  *
- * @param {Object} req - Express request object containing user and product details.
- * @param {Object} req.user - The logged-in user object.
+ * @param {Object} req - Express request object.
  * @param {Object} req.body - Request body containing product details.
- * @param {string} req.body.product - The ID of the product to add to the cart.
+ * @param {string} req.body.product - The product ID to add to the cart.
  * @param {number} req.body.quantity - The quantity of the product to add.
  * @param {string} req.body.color - The color of the product.
  * @param {string} req.body.size - The size of the product.
+ * @param {Object} req.user - The currently logged-in user object.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 201 - Success response indicating the product was added to the cart.
- * @property {Object} res.body.data - The updated or newly created cart data.
- * @throws {Error} 400 - Returns an error if the product is out of stock or if the request data is invalid.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the product or cart is not found.
+ * @returns {void} 201 - Success response with the updated or created cart.
+ * @throws {Error} 400 - If the product is out of stock or if the requested product, size, or color is invalid.
+ * @throws {Error} 401 - If the user is not logged in.
+ * @throws {Error} 500 - If any database operation fails during the transaction.
  */
 export const addToCart = async (req: Request, res: Response, next: NextFunction) => {
 	// check if user logged in
@@ -147,9 +152,36 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			return next(cartItemError || null);
 		}
 
+		// get cart taxes
+		const [taxesError, taxes] = await to(
+			Tax.find({
+				$or: [
+					{ applicableToAllProducts: true },
+					{
+						applicableCategories: {
+							$in: [existsProduct?.category?._id || existsProduct?.category],
+						},
+					},
+				],
+			}).session(session)
+		);
+		if (taxesError) {
+			handleTransactionError(session);
+			return next(taxesError);
+		}
+
 		// create cart
 		const [newCartError, newCart] = await to(
-			Cart.create([{ user: req.user._id, items: [cartItem[0]._id] }], { session })
+			Cart.create(
+				[
+					{
+						user: req.user._id,
+						items: [cartItem[0]._id],
+						taxes: taxes?.map((tax) => tax?._id || tax),
+					},
+				],
+				{ session }
+			)
 		);
 		if (newCartError || !newCart) {
 			handleTransactionError(session);
@@ -218,7 +250,31 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
 	}
 
-	cart = Object.assign(cart, { items }) as ICartDocument;
+	const [taxesError, taxes] = await to(
+		Tax.find({
+			$or: [
+				{ applicableToAllProducts: true },
+				{
+					applicableCategories: {
+						$in: items?.map(
+							(item) =>
+								(item?.product as IProductDocument)?.category?._id ||
+								(item?.product as IProductDocument)?.category
+						),
+					},
+				},
+			],
+		}).session(session)
+	);
+	if (taxesError) {
+		handleTransactionError(session);
+		return next(taxesError);
+	}
+
+	cart = Object.assign(cart, {
+		items,
+		taxes: taxes?.map((tax) => tax?._id || tax),
+	}) as ICartDocument;
 
 	const [saveCartError] = await to(cart.save({ session }));
 	if (saveCartError) {
@@ -242,7 +298,9 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 
 /**
  * @summary Retrieves the current user's cart.
- * @description Fetches the cart associated with the currently logged-in user. If no cart is found for the user, an empty object is returned. This method ensures the user is authenticated before proceeding to retrieve the cart.
+ * @description Fetches the cart associated with the currently logged-in user.
+ * If no cart is found for the user, an empty object is returned. This method ensures
+ * the user is authenticated before proceeding to retrieve the cart.
  *
  * @param {Object} req - Express request object containing user details.
  * @param {Object} req.user - The logged-in user object.
@@ -275,19 +333,22 @@ export const getSingleCart = async (req: Request, res: Response, next: NextFunct
 };
 
 /**
- * @summary Removes a product from the user's cart.
- * @description Handles the removal of a specific product from the logged-in user's cart. The method checks for the user's authentication, verifies that the product exists in the cart, and then proceeds to remove it. If the cart becomes empty after the removal, the entire cart is deleted.
+ * @summary Removes a product from the user's shopping cart.
+ * @description This method removes a specific cart item from the user's cart. If it is the last item,
+ * the cart is deleted. It also handles reapplying applicable taxes to the cart if there are still items remaining.
+ * The method ensures all operations are executed within a transaction to maintain data integrity.
  *
- * @param {Object} req - Express request object containing parameters and user details.
- * @param {Object} req.user - The logged-in user object.
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Request parameters containing the cartItem ID to be removed.
  * @param {string} req.params.cartItem - The ID of the cart item to remove.
+ * @param {Object} req.user - The currently logged-in user object.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the product was removed from the cart.
- * @property {Object} res.body.data - The updated cart data, or an empty object if the cart was deleted.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @returns {void} 200 - Success response with the updated cart or an empty object if the cart is deleted.
+ * @throws {Error} 400 - If the cart item is not found or the user does not have permission to modify the cart.
+ * @throws {Error} 401 - If the user is not logged in.
+ * @throws {Error} 500 - If any database operation fails during the transaction.
  */
 export const removeFromCart = async (req: Request, res: Response, next: NextFunction) => {
 	// check if user logged in
@@ -308,11 +369,10 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 		return next(cartError || null);
 	}
 
-	const cartItems = [...(cart?.items || [])].map((item) =>
-		(item?.id || item)?.toString()
-	) as string[];
-
-	if (!cartItems || !cartItems?.includes(cartItemId)) {
+	if (
+		!cart?.items ||
+		!cart?.items?.map((item) => (item?._id || item).toString())?.includes(cartItemId)
+	) {
 		handleTransactionError(session);
 		return next();
 	}
@@ -333,7 +393,9 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 		return next(deleteCartItemError);
 	}
 
-	const cartFilteredItems = cartItems.filter((item) => item && item !== cartItemId);
+	const cartFilteredItems = cart?.items.filter(
+		(item) => (item?._id || item).toString() !== cartItemId
+	) as ICartItemDocument[];
 	const isCartItemsEmpty = cartFilteredItems.length === 0;
 	let newCart: ICartDocument | null = null;
 
@@ -344,7 +406,30 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 			return next(deleteCartError);
 		}
 	} else {
-		newCart = Object.assign(cart, { items: cartFilteredItems }) as ICartDocument;
+		const [taxesError, taxes] = await to(
+			Tax.find({
+				$or: [
+					{ applicableToAllProducts: true },
+					{
+						applicableCategories: {
+							$in: cartFilteredItems?.map(
+								(item) =>
+									(item?.product as IProductDocument)?.category?._id ||
+									(item?.product as IProductDocument)?.category
+							),
+						},
+					},
+				],
+			}).session(session)
+		);
+		if (taxesError) {
+			handleTransactionError(session);
+			return next(taxesError);
+		}
+		newCart = Object.assign(cart, {
+			items: cartFilteredItems?.map((item) => item?._id || item),
+			taxes: taxes.map((tax) => tax?._id || tax),
+		}) as ICartDocument;
 		const [saveCartError] = await to(newCart.save({ session }));
 		if (saveCartError) {
 			handleTransactionError(session);
@@ -368,7 +453,10 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 
 /**
  * @summary Updates the quantity of a product in the user's cart.
- * @description Handles the update of a specific cart item's quantity for the logged-in user. The method checks if the user is authenticated, verifies the existence of the cart item and the product's stock, and updates the quantity of the cart item. If the cart item exists in the cart, it is updated with the new quantity.
+ * @description Handles the update of a specific cart item's quantity for the logged-in user.
+ * The method checks if the user is authenticated, verifies the existence of the cart item
+ * and the product's stock, and updates the quantity of the cart item. If the cart item
+ * exists in the cart, it is updated with the new quantity.
  *
  * @param {Object} req - Express request object containing parameters and user details.
  * @param {Object} req.user - The logged-in user object.
@@ -384,7 +472,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
  * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
-export const updateCart = async (req: Request, res: Response, next: NextFunction) => {
+export const updateCartItem = async (req: Request, res: Response, next: NextFunction) => {
 	// check if user logged in
 	if (!req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -466,7 +554,9 @@ export const updateCart = async (req: Request, res: Response, next: NextFunction
 
 /**
  * @summary Empties the user's cart.
- * @description Clears all items from the cart of the currently logged-in user by deleting both the cart items and the cart document itself. The method checks if the user is authenticated and uses a transaction to ensure the atomicity of the deletion process.
+ * @description Clears all items from the cart of the currently logged-in user by deleting both
+ * the cart items and the cart document itself. The method checks if the user is authenticated
+ * and uses a transaction to ensure the atomicity of the deletion process.
  *
  * @param {Object} req - Express request object containing the logged-in user details.
  * @param {Object} req.user - The logged-in user object.

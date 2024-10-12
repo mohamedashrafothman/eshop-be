@@ -19,7 +19,7 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 			ref: "Product",
 			autopopulate: {
 				maxDepth: 2,
-				select: "name slug thumbnail colors sizes price quantity",
+				select: "name slug thumbnail colors sizes price quantity category",
 			},
 		},
 		color: { type: String, index: true, required: [true, "Color name is required!"] },

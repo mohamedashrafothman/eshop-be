@@ -310,7 +310,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 					{}),
 				...((isFilteredByActive && { active }) || {}),
 				...((isFilteredByEmailVerified && { emailVerified }) || {}),
-				...((isFilteredByDeleted && { deleted }) || {}),
+				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
 				_id: { $ne: req?.user?._id || "" },
 			},
 			{ ...query }

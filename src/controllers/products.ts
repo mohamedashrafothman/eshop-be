@@ -198,7 +198,7 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 				thumbnail: Express.Multer.File[];
 				images: Express.Multer.File[];
 			};
-			req.body = { ...req.body, thumbnail: thumbnail[0], images };
+			req.body = { ...req.body, thumbnail: thumbnail?.[0], images };
 		}
 		next();
 	});
@@ -224,11 +224,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
-	if (
-		!req.user ||
-		([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role) &&
-			req.body.user !== req.user._id?.toString())
-	) {
+	if (!req.user || ![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -416,7 +412,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					isFilteredByDeleted && { deleted }) ||
+					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
 					{}),
 				...(categories && categories.length && { category: { $in: categories } }),
 				...(brands && brands.length && { brand: { $in: brands } }),

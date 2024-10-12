@@ -220,7 +220,7 @@ export const getBrands = async (req: Request, res: Response, next: NextFunction)
 				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					isFilteredByDeleted && { deleted }) ||
+					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
 					{}),
 			},
 			{ ...query }

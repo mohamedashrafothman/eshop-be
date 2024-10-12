@@ -218,7 +218,7 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
 					})),
 				}) ||
 					{}),
-				...((isFilteredByDeleted && { deleted }) || {}),
+				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
 				user: { $ne: req?.user?._id || "" },
 			},
 			{ ...query }

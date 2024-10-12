@@ -9,6 +9,7 @@ import cartRouter from "./cart";
 import categoriesRouter from "./categories";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
+import taxesRouter from "./taxes";
 import usersRouter from "./users";
 
 // defining express router
@@ -26,6 +27,12 @@ router.use(
 	authController.passportJWTAuthenticate,
 	permission.check(vars.auth.roles.user),
 	cartRouter
+);
+router.use(
+	"/taxes",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	taxesRouter
 );
 router.use("/reviews", reviewsRouter);
 

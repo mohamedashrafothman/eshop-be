@@ -35,14 +35,3 @@ mongoose.connection
 		);
 		process.exit();
 	});
-
-// register models
-import "../models/Attachment";
-import "../models/Brand";
-import "../models/Category";
-import "../models/Email";
-import "../models/Product";
-import "../models/Review";
-import "../models/Session";
-import "../models/Token";
-import "../models/User";

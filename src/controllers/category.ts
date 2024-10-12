@@ -113,8 +113,9 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
 
 /**
  * @summary Creates a new category.
- * @description Handles the creation of a new category in the system. Optionally uploads and attaches a icon image if provided in the request.
- * If a icon image is provided, it will be uploaded and linked to the category. The category is then saved to the database.
+ * @description Handles the creation of a new category in the system.
+ * Optionally uploads and attaches a icon image if provided in the request. If a icon image is provided,
+ * it will be uploaded and linked to the category. The category is then saved to the database.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - The data for creating a new category. Optionally includes a `icon` file for category image.
@@ -196,7 +197,8 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
 
 /**
  * @summary Retrieves a paginated list of categories.
- * @description Fetches categories based on query parameters. Supports filtering by name, description, and deletion status. Also includes pagination and sorting options.
+ * @description Fetches categories based on query parameters. Supports filtering by name,
+ * description, and deletion status. Also includes pagination and sorting options.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
@@ -234,7 +236,7 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					isFilteredByDeleted && { deleted }) ||
+					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
 					{}),
 				parent: { $size: 0 },
 			},
@@ -258,7 +260,8 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 
 /**
  * @summary Retrieves a single category by identifier.
- * @description Fetches a category based on the provided identifier, which can be either a slug or an ObjectId. Handles errors and returns the category data if found.
+ * @description Fetches a category based on the provided identifier, which can be either
+ * a slug or an ObjectId. Handles errors and returns the category data if found.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
@@ -291,7 +294,9 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
 
 /**
  * @summary Updates a single category by identifier.
- * @description Updates a category based on the provided identifier, which can be a slug or an ObjectId. Handles icon updates by replacing existing icons and manages file deletions. Returns the updated category data upon success.
+ * @description Updates a category based on the provided identifier, which can be a slug or an ObjectId.
+ * Handles icon updates by replacing existing icons and manages file deletions. Returns the updated
+ * category data upon success.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
@@ -398,7 +403,8 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 
 /**
  * @summary Deletes a single category by identifier.
- * @description Deletes a category based on the provided identifier, which can be a slug or an ObjectId. Upon successful deletion, returns a success message.
+ * @description Deletes a category based on the provided identifier, which can be a slug or an ObjectId.
+ * Upon successful deletion, returns a success message.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
@@ -438,7 +444,8 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
 
 /**
  * @summary Restores a single category by identifier.
- * @description Restores a category that has been soft-deleted, based on the provided identifier, which can be a slug or an ObjectId. Upon successful restoration, returns a success message.
+ * @description Restores a category that has been soft-deleted, based on the provided identifier,
+ * which can be a slug or an ObjectId. Upon successful restoration, returns a success message.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.

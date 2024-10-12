@@ -121,7 +121,11 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			required: [true, "Category is required!"],
 			autopopulate: { maxDepth: 1, select: "name slug description" },
 		},
-		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
+		user: {
+			type: Schema.Types.ObjectId,
+			ref: "User",
+			required: [true, "User is required!"],
+		},
 		reviews: [
 			{
 				type: Schema.Types.ObjectId,

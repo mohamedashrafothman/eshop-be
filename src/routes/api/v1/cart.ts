@@ -20,7 +20,7 @@ router
 	.patch(
 		cartController.validator("update"),
 		unprocessableEntityValidator,
-		cartController.updateCart
+		cartController.updateCartItem
 	)
 	.delete(cartController.removeFromCart);
 
