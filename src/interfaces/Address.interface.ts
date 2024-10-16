@@ -14,6 +14,4 @@ export default interface Address {
 	zip?: string | null;
 	default: boolean;
 	user: Types.ObjectId | IUserDocument;
-	createdAt: Date;
-	updateAt: Date;
 }

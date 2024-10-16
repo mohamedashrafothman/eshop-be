@@ -4,7 +4,10 @@ import isInt from "validator/lib/isInt";
 import IReview from "../interfaces/Review.interface";
 
 // adding schema methods here
-export interface IReviewDocument extends SoftDeleteInterface, IReview, Document<string> {}
+export interface IReviewDocument extends SoftDeleteInterface, IReview, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IReviewModel = Model<IReviewDocument>;

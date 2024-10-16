@@ -9,6 +9,8 @@ import vars from "../utils/vars";
 
 // adding schema methods here
 export interface IUserDocument extends SoftDeleteInterface, IUser, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
 	comparePassword: (
 		password: string,
 		next: (err?: Error | null | boolean, check?: boolean | null | undefined) => any

@@ -9,6 +9,4 @@ export default interface Cart {
 	taxes: (Types.ObjectId | ITaxDocument)[];
 	subtotal: number;
 	total: number;
-	createdAt: Date;
-	updateAt: Date;
 }

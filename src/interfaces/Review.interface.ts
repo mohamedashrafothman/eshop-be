@@ -9,6 +9,4 @@ export default interface Review {
 	comment: string;
 	product: Types.ObjectId | IProductDocument;
 	user: Types.ObjectId | IUserDocument;
-	createdAt: Date;
-	updateAt: Date;
 }

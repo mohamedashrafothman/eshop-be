@@ -4,7 +4,10 @@ import IToken from "../interfaces/Token.interface";
 import vars from "../utils/vars";
 
 // adding schema methods here
-export interface ITokenDocument extends SoftDeleteInterface, IToken, Document<string> {}
+export interface ITokenDocument extends SoftDeleteInterface, IToken, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type ITokenModel = Model<ITokenDocument>;

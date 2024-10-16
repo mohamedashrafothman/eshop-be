@@ -9,6 +9,4 @@ export default interface Tax {
 	isPercentage: boolean;
 	applicableCategories: (Types.ObjectId | ICategoryDocument)[];
 	applicableToAllProducts: boolean;
-	createdAt: Date;
-	updateAt: Date;
 }

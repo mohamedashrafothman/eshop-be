@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICategory from "../interfaces/Category.interface";
 
 // adding schema methods here
-export interface ICategoryDocument extends SoftDeleteInterface, ICategory, Document<string> {}
+export interface ICategoryDocument extends SoftDeleteInterface, ICategory, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type ICategoryModel = Model<ICategoryDocument>;

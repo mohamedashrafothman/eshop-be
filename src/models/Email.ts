@@ -4,7 +4,10 @@ import isEmail from "validator/lib/isEmail.js";
 import IEmail from "../interfaces/Email.interface";
 
 // adding schema methods here
-export interface IEmailDocument extends SoftDeleteInterface, IEmail, Document<string> {}
+export interface IEmailDocument extends SoftDeleteInterface, IEmail, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IEmailModel = Model<IEmailDocument>;

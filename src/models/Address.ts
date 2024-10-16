@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IAddress from "../interfaces/Address.interface";
 
 // adding schema methods here
-export interface IAddressDocument extends SoftDeleteInterface, IAddress, Document<string> {}
+export interface IAddressDocument extends SoftDeleteInterface, IAddress, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IAddressModel = Model<IAddressDocument>;

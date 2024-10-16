@@ -5,6 +5,4 @@ export default interface Attachment {
 	extname: string;
 	base: string;
 	alt: string;
-	createdAt: Date;
-	updateAt: Date;
 }

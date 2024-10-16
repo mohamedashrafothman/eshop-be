@@ -12,6 +12,4 @@ export default interface Category {
 	children: (Types.ObjectId | ICategoryDocument)[];
 	products: (Types.ObjectId | IProductDocument)[];
 	productsCount: number;
-	createdAt: Date;
-	updateAt: Date;
 }

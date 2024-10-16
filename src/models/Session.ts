@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ISession from "../interfaces/Session.interface";
 
 // adding schema methods here
-export interface ISessionDocument extends SoftDeleteInterface, ISession, Document<string> {}
+export interface ISessionDocument extends SoftDeleteInterface, ISession, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type ISessionModel = Model<ISessionDocument>;

@@ -22,6 +22,4 @@ export default interface Product {
 	reviews: (Types.ObjectId | IReviewDocument)[];
 	averageRating: number;
 	reviewCount: number;
-	createdAt: Date;
-	updateAt: Date;
 }

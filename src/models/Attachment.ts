@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IAttachment from "../interfaces/Attachment.interface";
 
 // adding schema methods here
-export interface IAttachmentDocument extends SoftDeleteInterface, IAttachment, Document<string> {}
+export interface IAttachmentDocument extends SoftDeleteInterface, IAttachment, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IAttachmentModel = Model<IAttachmentDocument>;

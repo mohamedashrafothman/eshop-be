@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IBrand from "../interfaces/Brand.interface";
 
 // adding schema methods here
-export interface IBrandDocument extends SoftDeleteInterface, IBrand, Document<string> {}
+export interface IBrandDocument extends SoftDeleteInterface, IBrand, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IBrandModel = Model<IBrandDocument>;

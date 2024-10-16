@@ -9,6 +9,4 @@ export default interface Category {
 	logo?: Types.ObjectId | IAttachmentDocument;
 	products: (Types.ObjectId | IProductDocument)[];
 	productsCount: number;
-	createdAt: Date;
-	updateAt: Date;
 }

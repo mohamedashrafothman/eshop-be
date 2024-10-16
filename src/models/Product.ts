@@ -6,7 +6,10 @@ import IProduct from "../interfaces/Product.interface";
 import vars from "../utils/vars";
 
 // adding schema methods here
-export interface IProductDocument extends SoftDeleteInterface, IProduct, Document<string> {}
+export interface IProductDocument extends SoftDeleteInterface, IProduct, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type IProductModel = Model<IProductDocument>;

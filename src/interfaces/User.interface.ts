@@ -13,6 +13,4 @@ export default interface User {
 	google?: string;
 	facebook?: string;
 	addresses: (Types.ObjectId | IAddressDocument)[] | [];
-	createdAt: Date;
-	updateAt: Date;
 }

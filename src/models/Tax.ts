@@ -3,7 +3,10 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ITax from "../interfaces/Tax.interface";
 
 // adding schema methods here
-export interface ITaxDocument extends SoftDeleteInterface, ITax, Document<string> {}
+export interface ITaxDocument extends SoftDeleteInterface, ITax, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type ITaxModel = Model<ITaxDocument>;

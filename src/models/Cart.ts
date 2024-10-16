@@ -6,7 +6,10 @@ import { IProductDocument } from "./Product";
 import { ITaxDocument } from "./Tax";
 
 // adding schema methods here
-export interface ICartDocument extends SoftDeleteInterface, ICart, Document<string> {}
+export interface ICartDocument extends SoftDeleteInterface, ICart, Document<string> {
+	createdAt: Date;
+	updatedAt: Date;
+}
 
 // adding statics methods here
 export type ICartModel = Model<ICartDocument>;
