@@ -6,6 +6,7 @@ import ITax from "../interfaces/Tax.interface";
 export interface ITaxDocument extends SoftDeleteInterface, ITax, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

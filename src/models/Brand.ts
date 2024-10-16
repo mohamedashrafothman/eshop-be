@@ -6,6 +6,7 @@ import IBrand from "../interfaces/Brand.interface";
 export interface IBrandDocument extends SoftDeleteInterface, IBrand, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

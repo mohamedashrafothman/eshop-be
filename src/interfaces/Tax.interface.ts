@@ -3,7 +3,6 @@ import { ICategoryDocument } from "../models/Category";
 
 export default interface Tax {
 	name: string;
-	slug: string;
 	rate: number;
 	description?: string;
 	isPercentage: boolean;

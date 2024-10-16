@@ -8,7 +8,6 @@ import vars from "../utils/vars";
 
 export default interface Product {
 	name: string;
-	slug: string;
 	description: string;
 	price: { normal: number; sale?: number | null; discount: number; percentage: number };
 	quantity: number;

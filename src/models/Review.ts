@@ -7,6 +7,7 @@ import IReview from "../interfaces/Review.interface";
 export interface IReviewDocument extends SoftDeleteInterface, IReview, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

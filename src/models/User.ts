@@ -11,6 +11,7 @@ import vars from "../utils/vars";
 export interface IUserDocument extends SoftDeleteInterface, IUser, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 	comparePassword: (
 		password: string,
 		next: (err?: Error | null | boolean, check?: boolean | null | undefined) => any

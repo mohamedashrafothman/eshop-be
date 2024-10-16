@@ -6,6 +6,7 @@ import ICategory from "../interfaces/Category.interface";
 export interface ICategoryDocument extends SoftDeleteInterface, ICategory, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

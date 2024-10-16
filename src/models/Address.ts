@@ -6,6 +6,7 @@ import IAddress from "../interfaces/Address.interface";
 export interface IAddressDocument extends SoftDeleteInterface, IAddress, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

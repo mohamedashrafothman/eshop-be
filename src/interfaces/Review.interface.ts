@@ -4,7 +4,6 @@ import { IUserDocument } from "../models/User";
 
 export default interface Review {
 	title: string;
-	slug: string;
 	rating: number;
 	comment: string;
 	product: Types.ObjectId | IProductDocument;

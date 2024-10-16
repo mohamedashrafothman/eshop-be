@@ -3,7 +3,6 @@ import { IUserDocument } from "../models/User";
 
 export default interface Address {
 	name: string;
-	slug: string;
 	street: string;
 	building: number;
 	floor: number;

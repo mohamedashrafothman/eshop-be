@@ -9,6 +9,7 @@ import vars from "../utils/vars";
 export interface IProductDocument extends SoftDeleteInterface, IProduct, Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	slug: string;
 }
 
 // adding statics methods here

@@ -5,7 +5,6 @@ import { IProductDocument } from "../models/Product";
 
 export default interface Category {
 	name: string;
-	slug: string;
 	description: string;
 	icon: Types.ObjectId | IAttachmentDocument;
 	parent: (Types.ObjectId | ICategoryDocument)[];
