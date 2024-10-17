@@ -38,7 +38,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 						"Rating must be an integer greater than or equal 0 and less than or equal 5!"
 					)
 					.toInt(),
-				body("product").notEmpty().withMessage("Product is required!"),
+				body("product")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Product is required!"),
 			];
 		case "update":
 			return [
@@ -67,7 +71,12 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 						"Rating must be an integer greater than or equal 0 and less than or equal 5!"
 					)
 					.toInt(),
-				body("product").optional().notEmpty().withMessage("Product is required!"),
+				body("product")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Product is required!"),
 			];
 		default:
 			return [];

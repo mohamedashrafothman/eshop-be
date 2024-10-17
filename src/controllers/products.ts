@@ -88,8 +88,16 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.notEmpty()
 					.isArray()
 					.withMessage("at least one Image is required!"),
-				body("brand").notEmpty().withMessage("Brand is required!"),
-				body("category").notEmpty().withMessage("Category is required!"),
+				body("brand")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Brand is required!"),
+				body("category")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Category is required!"),
 			];
 		case "update":
 			return [
@@ -157,8 +165,18 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isArray()
 					.notEmpty()
 					.withMessage("at least one Image is required!"),
-				body("brand").optional().notEmpty().withMessage("Brand is required!"),
-				body("category").optional().notEmpty().withMessage("Category is required!"),
+				body("brand")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Brand is required!"),
+				body("category")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Category is required!"),
 			];
 		default:
 			return [];

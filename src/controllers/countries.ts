@@ -72,13 +72,15 @@ export const postNewCountry = async (
 	res: Response,
 	next: NextFunction
 ) => {
-	// Create a new country from the request body data, and if there was an error, return the error and end the request
+	// Create a new country from the request body data, and if there was an error,
+	// return the error and end the request
 	const [createdCountryError, createdCountry] = await to(
 		Country.create({ name: req.body.name, code: req.body.code })
 	);
 	if (createdCountryError) return next(createdCountryError);
 
-	// Set a flash message to indicate that the country was created successfully, and return the created country in the response
+	// Set a flash message to indicate that the country was created successfully,
+	// and return the created country in the response
 	req.flash("success", "Country created successfully.");
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
@@ -177,6 +179,7 @@ export const getCountries = async (
  *
  * @returns {void} 200 - Success response with the retrieved country.
  *   * @property {object} entities.data - The retrieved country object.
+ * @throws {Error} 404 - Returns an error if the country is not found.
  * @throws {Error} 500 - Returns an error if the country retrieval fails.
  */
 export const getSingleCountry = async (
@@ -187,7 +190,8 @@ export const getSingleCountry = async (
 	// Retrieve the country ID or slug from the request parameters
 	const { country: countryIdentifier } = req.params || {};
 
-	// Attempt to retrieve a country from the database with the given ID or slug, and if there was an error or no country was found, return the error and end the request
+	// Attempt to retrieve a country from the database with the given ID or slug,
+	// and if there was an error or no country was found, return the error and end the request
 	const [countryError, country] = await to(
 		Country.findOneWithDeleted({
 			$or: [
@@ -219,6 +223,7 @@ export const getSingleCountry = async (
  *
  * @returns {void} 200 - Success response with the updated country data.
  *   * @property {object} entities.data - The updated country object.
+ * @throws {Error} 404 - Returns an error if the country is not found.
  * @throws {Error} 500 - Returns an error if the country update fails.
  */
 export const updateSingleCountry = async (
@@ -229,7 +234,8 @@ export const updateSingleCountry = async (
 	// Extract country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
-	// Attempt to find the country by ID or slug, and if there is an error or no country is found, pass the error to the next middleware
+	// Attempt to find the country by ID or slug, and if there is an error or no country is found,
+	// pass the error to the next middleware
 	let [countryError, country] = await to(
 		Country.findOneWithDeleted({
 			$or: [
@@ -241,12 +247,16 @@ export const updateSingleCountry = async (
 	if (countryError || !country) return next(countryError);
 
 	// Merge the request body data into the existing country object
-	country = Object.assign(country, req.body);
+	country = Object.assign(country, {
+		...(req.body?.name && { name: req.body.name }),
+		...(req.body?.code && { code: req.body.code }),
+	});
 
 	// If the country is not found, pass control to the next middleware
 	if (!country) return next();
 
-	// Save the updated country object to the database, and if there is an error during saving, pass the error to the next middleware
+	// Save the updated country object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveError, newCountry] = await to(country.save());
 	if (saveError) return next(saveError);
 
@@ -284,7 +294,8 @@ export const deleteSingleCountry = async (
 	// Extract the country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
-	// Attempt to find the country by its ID or slug, and if there is an error or no country is found, pass the error to the next middleware
+	// Attempt to find the country by its ID or slug, and if there is an error or no country is found,
+	// pass the error to the next middleware
 	const [countryError, country] = await to(
 		Country.findOne({
 			$or: [
@@ -295,7 +306,8 @@ export const deleteSingleCountry = async (
 	);
 	if (countryError || !country) return next(countryError);
 
-	// Attempt to soft-delete the found country, and if there is an error during the deletion, pass the error to the next middleware
+	// Attempt to soft-delete the found country, and if there is an error during the deletion,
+	// pass the error to the next middleware
 	const [deleteCountryError] = await to(Country.deleteById(country._id, req?.user?._id));
 	if (deleteCountryError) return next(deleteCountryError);
 
@@ -337,11 +349,13 @@ export const restoreSingleCountry = async (
 		deleted: true, // only find soft-deleted countries
 	};
 
-	// Attempt to find the country by its ID or slug, and if there is an error or no country is found, pass the error to the next middleware
+	// Attempt to find the country by its ID or slug, and if there is an error or no country is found,
+	// pass the error to the next middleware
 	const [countryError, country] = await to(Country.findOneWithDeleted(singleCountryQuery));
 	if (countryError || !country) return next(countryError);
 
-	// Attempt to restore the found country, and if there is an error during the restoration, pass the error to the next middleware
+	// Attempt to restore the found country, and if there is an error during the restoration,
+	// pass the error to the next middleware
 	const [restoreCountryError] = await to(Country.restore(singleCountryQuery));
 	if (restoreCountryError) return next(restoreCountryError);
 

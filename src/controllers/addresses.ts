@@ -47,7 +47,13 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("You must supply a country!"),
 				body("city").trim().escape().notEmpty().withMessage("You must supply a city!"),
 				body("zip").trim().escape().optional(),
-				body("user").trim().escape().notEmpty().withMessage("You must supply a user!"),
+				body("user")
+					.trim()
+					.escape()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("You must supply a user!"),
 			];
 		case "update":
 			return [

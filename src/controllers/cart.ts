@@ -21,6 +21,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("product")
 					.trim()
 					.escape()
+					.isMongoId()
+					.withMessage("Invalid country id!")
 					.notEmpty()
 					.withMessage("You must supply a product id!"),
 				body("quantity")

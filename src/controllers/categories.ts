@@ -38,7 +38,12 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isLength({ max: 1000 })
 					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
-				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
+				body("parent")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("You must supply a parent!"),
 			];
 		case "update":
 			return [
@@ -59,7 +64,12 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isLength({ max: 1000 })
 					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
-				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
+				body("parent")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("You must supply a parent!"),
 			];
 		default:
 			return [];
