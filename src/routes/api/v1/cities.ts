@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as brandsController from "../../../controllers/brands";
+import * as citiesController from "../../../controllers/cities";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,38 +13,36 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, brandsController.getBrands)
+	.get(citiesController.getCities)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		brandsController.uploadBrandLogo,
-		brandsController.validator("create"),
+		citiesController.validator("create"),
 		unprocessableEntityValidator,
-		brandsController.postNewBrand
+		citiesController.postNewCity
 	);
 router
-	.route("/:brand")
+	.route("/:city")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(brandsController.getSingleBrand)
+	.get(citiesController.getSingleCity)
 	.patch(
-		brandsController.uploadBrandLogo,
-		brandsController.validator("update"),
+		citiesController.validator("update"),
 		unprocessableEntityValidator,
-		brandsController.updateSingleBrand
+		citiesController.updateSingleCity
 	)
-	.delete(brandsController.deleteSingleBrand);
+	.delete(citiesController.deleteSingleCity);
 router
-	.route("/:brand/restore")
+	.route("/:city/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(brandsController.restoreSingleBrand);
+	.patch(citiesController.restoreSingleCity);
 
 // exporting router
 export default router;

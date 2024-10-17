@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as brandsController from "../../../controllers/brands";
+import * as statesController from "../../../controllers/states";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,38 +13,37 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, brandsController.getBrands)
+	.get(statesController.getStates)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		brandsController.uploadBrandLogo,
-		brandsController.validator("create"),
+		statesController.validator("create"),
 		unprocessableEntityValidator,
-		brandsController.postNewBrand
+		statesController.postNewState
 	);
 router
-	.route("/:brand")
+	.route("/:state")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(brandsController.getSingleBrand)
+	.get(statesController.getSingleState)
 	.patch(
-		brandsController.uploadBrandLogo,
-		brandsController.validator("update"),
+		statesController.validator("update"),
 		unprocessableEntityValidator,
-		brandsController.updateSingleBrand
+		statesController.updateSingleState
 	)
-	.delete(brandsController.deleteSingleBrand);
+	.delete(statesController.deleteSingleState);
+
 router
-	.route("/:brand/restore")
+	.route("/:state/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(brandsController.restoreSingleBrand);
+	.patch(statesController.restoreSingleState);
 
 // exporting router
 export default router;

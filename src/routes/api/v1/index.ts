@@ -7,8 +7,11 @@ import authRouter from "./auth";
 import brandsRouter from "./brands";
 import cartRouter from "./cart";
 import categoriesRouter from "./categories";
+import citiesRouter from "./cities";
+import countriesRouter from "./countries";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
+import statesRouter from "./states";
 import taxesRouter from "./taxes";
 import usersRouter from "./users";
 
@@ -34,6 +37,9 @@ router.use(
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 	taxesRouter
 );
+router.use("/countries", countriesRouter);
+router.use("/states", statesRouter);
+router.use("/cities", citiesRouter);
 router.use("/reviews", reviewsRouter);
 
 // exporting router

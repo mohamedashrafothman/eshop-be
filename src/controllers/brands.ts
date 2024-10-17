@@ -266,8 +266,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
 			],
 		})
 	);
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError || null);
 
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, entities: { data: brand } })
@@ -406,8 +405,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 			],
 		})
 	);
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError || null);
 
 	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
@@ -444,8 +442,7 @@ export const restoreSingleBrand = async (req: Request, res: Response, next: Next
 	};
 
 	const [brandError, brand] = await to(Brand.findOneWithDeleted(singleBrandQuery));
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError || null);
 
 	const [restoreBrandError] = await to(Brand.restore(singleBrandQuery));
 	if (restoreBrandError) return next(restoreBrandError);

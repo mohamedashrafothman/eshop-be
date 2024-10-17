@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as brandsController from "../../../controllers/brands";
+import * as countriesController from "../../../controllers/countries";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,38 +13,38 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, brandsController.getBrands)
+	.get(countriesController.getCountries)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		brandsController.uploadBrandLogo,
-		brandsController.validator("create"),
+		countriesController.validator("create"),
 		unprocessableEntityValidator,
-		brandsController.postNewBrand
+		countriesController.postNewCountry
 	);
+
 router
-	.route("/:brand")
+	.route("/:country")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(brandsController.getSingleBrand)
+	.get(countriesController.getSingleCountry)
 	.patch(
-		brandsController.uploadBrandLogo,
-		brandsController.validator("update"),
+		countriesController.validator("update"),
 		unprocessableEntityValidator,
-		brandsController.updateSingleBrand
+		countriesController.updateSingleCountry
 	)
-	.delete(brandsController.deleteSingleBrand);
+	.delete(countriesController.deleteSingleCountry);
+
 router
-	.route("/:brand/restore")
+	.route("/:country/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(brandsController.restoreSingleBrand);
+	.patch(countriesController.restoreSingleCountry);
 
 // exporting router
 export default router;
