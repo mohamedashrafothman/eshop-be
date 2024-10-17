@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from "express";
+import { ValidationChain } from "express-validator";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [];

@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
@@ -9,7 +9,10 @@ import User from "../models/User";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -136,7 +139,7 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
 	const [userError, user] = await to(User.findOne({ _id: req.body.user }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	const [createdAddressError, createdAddress] = await to(
@@ -294,7 +297,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 	);
 	if (addressError || !address) {
 		handleTransactionError(session);
-		return next(addressError || null);
+		return next(addressError);
 	}
 
 	if (
@@ -320,7 +323,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
 			handleTransactionError(session);
 			if (!addresses?.length)
 				req.flash("danger", "Cannot set the only address to non-default");
-			return next(addressesError || null);
+			return next(addressesError);
 		}
 	}
 
@@ -404,7 +407,7 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 	);
 	if (addressError || !address) {
 		handleTransactionError(session);
-		return next(addressError || null);
+		return next(addressError);
 	}
 
 	if (
@@ -419,7 +422,7 @@ export const deleteSingleAddress = async (req: Request, res: Response, next: Nex
 	const [userError, user] = await to(User.findOne({ _id: address.user }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	let restOfUserAddresses: IAddressDocument[] = [

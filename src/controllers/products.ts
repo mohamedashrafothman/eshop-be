@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
@@ -21,7 +21,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -758,7 +761,7 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 			],
 		})
 	);
-	if (productError || !product) return next(productError || null);
+	if (productError || !product) return next(productError);
 
 	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?._id));
 	if (deleteProductError) return next(deleteProductError);
@@ -795,7 +798,7 @@ export const restoreSingleProduct = async (req: Request, res: Response, next: Ne
 	};
 
 	const [productError, product] = await to(Product.findOneWithDeleted(singleProductQuery));
-	if (productError || !product) return next(productError || null);
+	if (productError || !product) return next(productError);
 
 	const [restoreProductError] = await to(Product.restore(singleProductQuery));
 	if (restoreProductError) return next(restoreProductError);

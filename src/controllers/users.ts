@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
@@ -14,7 +14,10 @@ import emailService from "../services/email";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -430,7 +433,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 	);
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	if (reqBody?.email && user?.email) isEmailModified = reqBody.email !== user.email || false;
@@ -561,7 +564,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 	);
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id).session(session));
@@ -627,9 +630,6 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			flashes: req.flash(),
-		})
+		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
 	);
 };

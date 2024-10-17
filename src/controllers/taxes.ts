@@ -1,13 +1,16 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
 import Tax from "../models/Tax";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -224,7 +227,7 @@ export const updateSingleTax = async (req: Request, res: Response, next: NextFun
 	);
 	if (taxError || !tax) {
 		handleTransactionError(session);
-		return next(taxError || null);
+		return next(taxError);
 	}
 
 	tax = Object.assign(tax, { ...(req?.body || {}) });

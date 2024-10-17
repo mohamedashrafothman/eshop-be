@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -16,7 +16,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -266,7 +269,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
 			],
 		})
 	);
-	if (brandError || !brand) return next(brandError || null);
+	if (brandError || !brand) return next(brandError);
 
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, entities: { data: brand } })
@@ -307,7 +310,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 	);
 	if (brandError || !brand) {
 		handleTransactionError(session);
-		return next(brandError || null);
+		return next(brandError);
 	}
 
 	let createdAttachmentError: Error | null;
@@ -405,7 +408,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 			],
 		})
 	);
-	if (brandError || !brand) return next(brandError || null);
+	if (brandError || !brand) return next(brandError);
 
 	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
@@ -442,7 +445,7 @@ export const restoreSingleBrand = async (req: Request, res: Response, next: Next
 	};
 
 	const [brandError, brand] = await to(Brand.findOneWithDeleted(singleBrandQuery));
-	if (brandError || !brand) return next(brandError || null);
+	if (brandError || !brand) return next(brandError);
 
 	const [restoreBrandError] = await to(Brand.restore(singleBrandQuery));
 	if (restoreBrandError) return next(restoreBrandError);

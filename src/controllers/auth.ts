@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
@@ -20,7 +20,12 @@ import emailService from "../services/email";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (
+	method: "login" | "social-user" | "refresh-token" | "forgot-password" | "reset-password"
+): ValidationChain[] => {
 	switch (method) {
 		case "login":
 			return [
@@ -210,7 +215,7 @@ export const _passportGoogleStrategy = async (
 					"danger",
 					"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
 				);
-			return done(existsUserError || null);
+			return done(existsUserError);
 		}
 
 		let userError = null;
@@ -296,7 +301,7 @@ export const _passportGoogleStrategy = async (
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return done(userError || null);
+			return done(userError);
 		}
 
 		// commit the transaction
@@ -317,7 +322,7 @@ export const _passportGoogleStrategy = async (
 				"danger",
 				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 			);
-		return done(existsEmailError || null);
+		return done(existsEmailError);
 	}
 
 	const user = {
@@ -475,7 +480,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return done(userError || null);
+			return done(userError);
 		}
 
 		// commit the transaction
@@ -496,7 +501,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 				"danger",
 				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 			);
-		return done(existsEmailError || null);
+		return done(existsEmailError);
 	}
 
 	const user = {
@@ -604,13 +609,13 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 					"danger",
 					`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 				);
-			return next(existsUserError || null);
+			return next(existsUserError);
 		}
 
 		let [userError, user] = await to(User.findOne({ _id: req.user._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return next(userError || null);
+			return next(userError);
 		}
 
 		user = Object.assign(user, {
@@ -749,7 +754,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return next(userError || null);
+			return next(userError);
 		}
 
 		const accessToken = jsonwebtoken.sign(
@@ -1014,7 +1019,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 	const [userError, user] = await to(User.findOne({ email }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	user.comparePassword(req.body.password, async (compareError, isMatch) => {
@@ -1440,7 +1445,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 	[userError, user] = await to(User.findOne({ _id: resetPasswordToken.user }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	user = Object.assign(user, {

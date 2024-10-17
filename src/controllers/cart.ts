@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
 import mongoose, { Types } from "mongoose";
@@ -11,9 +11,12 @@ import Product, { IProductDocument } from "../models/Product";
 import Tax from "../models/Tax";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
-		case "add":
+		case "create":
 			return [
 				body("product")
 					.trim()
@@ -123,7 +126,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 	);
 	if (existsProductError || !existsProduct) {
 		handleTransactionError(session);
-		return next(existsProductError || null);
+		return next(existsProductError);
 	}
 
 	// check if cart exists
@@ -149,7 +152,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (cartItemError || !cartItem) {
 			handleTransactionError(session);
-			return next(cartItemError || null);
+			return next(cartItemError);
 		}
 
 		// get cart taxes
@@ -185,7 +188,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (newCartError || !newCart) {
 			handleTransactionError(session);
-			return next(newCartError || null);
+			return next(newCartError);
 		}
 
 		// commit the transaction
@@ -244,7 +247,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (newCartItemError || !newCartItem) {
 			handleTransactionError(session);
-			return next(newCartItemError || null);
+			return next(newCartItemError);
 		}
 
 		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
@@ -366,7 +369,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	if (
@@ -382,7 +385,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
-		return next(cartItemError || null);
+		return next(cartItemError);
 	}
 
 	const [deleteCartItemError] = await to(
@@ -491,13 +494,13 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
-		return next(cartItemError || null);
+		return next(cartItemError);
 	}
 
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	const product = cartItem.product as IProductDocument;
@@ -584,7 +587,7 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	const cartItemsIds = [...(cart?.items || [])].map((item) => item?._id || item);

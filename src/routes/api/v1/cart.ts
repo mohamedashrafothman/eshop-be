@@ -11,7 +11,11 @@ router
 	.route("/")
 	.all(allowMethods(["post", "get", "delete"]))
 	.get(cartController.getSingleCart)
-	.post(cartController.validator("add"), unprocessableEntityValidator, cartController.addToCart)
+	.post(
+		cartController.validator("create"),
+		unprocessableEntityValidator,
+		cartController.addToCart
+	)
 	.delete(cartController.emptyCart);
 
 router

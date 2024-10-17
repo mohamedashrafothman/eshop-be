@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
@@ -8,7 +8,10 @@ import Product, { type IProductDocument } from "../models/Product";
 import Review from "../models/Review";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -92,7 +95,7 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 	);
 	if (existsProductError || !existsProduct) {
 		handleTransactionError(session);
-		return next(existsProductError || null);
+		return next(existsProductError);
 	}
 
 	// check if review exists

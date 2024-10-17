@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -16,7 +16,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -328,7 +331,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 	);
 	if (categoryError || !category) {
 		handleTransactionError(session);
-		return next(categoryError || null);
+		return next(categoryError);
 	}
 
 	let createdAttachmentError: Error | null;
