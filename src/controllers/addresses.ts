@@ -125,7 +125,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 201 - Created response with the newly created address.
- *   * @property {object} entities.data - The created address object.
+ *   * @property {Object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -195,8 +195,8 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
  *        Optionally searches by address name or street, filters by deleted status, and sorts based on various criteria.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.query.q - Optional search query string to match against address name or street (case-insensitive).
- * @param {boolean} req.query.deleted - Optional flag to filter addresses by deleted status (true for deleted, false or omitted for active).
+ * @param {String} req.query.q - Optional search query string to match against address name or street (case-insensitive).
+ * @param {Boolean} req.query.deleted - Optional flag to filter addresses by deleted status (true for deleted, false or omitted for active).
  * @param {Object} req.query - Additional query parameters for pagination (e.g., page, limit, sort).
  * @property {number} req.page - The page number to retrieve.
  * @property {number} req.limit - The number of addresses per page.
@@ -253,12 +253,12 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
  * @description Fetches an address based on the provided ID. If the user is authenticated, the address must belong to the user.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.address - The address ID.
+ * @param {String} req.params.address - The address ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response containing the address object.
- *   * @property {object} entities.data - The address object.
+ *   * @property {Object} entities.data - The address object.
  */
 export const getSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
 	const [addressError, address] = await to(
@@ -284,13 +284,13 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  *        Optionally sets the updated address as the default address if the `default` property is set to `true` in the request body.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.address - The address ID.
+ * @param {String} req.params.address - The address ID.
  * @param {Object} req.body - Update data for the address.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 200 - Success response with the updated address data.
- *   * @property {object} entities.data - The updated address object.
+ *   * @property {Object} entities.data - The updated address object.
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -397,7 +397,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
  * @description Deletes an address based on the provided ID. The user must have permission to delete the address.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.address - The address ID.
+ * @param {String} req.params.address - The address ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *

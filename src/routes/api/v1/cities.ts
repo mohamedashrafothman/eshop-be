@@ -21,6 +21,7 @@ router
 		unprocessableEntityValidator,
 		citiesController.postNewCity
 	);
+
 router
 	.route("/:city")
 	.all(
@@ -35,6 +36,7 @@ router
 		citiesController.updateSingleCity
 	)
 	.delete(citiesController.deleteSingleCity);
+
 router
 	.route("/:city/restore")
 	.all(

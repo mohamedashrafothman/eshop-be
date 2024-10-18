@@ -16,6 +16,7 @@ router
 		unprocessableEntityValidator,
 		taxesController.postNewTax
 	);
+
 router
 	.route("/:tax")
 	.all(allowMethods(["get", "patch", "delete"]))
@@ -26,6 +27,7 @@ router
 		taxesController.updateSingleTax
 	)
 	.delete(taxesController.deleteSingleTax);
+
 router
 	.route("/:tax/restore")
 	.all(allowMethods(["patch"]))

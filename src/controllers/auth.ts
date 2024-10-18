@@ -582,7 +582,7 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  * @description Handles social login/signup using a provider like Google. If the user is already authenticated, it attempts to link the social provider with their account. Otherwise, it creates a new user with the provided information.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.provider - The social provider name (e.g., 'google', 'facebook').
+ * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
  * @param {Object} req.body - Social login data including provider ID, email, name, and provider access token.
  *   * @property {string} req.body.providerId - User's ID in the social provider.
  *   * @property {string} req.body.email - User's email address.
@@ -591,7 +591,7 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  *   * @property {string} req.body.providerToken - Access token received from the social provider.
  *
  * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {object} entities.data - The user data.
+ *   * @property {Object} entities.data - The user data.
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -955,7 +955,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  * @description Removes a social provider account (e.g., Google, Facebook) from the user's profile.
 
  * @param {Object} req - Express request object.
- * @param {string} req.params.provider - The social provider name (e.g., 'google', 'facebook').
+ * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
 
  * @returns {object} 200 - Success response with a success message.
  */
@@ -1004,11 +1004,11 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  * @description Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.body.email - User's email address.
- * @param {string} req.body.password - User's password.
+ * @param {String} req.body.email - User's email address.
+ * @param {String} req.body.password - User's password.
  *
  * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {object} entities.data - The user data.
+ *   * @property {Object} entities.data - The user data.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1201,10 +1201,10 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - Request body containing a refresh token.
- * @param {string} req.body.refreshToken - The user's refresh token.
+ * @param {String} req.body.refreshToken - The user's refresh token.
  *
  * @returns {object} 200 - Success response containing a new access token and a refresh token.
- *   * @property {object} entities.data - The data containing new tokens.
+ *   * @property {Object} entities.data - The data containing new tokens.
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1302,7 +1302,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  * @description Sends a password reset email to the user's email address if the email exists in the user database.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.body.email - The user's email address.
+ * @param {String} req.body.email - The user's email address.
  *
  * @returns {object} 200 - Success response with a success message.
  */
@@ -1409,10 +1409,10 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  * @description Updates the password for a user identified by a valid password reset token.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.token - The password reset token received via email.
+ * @param {String} req.params.token - The password reset token received via email.
  * @param {Object} req.body - Request body containing the new password.
- * @param {string} req.body.password - The new password for the user.
- * @param {string} req.body.passwordConfirmation - The new password confirmation for the user.
+ * @param {String} req.body.password - The new password for the user.
+ * @param {String} req.body.passwordConfirmation - The new password confirmation for the user.
 
  * @returns {object} 200 - Success response with a success message.
  */
@@ -1506,7 +1506,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  * @description Marks a user's email as verified if the provided email verification token is valid and not expired.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.token - The email verification token received via email.
+ * @param {String} req.params.token - The email verification token received via email.
  *
  * @returns {object} 200 - Success response with a success message.
  */

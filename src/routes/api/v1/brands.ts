@@ -22,6 +22,7 @@ router
 		unprocessableEntityValidator,
 		brandsController.postNewBrand
 	);
+
 router
 	.route("/:brand")
 	.all(
@@ -37,6 +38,7 @@ router
 		brandsController.updateSingleBrand
 	)
 	.delete(brandsController.deleteSingleBrand);
+
 router
 	.route("/:brand/restore")
 	.all(

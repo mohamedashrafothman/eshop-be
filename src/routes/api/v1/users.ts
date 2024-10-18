@@ -18,10 +18,12 @@ router
 		unprocessableEntityValidator,
 		usersController.postNewUser
 	);
+
 router
 	.route("/me")
 	.all(allowMethods(["get"]))
 	.get(usersController.getCurrentAuthenticatedUser);
+
 router
 	.route("/:user")
 	.all(allowMethods(["get", "patch", "delete"]))
@@ -32,6 +34,7 @@ router
 		usersController.updateSingleUser
 	)
 	.delete(permission.check(vars.auth.roles.superAdmin), usersController.deleteSingleUser);
+
 router
 	.route("/:user/restore")
 	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))

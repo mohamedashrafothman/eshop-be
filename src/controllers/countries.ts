@@ -59,13 +59,13 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - Country data.
- * @param {string} req.body.name - The name of the country, ex: "United States of America".
- * @param {string} req.body.code - The code of the country, ex: "USA".
+ * @param {String} req.body.name - The name of the country, ex: "United States of America".
+ * @param {String} req.body.code - The code of the country, ex: "USA".
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 201 - Created response with the newly created country.
- *   * @property {object} entities.data - The created country object.
+ *   * @property {Object} entities.data - The created country object.
  */
 export const postNewCountry = async (
 	req: Request<{}, {}, { name: string; code: string }>,
@@ -98,19 +98,32 @@ export const postNewCountry = async (
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {string} [req.query.q] - Search term for filtering countries by name or code.
+ * @param {String} [req.query.sort] - The field to sort by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of states to retrieve per page.
+ * @param {String} [req.query.offset] - The number of states to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
+ * @param {String} [req.query.q] - Search term for filtering countries by name or code.
  * @param {boolean} [req.query.deleted] - Flag to include deleted countries.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with paginated countries and metadata.
+ * @returns {Object} 200 - Success response with paginated countries and metadata.
  *   * @property {Array} entities.data - List of retrieved country objects.
  *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
  *   * @property {Array} entities.meta.sort - Available sort options for the countries.
  * @throws {Error} 500 - Returns an error if the country retrieval fails.
  */
 export const getCountries = async (
-	req: Request<{}, {}, {}, PaginateOptions & { q?: string; deleted?: boolean | number }>,
+	req: Request<
+		{},
+		{},
+		{},
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+		}
+	>,
 	res: Response,
 	next: NextFunction
 ) => {
@@ -173,12 +186,12 @@ export const getCountries = async (
  * @description Fetches a single country based on the provided country ID or slug.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.country - The country ID or slug.
+ * @param {String} req.params.country - The country ID or slug.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the retrieved country.
- *   * @property {object} entities.data - The retrieved country object.
+ * @returns {Object} 200 - Success response with the retrieved country.
+ *   * @property {Object} entities.data - The retrieved country object.
  * @throws {Error} 404 - Returns an error if the country is not found.
  * @throws {Error} 500 - Returns an error if the country retrieval fails.
  */
@@ -214,15 +227,15 @@ export const getSingleCountry = async (
  * The update operation modifies the country object with the new data from the request body.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.country - The country ID or slug.
+ * @param {String} req.params.country - The country ID or slug.
  * @param {Object} req.body - The new data for the country.
- * @param {string} [req.body.name] - Optional new name for the country.
- * @param {string} [req.body.code] - Optional new code for the country.
+ * @param {String} [req.body.name] - Optional new name for the country.
+ * @param {String} [req.body.code] - Optional new code for the country.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated country data.
- *   * @property {object} entities.data - The updated country object.
+ * @returns {Object} 200 - Success response with the updated country data.
+ *   * @property {Object} entities.data - The updated country object.
  * @throws {Error} 404 - Returns an error if the country is not found.
  * @throws {Error} 500 - Returns an error if the country update fails.
  */
@@ -278,11 +291,11 @@ export const updateSingleCountry = async (
  * The method handles errors and returns a success response when the deletion is successful.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.country - The ID or slug of the country to delete.
+ * @param {String} req.params.country - The ID or slug of the country to delete.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the country was deleted.
+ * @returns {Object} 200 - Success response indicating the country was deleted.
  * @throws {Error} 404 - If no country is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
@@ -324,11 +337,11 @@ export const deleteSingleCountry = async (
  * The method handles errors and returns a success response when the country is successfully restored.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.country - The ID or slug of the country to restore.
+ * @param {String} req.params.country - The ID or slug of the country to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the country was restored.
+ * @returns {Object} 200 - Success response indicating the country was restored.
  * @throws {Error} 404 - If no country is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the restore process.
  */

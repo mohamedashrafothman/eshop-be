@@ -75,14 +75,14 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - State data.
- * @param {string} req.body.name - The name of the state, ex: "New York".
- * @param {string} req.body.code - The code of the state, ex: "NY".
- * @param {string} req.body.country - The ID of the country that the state belongs to.
+ * @param {String} req.body.name - The name of the state, ex: "New York".
+ * @param {String} req.body.code - The code of the state, ex: "NY".
+ * @param {String} req.body.country - The ID of the country that the state belongs to.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {object} 201 - Created response with the newly created state.
- *   * @property {object} entities.data - The created state object.
+ *   * @property {Object} entities.data - The created state object.
  */
 export const postNewState = async (
 	req: Request<{}, {}, { name: string; code: string; country: string }>,
@@ -119,13 +119,18 @@ export const postNewState = async (
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {string} [req.query.q] - Search term for filtering states by name or code.
- * @param {boolean} [req.query.deleted] - Flag to include deleted states.
- * @param {string} [req.query.country] - The ID of the country that the states belong to.
+ * @param {String} [req.query.sort] - The field to sort by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of states to retrieve per page.
+ * @param {String} [req.query.offset] - The number of states to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
+ * @param {String} [req.query.q] - Search term for filtering states by name or code.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted states.
+ * @param {String} [req.query.country] - The ID of the country that the states belong to.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with paginated states and metadata.
+ * @returns {Object} 200 - Success response with paginated states and metadata.
  *   * @property {Array} entities.data - List of retrieved state objects.
  *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
  *   * @property {Array} entities.meta.sort - Available sort options for the states.
@@ -137,7 +142,11 @@ export const getStates = async (
 		{},
 		{},
 		{},
-		PaginateOptions & { q?: string; deleted?: boolean | number; country?: string }
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+			country?: string;
+		}
 	>,
 	res: Response,
 	next: NextFunction
@@ -205,12 +214,12 @@ export const getStates = async (
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.state - The state identifier, either a slug or an ObjectId.
+ * @param {String} req.params.state - The state identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the state data.
- *   * @property {object} entities.data - The retrieved state object.
+ * @returns {Object} 200 - Success response with the state data.
+ *   * @property {Object} entities.data - The retrieved state object.
  * @throws {Error} 404 - Returns an error if no state is found.
  * @throws {Error} 500 - Returns an error if the state retrieval fails.
  */
@@ -246,16 +255,16 @@ export const getSingleState = async (
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.state - The state identifier, either a slug or an ObjectId.
+ * @param {String} req.params.state - The state identifier, either a slug or an ObjectId.
  * @param {Object} req.body - Update data for the state.
- * @param {string} [req.body.name] - The updated name of the state.
- * @param {string} [req.body.code] - The updated code of the state.
- * @param {string} [req.body.country] - The updated ID of the country that the state belongs to.
+ * @param {String} [req.body.name] - The updated name of the state.
+ * @param {String} [req.body.code] - The updated code of the state.
+ * @param {String} [req.body.country] - The updated ID of the country that the state belongs to.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated state data.
- *   * @property {object} entities.data - The updated state object.
+ * @returns {Object} 200 - Success response with the updated state data.
+ *   * @property {Object} entities.data - The updated state object.
  * @throws {Error} 404 - Returns an error if any data not found.
  * @throws {Error} 500 - Returns an error if there is an issue during the update process.
  */
@@ -319,11 +328,11 @@ export const updateSingleState = async (
  * The method handles errors and returns a success response when the deletion is successful.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.state - The ID or slug of the state to delete.
+ * @param {String} req.params.state - The ID or slug of the state to delete.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the state was deleted.
+ * @returns {Object} 200 - Success response indicating the state was deleted.
  * @throws {Error} 404 - If no state is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
@@ -365,11 +374,11 @@ export const deleteSingleState = async (
  * The method handles errors and returns a success response when the state is successfully restored.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.state - The ID or slug of the state to restore.
+ * @param {String} req.params.state - The ID or slug of the state to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the state was restored.
+ * @returns {Object} 200 - Success response indicating the state was restored.
  * @throws {Error} 404 - If no state is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the restore process.
  */

@@ -111,14 +111,14 @@ export const postNewTax = async (req: Request, res: Response, next: NextFunction
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for filtering and pagination.
- * @param {string} [req.query.q] - Search query to match against tax name and description.
- * @param {boolean} [req.query.deleted] - Flag to include deleted tax entries in the response.
+ * @param {String} [req.query.q] - Search query to match against tax name and description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted tax entries in the response.
  * @param {Object} [req.query.page] - Pagination page number.
  * @param {Object} [req.query.limit] - Pagination limit for the number of entries per page.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a list of taxes and pagination metadata.
+ * @returns {Object} 200 - Success response with a list of taxes and pagination metadata.
  *   * @property {Array<Object>} entities.data - The list of retrieved tax entries.
  *   * @property {Object} entities.meta - Pagination and sorting metadata.
  *   * @property {Object} entities.meta.pagination - Pagination details for the tax list.
@@ -168,11 +168,11 @@ export const getTaxes = async (req: Request, res: Response, next: NextFunction) 
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Route parameters.
- * @param {string} req.params.tax - The slug or ID of the tax entry to retrieve.
+ * @param {String} req.params.tax - The slug or ID of the tax entry to retrieve.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the retrieved tax data.
+ * @returns {Object} 200 - Success response with the retrieved tax data.
  *   * @property {Object} entities.data - The retrieved tax object.
  * @throws {Error} 404 - If no tax is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the retrieval process.
@@ -201,12 +201,12 @@ export const getSingleTax = async (req: Request, res: Response, next: NextFuncti
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Route parameters.
- * @param {string} req.params.tax - The slug or ID of the tax entry to update.
+ * @param {String} req.params.tax - The slug or ID of the tax entry to update.
  * @param {Object} req.body - The updated data for the tax entry.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated tax data.
+ * @returns {Object} 200 - Success response with the updated tax data.
  *   * @property {Object} entities.data - The updated tax object.
  * @throws {Error} 404 - If no tax is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the update process.
@@ -262,11 +262,11 @@ export const updateSingleTax = async (req: Request, res: Response, next: NextFun
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Route parameters.
- * @param {string} req.params.tax - The slug or ID of the tax entry to delete.
+ * @param {String} req.params.tax - The slug or ID of the tax entry to delete.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the tax was deleted.
+ * @returns {Object} 200 - Success response indicating the tax was deleted.
  * @throws {Error} 404 - If no tax is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
@@ -298,11 +298,11 @@ export const deleteSingleTax = async (req: Request, res: Response, next: NextFun
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Route parameters.
- * @param {string} req.params.tax - The slug or ID of the tax entry to restore.
+ * @param {String} req.params.tax - The slug or ID of the tax entry to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the tax was successfully restored.
+ * @returns {Object} 200 - Success response indicating the tax was successfully restored.
  * @throws {Error} 404 - If no deleted tax is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the restoration process.
  */

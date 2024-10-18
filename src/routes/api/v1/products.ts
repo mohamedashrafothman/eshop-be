@@ -22,6 +22,7 @@ router
 		unprocessableEntityValidator,
 		productsController.postNewProduct
 	);
+
 router
 	.route("/:product")
 	.all(allowMethods(["get", "patch", "delete"]))
@@ -39,6 +40,7 @@ router
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
 		productsController.deleteSingleProduct
 	);
+
 router
 	.route("/:product/restore")
 	.all(

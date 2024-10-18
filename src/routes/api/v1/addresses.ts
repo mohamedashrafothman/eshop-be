@@ -19,6 +19,7 @@ router
 		unprocessableEntityValidator,
 		addressesController.postNewAddress
 	);
+
 router
 	.route("/:address")
 	.all(

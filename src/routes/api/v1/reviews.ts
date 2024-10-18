@@ -21,6 +21,7 @@ router
 		unprocessableEntityValidator,
 		reviewsController.postNewReview
 	);
+
 router
 	.route("/:review")
 	.all(allowMethods(["get", "patch", "delete"]), authController.passportJWTAuthenticate)
@@ -34,6 +35,7 @@ router
 		reviewsController.updateSingleReview
 	)
 	.delete(reviewsController.deleteSingleReview);
+
 router
 	.route("/:review/restore")
 	.all(

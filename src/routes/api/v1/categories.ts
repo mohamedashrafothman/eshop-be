@@ -22,6 +22,7 @@ router
 		unprocessableEntityValidator,
 		categoriesController.postNewCategory
 	);
+
 router
 	.route("/:category")
 	.all(
@@ -37,6 +38,7 @@ router
 		categoriesController.updateSingleCategory
 	)
 	.delete(categoriesController.deleteSingleCategory);
+
 router
 	.route("/:category/restore")
 	.all(
