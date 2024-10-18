@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
@@ -20,7 +20,12 @@ import emailService from "../services/email";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (
+	method: "login" | "social-user" | "refresh-token" | "forgot-password" | "reset-password"
+): ValidationChain[] => {
 	switch (method) {
 		case "login":
 			return [
@@ -195,7 +200,7 @@ export const _passportGoogleStrategy = async (
 	profile: Profile,
 	done: GoogleVerifyCallback
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -210,7 +215,7 @@ export const _passportGoogleStrategy = async (
 					"danger",
 					"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
 				);
-			return done(existsUserError || null);
+			return done(existsUserError);
 		}
 
 		let userError = null;
@@ -296,7 +301,7 @@ export const _passportGoogleStrategy = async (
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return done(userError || null);
+			return done(userError);
 		}
 
 		// commit the transaction
@@ -317,7 +322,7 @@ export const _passportGoogleStrategy = async (
 				"danger",
 				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 			);
-		return done(existsEmailError || null);
+		return done(existsEmailError);
 	}
 
 	const user = {
@@ -359,7 +364,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	profile,
 	done: (verifyError: Error | null, user?: Express.User | false, options?: IVerifyOptions) => void
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -475,7 +480,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return done(userError || null);
+			return done(userError);
 		}
 
 		// commit the transaction
@@ -496,7 +501,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 				"danger",
 				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 			);
-		return done(existsEmailError || null);
+		return done(existsEmailError);
 	}
 
 	const user = {
@@ -577,19 +582,19 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  * @description Handles social login/signup using a provider like Google. If the user is already authenticated, it attempts to link the social provider with their account. Otherwise, it creates a new user with the provided information.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.provider - The social provider name (e.g., 'google', 'facebook').
+ * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
  * @param {Object} req.body - Social login data including provider ID, email, name, and provider access token.
- *   * @property {string} req.body.providerId - User's ID in the social provider.
- *   * @property {string} req.body.email - User's email address.
- *   * @property {string} req.body.name - User's name.
- *   * @property {string} req.body.picture - User's profile picture URL (optional).
- *   * @property {string} req.body.providerToken - Access token received from the social provider.
+ *   * @property {String} req.body.providerId - User's ID in the social provider.
+ *   * @property {String} req.body.email - User's email address.
+ *   * @property {String} req.body.name - User's name.
+ *   * @property {String} req.body.picture - User's profile picture URL (optional).
+ *   * @property {String} req.body.providerToken - Access token received from the social provider.
  *
- * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {object} entities.data - The user data.
+ * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
+ *   * @property {Object} entities.data - The user data.
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -604,13 +609,13 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 					"danger",
 					`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
 				);
-			return next(existsUserError || null);
+			return next(existsUserError);
 		}
 
 		let [userError, user] = await to(User.findOne({ _id: req.user._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return next(userError || null);
+			return next(userError);
 		}
 
 		user = Object.assign(user, {
@@ -749,7 +754,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		const [userError, user] = await to(User.findOne({ _id: existsUser?._id }).session(session));
 		if (userError || !user) {
 			handleTransactionError(session);
-			return next(userError || null);
+			return next(userError);
 		}
 
 		const accessToken = jsonwebtoken.sign(
@@ -950,12 +955,12 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  * @description Removes a social provider account (e.g., Google, Facebook) from the user's profile.
 
  * @param {Object} req - Express request object.
- * @param {string} req.params.provider - The social provider name (e.g., 'google', 'facebook').
+ * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
 
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -999,14 +1004,14 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  * @description Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.body.email - User's email address.
- * @param {string} req.body.password - User's password.
+ * @param {String} req.body.email - User's email address.
+ * @param {String} req.body.password - User's password.
  *
- * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {object} entities.data - The user data.
+ * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
+ *   * @property {Object} entities.data - The user data.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1014,7 +1019,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 	const [userError, user] = await to(User.findOne({ email }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	user.comparePassword(req.body.password, async (compareError, isMatch) => {
@@ -1135,10 +1140,10 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  * @summary Logs out the current user.
  * @description Revokes all tokens associated with the user and deactivates the user account.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1196,13 +1201,13 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - Request body containing a refresh token.
- * @param {string} req.body.refreshToken - The user's refresh token.
+ * @param {String} req.body.refreshToken - The user's refresh token.
  *
- * @returns {object} 200 - Success response containing a new access token and a refresh token.
- *   * @property {object} entities.data - The data containing new tokens.
+ * @returns {Object} 200 - Success response containing a new access token and a refresh token.
+ *   * @property {Object} entities.data - The data containing new tokens.
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1297,12 +1302,12 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  * @description Sends a password reset email to the user's email address if the email exists in the user database.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.body.email - The user's email address.
+ * @param {String} req.body.email - The user's email address.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1404,15 +1409,15 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  * @description Updates the password for a user identified by a valid password reset token.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.token - The password reset token received via email.
+ * @param {String} req.params.token - The password reset token received via email.
  * @param {Object} req.body - Request body containing the new password.
- * @param {string} req.body.password - The new password for the user.
- * @param {string} req.body.passwordConfirmation - The new password confirmation for the user.
+ * @param {String} req.body.password - The new password for the user.
+ * @param {String} req.body.passwordConfirmation - The new password confirmation for the user.
 
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1440,7 +1445,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 	[userError, user] = await to(User.findOne({ _id: resetPasswordToken.user }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	user = Object.assign(user, {
@@ -1501,12 +1506,12 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  * @description Marks a user's email as verified if the provided email verification token is valid and not expired.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.token - The email verification token received via email.
+ * @param {String} req.params.token - The email verification token received via email.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1568,14 +1573,14 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
  * @summary Resend an email verification link to a user who hasn't verified their email yet.
  * @description Sends a new email verification token to a user if their email is not verified and a valid verification token doesn't already exist.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getResendEmailVerification = async (
 	req: Request,
 	res: Response,
 	next: NextFunction
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

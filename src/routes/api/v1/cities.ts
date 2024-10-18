@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as categoriesController from "../../../controllers/categories";
+import * as citiesController from "../../../controllers/cities";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,40 +13,38 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, categoriesController.getCategories)
+	.get(citiesController.getCities)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("create"),
+		citiesController.validator("create"),
 		unprocessableEntityValidator,
-		categoriesController.postNewCategory
+		citiesController.postNewCity
 	);
 
 router
-	.route("/:category")
+	.route("/:city")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(categoriesController.getSingleCategory)
+	.get(citiesController.getSingleCity)
 	.patch(
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("update"),
+		citiesController.validator("update"),
 		unprocessableEntityValidator,
-		categoriesController.updateSingleCategory
+		citiesController.updateSingleCity
 	)
-	.delete(categoriesController.deleteSingleCategory);
+	.delete(citiesController.deleteSingleCity);
 
 router
-	.route("/:category/restore")
+	.route("/:city/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(categoriesController.restoreSingleCategory);
+	.patch(citiesController.restoreSingleCity);
 
 // exporting router
 export default router;

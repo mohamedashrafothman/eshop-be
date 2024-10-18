@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -16,7 +16,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -35,7 +38,12 @@ export const validator = (method: string) => {
 					.isLength({ max: 1000 })
 					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").notEmpty().withMessage("You must add an icon!"),
-				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
+				body("parent")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("You must supply a parent!"),
 			];
 		case "update":
 			return [
@@ -56,7 +64,12 @@ export const validator = (method: string) => {
 					.isLength({ max: 1000 })
 					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
-				body("parent").optional().notEmpty().withMessage("You must supply a parent!"),
+				body("parent")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("You must supply a parent!"),
 			];
 		default:
 			return [];
@@ -73,7 +86,7 @@ export const validator = (method: string) => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the icon was uploaded successfully.
+ * @returns {Object} 200 - Success response indicating the icon was uploaded successfully.
  *   * @property {Object} req.body.icon - The uploaded icon file data.
  *   * @throws {Error} 400 - Returns an error if the file type is invalid or the file size exceeds the limit.
  */
@@ -123,12 +136,12 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {void} 201 - Success response with the newly created category data.
- *   * @property {object} entities.data - The created category object.
+ *   * @property {Object} entities.data - The created category object.
  *   * @property {Array} flashes - Success message for category creation.
  * @throws {Error} 500 - Returns an error if the category or icon creation fails.
  */
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -202,12 +215,12 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {string} [req.query.q] - Search term for filtering categories by name or description.
- * @param {boolean} [req.query.deleted] - Flag to include deleted categories.
+ * @param {String} [req.query.q] - Search term for filtering categories by name or description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted categories.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with paginated categories and metadata.
+ * @returns {Object} 200 - Success response with paginated categories and metadata.
  *   * @property {Array} entities.data - List of retrieved brand objects.
  *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
  *   * @property {Array} entities.meta.sort - Available sort options for the categories.
@@ -265,12 +278,12 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the category data.
- *   * @property {object} entities.data - The retrieved category object.
+ * @returns {Object} 200 - Success response with the category data.
+ *   * @property {Object} entities.data - The retrieved category object.
  * @throws {Error} 500 - Returns an error if the category retrieval fails.
  * @throws {Error} 404 - Returns an error if no category is found.
  */
@@ -300,20 +313,20 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
  * @param {Object} req.body - The data to update the category with.
  * @param {Object} [req.body.icon] - Optional icon data to update the category's icon.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated category data.
- *   * @property {object} entities.data - The updated category object.
- *   * @property {string} flashes.success - Success message after the update.
+ * @returns {Object} 200 - Success response with the updated category data.
+ *   * @property {Object} entities.data - The updated category object.
+ *   * @property {String} flashes.success - Success message after the update.
  * @throws {Error} 500 - Returns an error if any issue occurs during the update process.
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
 export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -328,7 +341,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 	);
 	if (categoryError || !category) {
 		handleTransactionError(session);
-		return next(categoryError || null);
+		return next(categoryError);
 	}
 
 	let createdAttachmentError: Error | null;
@@ -408,12 +421,12 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the category was successfully deleted.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the category was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
@@ -449,12 +462,12 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.category - The category identifier, either a slug or an ObjectId.
+ * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the category was successfully restored.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the category was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the category is not found or if the category was not soft-deleted.
  */

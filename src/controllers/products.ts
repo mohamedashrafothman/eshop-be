@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
@@ -21,7 +21,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -85,8 +88,16 @@ export const validator = (method: string) => {
 					.notEmpty()
 					.isArray()
 					.withMessage("at least one Image is required!"),
-				body("brand").notEmpty().withMessage("Brand is required!"),
-				body("category").notEmpty().withMessage("Category is required!"),
+				body("brand")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Brand is required!"),
+				body("category")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Category is required!"),
 			];
 		case "update":
 			return [
@@ -154,8 +165,18 @@ export const validator = (method: string) => {
 					.isArray()
 					.notEmpty()
 					.withMessage("at least one Image is required!"),
-				body("brand").optional().notEmpty().withMessage("Brand is required!"),
-				body("category").optional().notEmpty().withMessage("Category is required!"),
+				body("brand")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Brand is required!"),
+				body("category")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Category is required!"),
 			];
 		default:
 			return [];
@@ -220,7 +241,7 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
  * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
  */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -359,18 +380,18 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for filtering and sorting.
- * @param {string} [req.query.q] - Search query to match against product name and description.
- * @param {boolean} [req.query.deleted] - Flag to include deleted products in the response.
+ * @param {String} [req.query.q] - Search query to match against product name and description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted products in the response.
  * @param {Array<string>} [req.query.categories] - List of category identifiers to filter products.
  * @param {Array<string>} [req.query.brands] - List of brand identifiers to filter products.
  * @param {Array<string>} [req.query.sizes] - List of sizes to filter products.
  * @param {Array<string>} [req.query.colors] - List of colors to filter products.
- * @param {number} [req.query.minPrice] - Minimum price for filtering products.
- * @param {number} [req.query.maxPrice] - Maximum price for filtering products.
+ * @param {Number} [req.query.minPrice] - Minimum price for filtering products.
+ * @param {Number} [req.query.maxPrice] - Maximum price for filtering products.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a list of products and pagination metadata.
+ * @returns {Object} 200 - Success response with a list of products and pagination metadata.
  *   * @property {Array<Object>} entities.data - The list of retrieved products.
  *   * @property {Object} meta - Pagination and sort metadata.
  *   * @property {Object} meta.pagination - Pagination details for the product list.
@@ -473,11 +494,11 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.product - The product identifier, either a slug or a MongoDB ObjectId.
+ * @param {String} req.params.product - The product identifier, either a slug or a MongoDB ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the product details.
+ * @returns {Object} 200 - Success response with the product details.
  *   * @property {Object} entities - Object containing the product data.
  *   * @property {Object} entities.data - The retrieved product.
  * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
@@ -513,19 +534,19 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.product - The product identifier, either a slug or MongoDB ObjectId.
+ * @param {String} req.params.product - The product identifier, either a slug or MongoDB ObjectId.
  * @param {Object} req.body - The request body containing the product data.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated product details.
+ * @returns {Object} 200 - Success response with the updated product details.
  *    * @property {Object} entities - Contains the updated product data.
  *    * @property {Object} entities.data - The updated product.
  * @throws {Error} 500 - Internal server error if there's a problem updating the product.
  * @throws {Error} 404 - Product not found.
  */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -739,12 +760,12 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.product - The product identifier, either a slug or an ObjectId.
+ * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the product was successfully deleted.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the product was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the product is not found.
  */
@@ -758,7 +779,7 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 			],
 		})
 	);
-	if (productError || !product) return next(productError || null);
+	if (productError || !product) return next(productError);
 
 	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?._id));
 	if (deleteProductError) return next(deleteProductError);
@@ -775,12 +796,12 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.product - The product identifier, either a slug or an ObjectId.
+ * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the product was successfully restored.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the product was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the product is not found or if the product was not soft-deleted.
  */
@@ -795,7 +816,7 @@ export const restoreSingleProduct = async (req: Request, res: Response, next: Ne
 	};
 
 	const [productError, product] = await to(Product.findOneWithDeleted(singleProductQuery));
-	if (productError || !product) return next(productError || null);
+	if (productError || !product) return next(productError);
 
 	const [restoreProductError] = await to(Product.restore(singleProductQuery));
 	if (restoreProductError) return next(restoreProductError);

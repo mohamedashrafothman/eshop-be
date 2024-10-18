@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as categoriesController from "../../../controllers/categories";
+import * as countriesController from "../../../controllers/countries";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,40 +13,38 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, categoriesController.getCategories)
+	.get(countriesController.getCountries)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("create"),
+		countriesController.validator("create"),
 		unprocessableEntityValidator,
-		categoriesController.postNewCategory
+		countriesController.postNewCountry
 	);
 
 router
-	.route("/:category")
+	.route("/:country")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(categoriesController.getSingleCategory)
+	.get(countriesController.getSingleCountry)
 	.patch(
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("update"),
+		countriesController.validator("update"),
 		unprocessableEntityValidator,
-		categoriesController.updateSingleCategory
+		countriesController.updateSingleCountry
 	)
-	.delete(categoriesController.deleteSingleCategory);
+	.delete(countriesController.deleteSingleCountry);
 
 router
-	.route("/:category/restore")
+	.route("/:country/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(categoriesController.restoreSingleCategory);
+	.patch(countriesController.restoreSingleCountry);
 
 // exporting router
 export default router;

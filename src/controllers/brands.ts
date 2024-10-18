@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -16,7 +16,10 @@ import {
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -72,7 +75,7 @@ export const validator = (method: string) => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the logo was uploaded successfully.
+ * @returns {Object} 200 - Success response indicating the logo was uploaded successfully.
  *   * @property {Object} req.body.logo - The uploaded logo file data.
  *   * @throws {Error} 400 - Returns an error if the file type is invalid or the file size exceeds the limit.
  */
@@ -121,12 +124,12 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {void} 201 - Success response with the newly created brand data.
- *   * @property {object} entities.data - The created brand object.
+ *   * @property {Object} entities.data - The created brand object.
  *   * @property {Array} flashes - Success message for brand creation.
  * @throws {Error} 500 - Returns an error if the brand or logo creation fails.
  */
 export const postNewBrand = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -186,12 +189,12 @@ export const postNewBrand = async (req: Request, res: Response, next: NextFuncti
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {string} [req.query.q] - Search term for filtering brands by name or description.
- * @param {boolean} [req.query.deleted] - Flag to include deleted brands.
+ * @param {String} [req.query.q] - Search term for filtering brands by name or description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted brands.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with paginated brands and metadata.
+ * @returns {Object} 200 - Success response with paginated brands and metadata.
  *   * @property {Array} entities.data - List of retrieved brand objects.
  *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
  *   * @property {Array} entities.meta.sort - Available sort options for the brands.
@@ -247,12 +250,12 @@ export const getBrands = async (req: Request, res: Response, next: NextFunction)
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.brand - The brand identifier, either a slug or an ObjectId.
+ * @param {String} req.params.brand - The brand identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the brand data.
- *   * @property {object} entities.data - The retrieved brand object.
+ * @returns {Object} 200 - Success response with the brand data.
+ *   * @property {Object} entities.data - The retrieved brand object.
  * @throws {Error} 500 - Returns an error if the brand retrieval fails.
  * @throws {Error} 404 - Returns an error if no brand is found.
  */
@@ -266,8 +269,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
 			],
 		})
 	);
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError);
 
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, entities: { data: brand } })
@@ -280,20 +282,20 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.brand - The brand identifier, either a slug or an ObjectId.
+ * @param {String} req.params.brand - The brand identifier, either a slug or an ObjectId.
  * @param {Object} req.body - The data to update the brand with.
  * @param {Object} [req.body.logo] - Optional logo data to update the brand's logo.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated brand data.
- *   * @property {object} entities.data - The updated brand object.
- *   * @property {string} flashes.success - Success message after the update.
+ * @returns {Object} 200 - Success response with the updated brand data.
+ *   * @property {Object} entities.data - The updated brand object.
+ *   * @property {String} flashes.success - Success message after the update.
  * @throws {Error} 500 - Returns an error if any issue occurs during the update process.
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
 export const updateSingleBrand = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -308,7 +310,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
 	);
 	if (brandError || !brand) {
 		handleTransactionError(session);
-		return next(brandError || null);
+		return next(brandError);
 	}
 
 	let createdAttachmentError: Error | null;
@@ -387,12 +389,12 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.brand - The brand identifier, either a slug or an ObjectId.
+ * @param {String} req.params.brand - The brand identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the brand was successfully deleted.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the brand was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
@@ -406,8 +408,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
 			],
 		})
 	);
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError);
 
 	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
@@ -424,12 +425,12 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {string} req.params.brand - The brand identifier, either a slug or an ObjectId.
+ * @param {String} req.params.brand - The brand identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the brand was successfully restored.
+ * @returns {Object} 200 - Success response with a flash message.
+ *   * @property {String} flashes.success - Success message indicating the brand was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the brand is not found or if the brand was not soft-deleted.
  */
@@ -444,8 +445,7 @@ export const restoreSingleBrand = async (req: Request, res: Response, next: Next
 	};
 
 	const [brandError, brand] = await to(Brand.findOneWithDeleted(singleBrandQuery));
-	if (brandError) return next(brandError);
-	if (!brand) return next();
+	if (brandError || !brand) return next(brandError);
 
 	const [restoreBrandError] = await to(Brand.restore(singleBrandQuery));
 	if (restoreBrandError) return next(restoreBrandError);

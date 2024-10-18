@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as brandsController from "../../../controllers/brand";
+import * as brandsController from "../../../controllers/brands";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -22,6 +22,7 @@ router
 		unprocessableEntityValidator,
 		brandsController.postNewBrand
 	);
+
 router
 	.route("/:brand")
 	.all(
@@ -37,6 +38,7 @@ router
 		brandsController.updateSingleBrand
 	)
 	.delete(brandsController.deleteSingleBrand);
+
 router
 	.route("/:brand/restore")
 	.all(

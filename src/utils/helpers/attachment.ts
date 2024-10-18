@@ -8,7 +8,7 @@ import vars from "../vars";
  * Handles a file to upload by returning the file's information.
  *
  * @param {Express.Multer.File} file - The file to handle.
- * @param {string} base - The base URL of the file.
+ * @param {String} base - The base URL of the file.
  * @param {StorageOptions["sizes"][0]} [size] - The size of the file.
  * @returns {Pick<IAttachment, "path" | "dir" | "name" | "extname" | "base">} The file's information.
  */
@@ -56,7 +56,7 @@ export const handleFileToUpload = (
 /**
  * Deletes a file from the file system.
  *
- * @param {string} [file] - The file path to delete.
+ * @param {String} [file] - The file path to delete.
  */
 export const deleteFileFromDisk = (file?: string): NodeJS.ErrnoException | void => {
 	// Check if the file exists

@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
@@ -14,7 +14,10 @@ import emailService from "../services/email";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 import vars from "../utils/vars";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -119,22 +122,22 @@ export const validator = (method: string) => {
  * @description Registers a new user with the provided information. A verification email will be sent to the provided email address.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.body.email - User's email address (required).
- * @param {string} req.body.name - User's name (required).
- * @param {string} req.body.password - User's password (required).
- * @param {string} req.body.passwordConfirmation - User's password confirmation (required).
- * @param {string} req.body.role - User's role (optional, defaults to 'USER'). Valid roles include 'ADMIN', and 'USER'.
+ * @param {String} req.body.email - User's email address (required).
+ * @param {String} req.body.name - User's name (required).
+ * @param {String} req.body.password - User's password (required).
+ * @param {String} req.body.passwordConfirmation - User's password confirmation (required).
+ * @param {String} req.body.role - User's role (optional, defaults to 'USER'). Valid roles include 'ADMIN', and 'USER'.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
- *   * @property {object} entities.data - The newly created user object.
- *      * @property {string} entities.data.accessToken - Access token (only included if not authenticated).
- *      * @property {string} entities.data.refreshToken - Refresh token (only included if not authenticated).
- *      * @property {string} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
+ * @returns {Object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
+ *   * @property {Object} entities.data - The newly created user object.
+ *      * @property {String} entities.data.accessToken - Access token (only included if not authenticated).
+ *      * @property {String} entities.data.refreshToken - Refresh token (only included if not authenticated).
+ *      * @property {String} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -266,21 +269,21 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  * @description Fetches a list of users with pagination and filtering options. Excluded user (based on ID) can be specified in the request.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.query.q - Search term to match against user name and email (case-insensitive).
- * @param {boolean} req.query.emailVerified - Filter users by email verification status (true/false).
- * @param {boolean} req.query.deleted - Filter users by deleted status (true/false).
- * @param {boolean} req.query.active - Filter users by active status (true/false).
- * @param {number} req.query.page - Page number for pagination (default: 1).
- * @param {number} req.query.limit - Number of users per page (default: 10).
- * @param {string} req.query.offset - Number of users to skip (default: 0).
- * @param {string} req.query.sort - Sort option (available options: 'name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc').
+ * @param {String} req.query.q - Search term to match against user name and email (case-insensitive).
+ * @param {Boolean} req.query.emailVerified - Filter users by email verification status (true/false).
+ * @param {Boolean} req.query.deleted - Filter users by deleted status (true/false).
+ * @param {Boolean} req.query.active - Filter users by active status (true/false).
+ * @param {Number} req.query.page - Page number for pagination (default: 1).
+ * @param {Number} req.query.limit - Number of users per page (default: 10).
+ * @param {String} req.query.offset - Number of users to skip (default: 0).
+ * @param {String} req.query.sort - Sort option (available options: 'name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc').
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing a paginated list of users and sorting options.
- *   * @property {object} entities.data - An array of user objects.
- *   * @property {object} entities.meta - Meta information about the pagination and available sorting options.
- *     * @property {number} entities.meta.pagination - An object containing the current page, total pages, and total results.
+ * @returns {Object} 200 - Success response containing a paginated list of users and sorting options.
+ *   * @property {Object} entities.data - An array of user objects.
+ *   * @property {Object} entities.meta - Meta information about the pagination and available sorting options.
+ *     * @property {Number} entities.meta.pagination - An object containing the current page, total pages, and total results.
  *     * @property {array} entities.meta.sort - An array of available sorting options (see request parameter `sort`).
  */
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -336,12 +339,12 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  * @description Fetches a user based on the provided slug or ID.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.user - User slug or ID.
+ * @param {String} req.params.user - User slug or ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the user object.
- *   * @property {object} entities.data - The user object.
+ * @returns {Object} 200 - Success response containing the user object.
+ *   * @property {Object} entities.data - The user object.
  */
 export const getSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	const { user: userIdentifier } = req.params || {};
@@ -372,8 +375,8 @@ export const getSingleUser = async (req: Request, res: Response, next: NextFunct
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the user object.
- *   * @property {object} entities.data - The user object.
+ * @returns {Object} 200 - Success response containing the user object.
+ *   * @property {Object} entities.data - The user object.
  */
 export const getCurrentAuthenticatedUser = async (
 	req: Request,
@@ -398,16 +401,16 @@ export const getCurrentAuthenticatedUser = async (
  * @description Updates a user's profile information based on the provided data. Only the currently authenticated user can update their own profile.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.user - User slug or ID.
+ * @param {String} req.params.user - User slug or ID.
  * @param {Object} req.body - Update data for the user.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the updated user object and a success message.
- *   * @property {object} entities.data - The updated user object.
+ * @returns {Object} 200 - Success response containing the updated user object and a success message.
+ *   * @property {Object} entities.data - The updated user object.
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -430,7 +433,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 	);
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	if (reqBody?.email && user?.email) isEmailModified = reqBody.email !== user.email || false;
@@ -538,14 +541,14 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  * @description Deletes a user based on the provided slug or ID, along with associated sessions and tokens. Only the currently authenticated user can delete their own account or other users with appropriate permissions.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.user - User slug or ID.
+ * @param {String} req.params.user - User slug or ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -561,7 +564,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 	);
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError || null);
+		return next(userError);
 	}
 
 	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id).session(session));
@@ -602,11 +605,11 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
  * @description Restores a previously deleted user based on the provided slug or ID.
  *
  * @param {Object} req - Express request object.
- * @param {string} req.params.user - User slug or ID.
+ * @param {String} req.params.user - User slug or ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const restoreSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	const { user: userIdentifier } = req.params || {};
@@ -627,9 +630,6 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			flashes: req.flash(),
-		})
+		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
 	);
 };

@@ -24,24 +24,37 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		street: { type: String, trim: true, required: [true, "Street is required!"] },
 		building: { type: Number, required: [true, "Building is required!"] },
-		floor: { type: Number, required: [true, "Floor is required!"] },
-		apartment: { type: Number, required: [true, "Apartment is required!"] },
+		floor: { type: Number },
+		apartment: { type: String },
 		area: { type: String, trim: true, required: [true, "Area is required!"] },
-		country: { type: String, trim: true, required: [true, "Country is required!"] },
-		city: { type: String, trim: true, required: [true, "City is required!"] },
 		zip: { type: String },
 		default: { type: Boolean, default: false },
+		country: {
+			type: Schema.Types.ObjectId,
+			ref: "Country",
+			required: [true, "Country is required!"],
+			autopopulate: { maxDepth: 1, select: "name code" },
+		},
+		state: {
+			type: Schema.Types.ObjectId,
+			ref: "State",
+			required: [true, "State is required!"],
+			autopopulate: { maxDepth: 1, select: "name code" },
+		},
+		city: {
+			type: Schema.Types.ObjectId,
+			ref: "City",
+			required: [true, "City is required!"],
+			autopopulate: { maxDepth: 1, select: "name" },
+		},
 		user: {
 			type: Schema.Types.ObjectId,
-			required: [true, "User is required!"],
 			ref: "User",
+			required: [true, "User is required!"],
 			autopopulate: { maxDepth: 1 },
 		},
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 // modal definition

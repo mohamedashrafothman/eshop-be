@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
@@ -8,7 +8,10 @@ import Product, { type IProductDocument } from "../models/Product";
 import Review from "../models/Review";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -35,7 +38,11 @@ export const validator = (method: string) => {
 						"Rating must be an integer greater than or equal 0 and less than or equal 5!"
 					)
 					.toInt(),
-				body("product").notEmpty().withMessage("Product is required!"),
+				body("product")
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Product is required!"),
 			];
 		case "update":
 			return [
@@ -64,7 +71,12 @@ export const validator = (method: string) => {
 						"Rating must be an integer greater than or equal 0 and less than or equal 5!"
 					)
 					.toInt(),
-				body("product").optional().notEmpty().withMessage("Product is required!"),
+				body("product")
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid country id!")
+					.notEmpty()
+					.withMessage("Product is required!"),
 			];
 		default:
 			return [];
@@ -80,7 +92,7 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -92,7 +104,7 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 	);
 	if (existsProductError || !existsProduct) {
 		handleTransactionError(session);
-		return next(existsProductError || null);
+		return next(existsProductError);
 	}
 
 	// check if review exists

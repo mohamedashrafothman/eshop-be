@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
 import mongoose, { Types } from "mongoose";
@@ -11,13 +11,18 @@ import Product, { IProductDocument } from "../models/Product";
 import Tax from "../models/Tax";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
-export const validator = (method: string) => {
+/**
+ * Validates the input fields based on the method provided.
+ */
+export const validator = (method: "create" | "update"): ValidationChain[] => {
 	switch (method) {
-		case "add":
+		case "create":
 			return [
 				body("product")
 					.trim()
 					.escape()
+					.isMongoId()
+					.withMessage("Invalid country id!")
 					.notEmpty()
 					.withMessage("You must supply a product id!"),
 				body("quantity")
@@ -50,7 +55,7 @@ export const validator = (method: string) => {
  * and has enough items available in the stock for the given quantity.
  *
  * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
- * @param {number} [quantity=0] - The requested quantity to check against the product's stock.
+ * @param {Number} [quantity=0] - The requested quantity to check against the product's stock.
  *
  * @returns {HttpError|null} - Returns an error if the product has no stock quantity, is out of stock, or the requested quantity exceeds the available stock. Returns `null` if there are no issues.
  * @throws {Error} 500 - Returns an error if the product object does not contain a valid quantity field.
@@ -88,10 +93,10 @@ const _checkProductStock = (
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - Request body containing product details.
- * @param {string} req.body.product - The product ID to add to the cart.
- * @param {number} req.body.quantity - The quantity of the product to add.
- * @param {string} req.body.color - The color of the product.
- * @param {string} req.body.size - The size of the product.
+ * @param {String} req.body.product - The product ID to add to the cart.
+ * @param {Number} req.body.quantity - The quantity of the product to add.
+ * @param {String} req.body.color - The color of the product.
+ * @param {String} req.body.size - The size of the product.
  * @param {Object} req.user - The currently logged-in user object.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
@@ -108,7 +113,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -123,7 +128,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 	);
 	if (existsProductError || !existsProduct) {
 		handleTransactionError(session);
-		return next(existsProductError || null);
+		return next(existsProductError);
 	}
 
 	// check if cart exists
@@ -149,7 +154,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (cartItemError || !cartItem) {
 			handleTransactionError(session);
-			return next(cartItemError || null);
+			return next(cartItemError);
 		}
 
 		// get cart taxes
@@ -185,7 +190,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (newCartError || !newCart) {
 			handleTransactionError(session);
-			return next(newCartError || null);
+			return next(newCartError);
 		}
 
 		// commit the transaction
@@ -244,7 +249,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		);
 		if (newCartItemError || !newCartItem) {
 			handleTransactionError(session);
-			return next(newCartItemError || null);
+			return next(newCartItemError);
 		}
 
 		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
@@ -307,7 +312,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the user's cart data.
+ * @returns {Object} 200 - Success response with the user's cart data.
  * @property {Object} res.body.data - The cart object, or an empty object if no cart exists for the user.
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
  * @throws {Error} 500 - Returns an error if there is an issue retrieving the cart from the database.
@@ -340,12 +345,12 @@ export const getSingleCart = async (req: Request, res: Response, next: NextFunct
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Request parameters containing the cartItem ID to be removed.
- * @param {string} req.params.cartItem - The ID of the cart item to remove.
+ * @param {String} req.params.cartItem - The ID of the cart item to remove.
  * @param {Object} req.user - The currently logged-in user object.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response with the updated cart or an empty object if the cart is deleted.
+ * @returns {Object} 200 - Success response with the updated cart or an empty object if the cart is deleted.
  * @throws {Error} 400 - If the cart item is not found or the user does not have permission to modify the cart.
  * @throws {Error} 401 - If the user is not logged in.
  * @throws {Error} 500 - If any database operation fails during the transaction.
@@ -357,7 +362,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -366,7 +371,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	if (
@@ -382,7 +387,7 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
-		return next(cartItemError || null);
+		return next(cartItemError);
 	}
 
 	const [deleteCartItemError] = await to(
@@ -460,12 +465,12 @@ export const removeFromCart = async (req: Request, res: Response, next: NextFunc
  *
  * @param {Object} req - Express request object containing parameters and user details.
  * @param {Object} req.user - The logged-in user object.
- * @param {string} req.params.cartItem - The ID of the cart item to update.
+ * @param {String} req.params.cartItem - The ID of the cart item to update.
  * @param {Object} req.body.quantity - The new quantity for the cart item.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the cart was updated successfully.
+ * @returns {Object} 200 - Success response indicating the cart was updated successfully.
  * @property {Object} res.body.data - The updated cart data.
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
  * @throws {Error} 404 - Returns an error if the cart item or product does not exist.
@@ -479,7 +484,7 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -491,13 +496,13 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
-		return next(cartItemError || null);
+		return next(cartItemError);
 	}
 
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	const product = cartItem.product as IProductDocument;
@@ -563,7 +568,7 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 200 - Success response indicating the cart was cleared successfully.
+ * @returns {Object} 200 - Success response indicating the cart was cleared successfully.
  * @property {Object} res.body.data - Empty object after the cart is cleared.
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
  * @throws {Error} 404 - Returns an error if the cart or cart items are not found.
@@ -576,7 +581,7 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -584,7 +589,7 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
-		return next(cartError || null);
+		return next(cartError);
 	}
 
 	const cartItemsIds = [...(cart?.items || [])].map((item) => item?._id || item);

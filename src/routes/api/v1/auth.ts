@@ -15,6 +15,7 @@ router
 	.all(allowMethods(["post", "get"]), authController.passportJWTAuthenticate)
 	.post(authController.logout)
 	.get(authController.logout);
+
 router
 	.route("/register")
 	.all(allowMethods(["post"]))
@@ -23,6 +24,7 @@ router
 		unprocessableEntityValidator,
 		usersController.postNewUser
 	);
+
 router
 	.route("/login")
 	.all(allowMethods(["post"]))
@@ -32,6 +34,7 @@ router
 		unprocessableEntityValidator,
 		authController.postLogin
 	);
+
 router
 	.route("/refresh-token")
 	.all(allowMethods(["post"]))
@@ -40,6 +43,7 @@ router
 		unprocessableEntityValidator,
 		authController.postRefreshToken
 	);
+
 router
 	.route("/password/forgot")
 	.all(allowMethods(["post"]))
@@ -48,6 +52,7 @@ router
 		unprocessableEntityValidator,
 		authController.postForgotPassword
 	);
+
 router
 	.route("/password/reset/:token")
 	.all(allowMethods(["post"]))
@@ -56,14 +61,17 @@ router
 		unprocessableEntityValidator,
 		authController.postResetPassword
 	);
+
 router
 	.route("/email/verify/:token")
 	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getEmailVerification);
+
 router
 	.route("/email/resend")
 	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getResendEmailVerification);
+
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
 	.all(allowMethods(["post"]), (req, res, next) =>
@@ -74,6 +82,7 @@ router
 		unprocessableEntityValidator,
 		authController.postSocialUser
 	);
+
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})/unlink`)
 	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)

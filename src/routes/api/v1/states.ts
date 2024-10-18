@@ -1,7 +1,7 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
-import * as categoriesController from "../../../controllers/categories";
+import * as statesController from "../../../controllers/states";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -13,40 +13,38 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(authController.passportJWTSerialize, categoriesController.getCategories)
+	.get(statesController.getStates)
 	.post(
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("create"),
+		statesController.validator("create"),
 		unprocessableEntityValidator,
-		categoriesController.postNewCategory
+		statesController.postNewState
 	);
 
 router
-	.route("/:category")
+	.route("/:state")
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(categoriesController.getSingleCategory)
+	.get(statesController.getSingleState)
 	.patch(
-		categoriesController.uploadCategoryIcon,
-		categoriesController.validator("update"),
+		statesController.validator("update"),
 		unprocessableEntityValidator,
-		categoriesController.updateSingleCategory
+		statesController.updateSingleState
 	)
-	.delete(categoriesController.deleteSingleCategory);
+	.delete(statesController.deleteSingleState);
 
 router
-	.route("/:category/restore")
+	.route("/:state/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.patch(categoriesController.restoreSingleCategory);
+	.patch(statesController.restoreSingleState);
 
 // exporting router
 export default router;
