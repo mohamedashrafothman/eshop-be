@@ -79,7 +79,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
  */
 export const postNewTax = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -212,7 +212,7 @@ export const getSingleTax = async (req: Request, res: Response, next: NextFuncti
  * @throws {Error} 500 - If an error occurs during the update process.
  */
 export const updateSingleTax = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

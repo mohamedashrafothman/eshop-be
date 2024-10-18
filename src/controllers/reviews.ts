@@ -92,7 +92,7 @@ export const postNewReview = async (req: Request, res: Response, next: NextFunct
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

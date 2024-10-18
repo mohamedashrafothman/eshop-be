@@ -129,7 +129,7 @@ export const uploadBrandLogo = async (req: Request, res: Response, next: NextFun
  * @throws {Error} 500 - Returns an error if the brand or logo creation fails.
  */
 export const postNewBrand = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -295,7 +295,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
 export const updateSingleBrand = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

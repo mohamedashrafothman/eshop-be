@@ -200,7 +200,7 @@ export const _passportGoogleStrategy = async (
 	profile: Profile,
 	done: GoogleVerifyCallback
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -364,7 +364,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	profile,
 	done: (verifyError: Error | null, user?: Express.User | false, options?: IVerifyOptions) => void
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -594,7 +594,7 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  *   * @property {Object} entities.data - The user data.
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -960,7 +960,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  * @returns {Object} 200 - Success response with a success message.
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1011,7 +1011,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  *   * @property {Object} entities.data - The user data.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1143,7 +1143,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  * @returns {Object} 200 - Success response with a success message.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1207,7 +1207,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  *   * @property {Object} entities.data - The data containing new tokens.
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1307,7 +1307,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  * @returns {Object} 200 - Success response with a success message.
  */
 export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1417,7 +1417,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  * @returns {Object} 200 - Success response with a success message.
  */
 export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1511,7 +1511,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  * @returns {Object} 200 - Success response with a success message.
  */
 export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -1580,7 +1580,7 @@ export const getResendEmailVerification = async (
 	res: Response,
 	next: NextFunction
 ) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

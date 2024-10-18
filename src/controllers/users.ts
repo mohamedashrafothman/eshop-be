@@ -137,7 +137,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *      * @property {String} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -410,7 +410,7 @@ export const getCurrentAuthenticatedUser = async (
  *   * @property {Object} entities.data - The updated user object.
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -548,7 +548,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  * @returns {Object} 200 - Success response with a success message.
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

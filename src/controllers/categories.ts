@@ -141,7 +141,7 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
  * @throws {Error} 500 - Returns an error if the category or icon creation fails.
  */
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 
@@ -326,7 +326,7 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
 export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
-	// start transaction
+	// Start a transaction to ensure data integrity
 	const session = await mongoose.startSession();
 	session.startTransaction();
 

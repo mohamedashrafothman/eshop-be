@@ -192,7 +192,7 @@ export const getCities = async (
 	// Attempt to retrieve the cities using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedCitiesError, paginatedCities] = await to(
-		State.paginate(
+		City.paginate(
 			{
 				// If the query includes a search term, filter cities by name or code
 				...((q && {
