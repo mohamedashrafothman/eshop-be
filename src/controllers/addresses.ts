@@ -124,7 +124,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 201 - Created response with the newly created address.
+ * @returns {Object} 201 - Created response with the newly created address.
  *   * @property {Object} entities.data - The created address object.
  */
 export const postNewAddress = async (req: Request, res: Response, next: NextFunction) => {
@@ -198,14 +198,14 @@ export const postNewAddress = async (req: Request, res: Response, next: NextFunc
  * @param {String} req.query.q - Optional search query string to match against address name or street (case-insensitive).
  * @param {Boolean} req.query.deleted - Optional flag to filter addresses by deleted status (true for deleted, false or omitted for active).
  * @param {Object} req.query - Additional query parameters for pagination (e.g., page, limit, sort).
- * @property {number} req.page - The page number to retrieve.
- * @property {number} req.limit - The number of addresses per page.
- * @property {string} req.offset - The number of addresses to skip.
- * @property {string} req.sort - The sort order of the addresses (e.g., name, createdAt).
+ * @property {Number} req.page - The page number to retrieve.
+ * @property {Number} req.limit - The number of addresses per page.
+ * @property {String} req.offset - The number of addresses to skip.
+ * @property {String} req.sort - The sort order of the addresses (e.g., name, createdAt).
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a list of addresses and pagination meta information.
+ * @returns {Object} 200 - Success response with a list of addresses and pagination meta information.
  */
 export const getAddresses = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, deleted, ...query } = req.query || {};
@@ -257,7 +257,7 @@ export const getAddresses = async (req: Request, res: Response, next: NextFuncti
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the address object.
+ * @returns {Object} 200 - Success response containing the address object.
  *   * @property {Object} entities.data - The address object.
  */
 export const getSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
@@ -289,7 +289,7 @@ export const getSingleAddress = async (req: Request, res: Response, next: NextFu
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with the updated address data.
+ * @returns {Object} 200 - Success response with the updated address data.
  *   * @property {Object} entities.data - The updated address object.
  */
 export const updateSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
@@ -401,7 +401,7 @@ export const updateSingleAddress = async (req: Request, res: Response, next: Nex
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const deleteSingleAddress = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction

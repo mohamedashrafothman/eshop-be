@@ -765,7 +765,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the product was successfully deleted.
+ *   * @property {String} flashes.success - Success message indicating the product was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the product is not found.
  */
@@ -801,7 +801,7 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the product was successfully restored.
+ *   * @property {String} flashes.success - Success message indicating the product was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the product is not found or if the product was not soft-deleted.
  */

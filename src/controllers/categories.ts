@@ -321,7 +321,7 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
  *
  * @returns {Object} 200 - Success response with the updated category data.
  *   * @property {Object} entities.data - The updated category object.
- *   * @property {string} flashes.success - Success message after the update.
+ *   * @property {String} flashes.success - Success message after the update.
  * @throws {Error} 500 - Returns an error if any issue occurs during the update process.
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
@@ -426,7 +426,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the category was successfully deleted.
+ *   * @property {String} flashes.success - Success message indicating the category was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the category is not found.
  */
@@ -467,7 +467,7 @@ export const deleteSingleCategory = async (req: Request, res: Response, next: Ne
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the category was successfully restored.
+ *   * @property {String} flashes.success - Success message indicating the category was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the category is not found or if the category was not soft-deleted.
  */

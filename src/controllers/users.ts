@@ -130,11 +130,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
+ * @returns {Object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
  *   * @property {Object} entities.data - The newly created user object.
- *      * @property {string} entities.data.accessToken - Access token (only included if not authenticated).
- *      * @property {string} entities.data.refreshToken - Refresh token (only included if not authenticated).
- *      * @property {string} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
+ *      * @property {String} entities.data.accessToken - Access token (only included if not authenticated).
+ *      * @property {String} entities.data.refreshToken - Refresh token (only included if not authenticated).
+ *      * @property {String} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -280,10 +280,10 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing a paginated list of users and sorting options.
+ * @returns {Object} 200 - Success response containing a paginated list of users and sorting options.
  *   * @property {Object} entities.data - An array of user objects.
  *   * @property {Object} entities.meta - Meta information about the pagination and available sorting options.
- *     * @property {number} entities.meta.pagination - An object containing the current page, total pages, and total results.
+ *     * @property {Number} entities.meta.pagination - An object containing the current page, total pages, and total results.
  *     * @property {array} entities.meta.sort - An array of available sorting options (see request parameter `sort`).
  */
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -343,7 +343,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the user object.
+ * @returns {Object} 200 - Success response containing the user object.
  *   * @property {Object} entities.data - The user object.
  */
 export const getSingleUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -375,7 +375,7 @@ export const getSingleUser = async (req: Request, res: Response, next: NextFunct
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the user object.
+ * @returns {Object} 200 - Success response containing the user object.
  *   * @property {Object} entities.data - The user object.
  */
 export const getCurrentAuthenticatedUser = async (
@@ -406,7 +406,7 @@ export const getCurrentAuthenticatedUser = async (
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response containing the updated user object and a success message.
+ * @returns {Object} 200 - Success response containing the updated user object and a success message.
  *   * @property {Object} entities.data - The updated user object.
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -545,7 +545,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -609,7 +609,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const restoreSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	const { user: userIdentifier } = req.params || {};

@@ -290,7 +290,7 @@ export const getSingleBrand = async (req: Request, res: Response, next: NextFunc
  *
  * @returns {Object} 200 - Success response with the updated brand data.
  *   * @property {Object} entities.data - The updated brand object.
- *   * @property {string} flashes.success - Success message after the update.
+ *   * @property {String} flashes.success - Success message after the update.
  * @throws {Error} 500 - Returns an error if any issue occurs during the update process.
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
@@ -394,7 +394,7 @@ export const updateSingleBrand = async (req: Request, res: Response, next: NextF
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the brand was successfully deleted.
+ *   * @property {String} flashes.success - Success message indicating the brand was successfully deleted.
  * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
  * @throws {Error} 404 - Returns an error if the brand is not found.
  */
@@ -430,7 +430,7 @@ export const deleteSingleBrand = async (req: Request, res: Response, next: NextF
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response with a flash message.
- *   * @property {string} flashes.success - Success message indicating the brand was successfully restored.
+ *   * @property {String} flashes.success - Success message indicating the brand was successfully restored.
  * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
  * @throws {Error} 404 - Returns an error if the brand is not found or if the brand was not soft-deleted.
  */

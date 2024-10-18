@@ -64,7 +64,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 201 - Created response with the newly created country.
+ * @returns {Object} 201 - Created response with the newly created country.
  *   * @property {Object} entities.data - The created country object.
  */
 export const postNewCountry = async (
@@ -104,7 +104,7 @@ export const postNewCountry = async (
  * @param {String} [req.query.offset] - The number of states to skip.
  * @param {String} [req.query.pagination] - Enable or disable pagination.
  * @param {String} [req.query.q] - Search term for filtering countries by name or code.
- * @param {boolean} [req.query.deleted] - Flag to include deleted countries.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted countries.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *

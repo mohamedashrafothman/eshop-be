@@ -81,7 +81,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {object} 201 - Created response with the newly created state.
+ * @returns {Object} 201 - Created response with the newly created state.
  *   * @property {Object} entities.data - The created state object.
  */
 export const postNewState = async (

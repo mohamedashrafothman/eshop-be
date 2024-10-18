@@ -11,7 +11,7 @@ import { formatResponseObject } from "../utils/helpers";
  * @param {Function} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response indicating the server is healthy.
- *   * @property {string} message - A message confirming the server's healthy status.
+ *   * @property {String} message - A message confirming the server's healthy status.
  */
 export const getHealth = async (req: Request, res: Response, next: NextFunction) => {
 	res.status(httpStatus.OK).json(

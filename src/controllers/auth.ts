@@ -584,13 +584,13 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  * @param {Object} req - Express request object.
  * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
  * @param {Object} req.body - Social login data including provider ID, email, name, and provider access token.
- *   * @property {string} req.body.providerId - User's ID in the social provider.
- *   * @property {string} req.body.email - User's email address.
- *   * @property {string} req.body.name - User's name.
- *   * @property {string} req.body.picture - User's profile picture URL (optional).
- *   * @property {string} req.body.providerToken - Access token received from the social provider.
+ *   * @property {String} req.body.providerId - User's ID in the social provider.
+ *   * @property {String} req.body.email - User's email address.
+ *   * @property {String} req.body.name - User's name.
+ *   * @property {String} req.body.picture - User's profile picture URL (optional).
+ *   * @property {String} req.body.providerToken - Access token received from the social provider.
  *
- * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
+ * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
  *   * @property {Object} entities.data - The user data.
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -957,7 +957,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  * @param {Object} req - Express request object.
  * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
 
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1007,7 +1007,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  * @param {String} req.body.email - User's email address.
  * @param {String} req.body.password - User's password.
  *
- * @returns {object} 200 - Success response containing user data, access and refresh tokens, and a success message.
+ * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
  *   * @property {Object} entities.data - The user data.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
@@ -1140,7 +1140,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  * @summary Logs out the current user.
  * @description Revokes all tokens associated with the user and deactivates the user account.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1203,7 +1203,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  * @param {Object} req.body - Request body containing a refresh token.
  * @param {String} req.body.refreshToken - The user's refresh token.
  *
- * @returns {object} 200 - Success response containing a new access token and a refresh token.
+ * @returns {Object} 200 - Success response containing a new access token and a refresh token.
  *   * @property {Object} entities.data - The data containing new tokens.
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
@@ -1304,7 +1304,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  * @param {Object} req - Express request object.
  * @param {String} req.body.email - The user's email address.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1414,7 +1414,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  * @param {String} req.body.password - The new password for the user.
  * @param {String} req.body.passwordConfirmation - The new password confirmation for the user.
 
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1508,7 +1508,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  * @param {Object} req - Express request object.
  * @param {String} req.params.token - The email verification token received via email.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
 	// start transaction
@@ -1573,7 +1573,7 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
  * @summary Resend an email verification link to a user who hasn't verified their email yet.
  * @description Sends a new email verification token to a user if their email is not verified and a valid verification token doesn't already exist.
  *
- * @returns {object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response with a success message.
  */
 export const getResendEmailVerification = async (
 	req: Request,
