@@ -147,10 +147,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 		},
 		reviewCount: { type: Number, default: 0, index: true },
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 ProductSchema.pre("save", function (next) {

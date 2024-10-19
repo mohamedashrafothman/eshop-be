@@ -13,7 +13,7 @@ export interface IEmailDocument extends SoftDeleteInterface, IEmail, Document<st
 export type IEmailModel = Model<IEmailDocument>;
 
 // schema definition
-const EmailSchema = new Schema<IEmailDocument, object, IEmailDocument>(
+const EmailSchema: Schema<IEmailDocument, object, IEmailDocument> = new Schema(
 	{
 		to: [
 			{

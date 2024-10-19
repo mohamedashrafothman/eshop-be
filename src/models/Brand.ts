@@ -43,10 +43,7 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 		],
 		productsCount: { type: Number, default: 0 },
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 BrandSchema.pre("save", function (next) {

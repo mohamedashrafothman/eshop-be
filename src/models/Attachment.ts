@@ -25,10 +25,7 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 			default: "",
 		},
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 // modal definition

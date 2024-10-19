@@ -14,6 +14,7 @@ import reviewsRouter from "./reviews";
 import statesRouter from "./states";
 import taxesRouter from "./taxes";
 import usersRouter from "./users";
+import zonesRouter from "./zones";
 
 // defining express router
 const router = Router();
@@ -40,6 +41,12 @@ router.use(
 router.use("/countries", countriesRouter);
 router.use("/states", statesRouter);
 router.use("/cities", citiesRouter);
+router.use(
+	"/zones",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	zonesRouter
+);
 router.use("/reviews", reviewsRouter);
 
 // exporting router

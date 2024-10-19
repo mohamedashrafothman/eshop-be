@@ -13,7 +13,7 @@ export interface ITokenDocument extends SoftDeleteInterface, IToken, Document<st
 export type ITokenModel = Model<ITokenDocument>;
 
 // schema definition
-const TokenSchema = new Schema<ITokenDocument, object, ITokenDocument>(
+const TokenSchema: Schema<ITokenDocument, object, ITokenDocument> = new Schema(
 	{
 		user: {
 			type: Schema.Types.ObjectId,
@@ -33,7 +33,7 @@ const TokenSchema = new Schema<ITokenDocument, object, ITokenDocument>(
 		},
 		expireAt: { type: Date },
 	},
-	{ timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 // modal definition

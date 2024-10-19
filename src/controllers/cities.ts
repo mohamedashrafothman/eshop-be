@@ -77,7 +77,6 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @param {Object} req - Express request object.
  * @param {Object} req.body - City data.
  * @param {String} req.body.name - The name of the city, ex: "New York".
- * @param {String} req.body.code - The code of the city, ex: "NY".
  * @param {String} req.body.country - The ID of the country that the city belongs to.
  * @param {String} req.body.state - The ID of the state that the city belongs to.
  * @param {Object} res - Express response object.
@@ -87,7 +86,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created city object.
  */
 export const postNewCity = async (
-	req: Request<{}, {}, { name: string; code: string; country: string; state: string }>,
+	req: Request<{}, {}, { name: string; country: string; state: string }>,
 	res: Response,
 	next: NextFunction
 ) => {
@@ -104,12 +103,7 @@ export const postNewCity = async (
 	// Attempt to create the new city
 	// If there is an error creating the city, pass the error to the next middleware
 	const [createdCityError, createdCity] = await to(
-		City.create({
-			name: req.body.name,
-			code: req.body.code,
-			country: country._id,
-			state: state._id,
-		})
+		City.create({ name: req.body.name, country: country._id, state: state._id })
 	);
 	if (createdCityError) return next(createdCityError);
 
@@ -127,7 +121,7 @@ export const postNewCity = async (
 /**
  * @summary Retrieves a paginated list of cities.
  * @description Fetches cities based on query parameters. Supports filtering by name,
- * code, and deletion status. Also includes pagination and sorting options.
+ * and deletion status. Also includes pagination and sorting options.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
@@ -136,7 +130,6 @@ export const postNewCity = async (
  * @param {Number} [req.query.limit] - The number of cities to retrieve per page.
  * @param {String} [req.query.offset] - The number of cities to skip.
  * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering cities by name or code.
  * @param {Boolean} [req.query.deleted] - Flag to include deleted cities.
  * @param {String} [req.query.country] - The ID of the country that the cities belong to.
  * @param {String} [req.query.state] - The ID of the state that the cities belong to.
@@ -179,7 +172,7 @@ export const getCities = async (
 	const isFilteredByState: boolean = "state" in req.query;
 
 	// List of fields to search for the query term
-	const querySearchFields: string[] = ["name", "code"];
+	const querySearchFields: string[] = ["name"];
 
 	// List of sort options
 	const sort: { name: string; value: object }[] = [
@@ -194,7 +187,7 @@ export const getCities = async (
 	const [paginatedCitiesError, paginatedCities] = await to(
 		City.paginate(
 			{
-				// If the query includes a search term, filter cities by name or code
+				// If the query includes a search term, filter cities by name
 				...((q && {
 					$or: querySearchFields.map((item) => ({
 						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
