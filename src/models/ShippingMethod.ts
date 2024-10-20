@@ -1,15 +1,17 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IShippingMethod from "../interfaces/ShippingMethod.interface";
+import { IZoneDocument } from "./Zone";
 
 // adding schema methods here
 export interface IShippingMethodDocument
 	extends SoftDeleteInterface,
-		IShippingMethod,
+		Omit<IShippingMethod, "zone">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	zone: Types.ObjectId | IZoneDocument;
 }
 
 // adding statics methods here

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ValidationChain } from "express-validator";
 import { PaginateOptions } from "mongoose";
+import IShippingMethod from "../interfaces/ShippingMethod.interface";
 
 /**
  * Validates the input fields based on the method provided.
@@ -17,7 +18,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 export const postNewShippingMethod = async (
-	req: Request<{}, {}, {}>,
+	req: Request<{}, {}, IShippingMethod>,
 	res: Response,
 	next: NextFunction
 ) => {};
@@ -37,25 +38,25 @@ export const getShippingMethods = async (
 ) => {};
 
 export const getSingleShippingMethod = async (
-	req: Request<{}>,
+	req: Request<{ method: string }>,
 	res: Response,
 	next: NextFunction
 ) => {};
 
 export const updateSingleShippingMethod = async (
-	req: Request<{}, {}, {}>,
+	req: Request<{ method: string }, {}, Partial<IShippingMethod>>,
 	res: Response,
 	next: NextFunction
 ) => {};
 
 export const deleteSingleShippingMethod = async (
-	req: Request<{}>,
+	req: Request<{ method: string }>,
 	res: Response,
 	next: NextFunction
 ) => {};
 
 export const restoreSingleShippingMethod = async (
-	req: Request<{}>,
+	req: Request<{ method: string }>,
 	res: Response,
 	next: NextFunction
 ) => {};

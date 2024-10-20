@@ -2,14 +2,19 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { PaginateOptions } from "mongoose";
-import Address, { type IAddressDocument } from "../models/Address";
+import IAddress from "../interfaces/Address.interface";
+import Address, { IAddressDocument } from "../models/Address";
 import City from "../models/City";
 import Country from "../models/Country";
 import State from "../models/State";
 import User from "../models/User";
-import { formatResponseObject, handleTransactionError } from "../utils/helpers";
+import {
+	formatResponseObject,
+	handleTransactionError,
+	type FormatResponseObjectType,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 /**
@@ -164,24 +169,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
  */
 export const postNewAddress = async (
-	req: Request<
-		{},
-		{},
-		{
-			name: string;
-			street: string;
-			building: number;
-			floor?: number;
-			apartment?: number;
-			area: string;
-			zip?: string;
-			country: string;
-			state: string;
-			city: string;
-			user: string;
-		}
-	>,
-	res: Response,
+	req: Request<{}, FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>, IAddress>,
+	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ) => {
 	// Start a transaction to ensure data integrity
@@ -288,7 +277,7 @@ export const postNewAddress = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdAddress },
+			entities: { data: createdAddress[0] },
 			flashes: req.flash(),
 		})
 	);
@@ -320,14 +309,14 @@ export const postNewAddress = async (
 export const getAddresses = async (
 	req: Request<
 		{},
-		{},
+		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
 		{},
 		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 			q?: string;
 			deleted?: boolean | number;
 		}
 	>,
-	res: Response,
+	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Destructure the query parameters (req.query) into
@@ -351,7 +340,7 @@ export const getAddresses = async (
 	// Attempt to retrieve the addresses using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedAddressesError, paginatedAddresses] = await to(
-		Address.paginate(
+		Address.paginate<IAddressDocument>(
 			{
 				// If the query includes a search term, filter addresses by name or code
 				...((q && {
@@ -365,7 +354,13 @@ export const getAddresses = async (
 				// If the user is authenticated, filter by user
 				...((req.user && { user: req.user._id }) || {}),
 			},
-			{ ...query }
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedAddressesError) return next(paginatedAddressesError);
@@ -402,8 +397,8 @@ export const getAddresses = async (
  * @throws {Error} 500 - Returns an error if the address retrieval fails.
  */
 export const getSingleAddress = async (
-	req: Request<{ address: string }>,
-	res: Response,
+	req: Request<{ address: string }, FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Retrieve the address ID from the request parameters
@@ -461,23 +456,10 @@ export const getSingleAddress = async (
 export const updateSingleAddress = async (
 	req: Request<
 		{ address: string },
-		{},
-		{
-			name?: string;
-			street?: string;
-			building?: number;
-			floor?: number;
-			apartment?: number;
-			area?: string;
-			zip?: string;
-			country?: string;
-			state?: string;
-			city?: string;
-			user?: string;
-			default?: boolean;
-		}
+		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
+		Partial<IAddress>
 	>,
-	res: Response,
+	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Start a transaction to ensure data integrity
@@ -631,7 +613,7 @@ export const updateSingleAddress = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: { ...(newAddress?.toJSON() || {}) } },
+			entities: { data: newAddress },
 			flashes: req.flash(),
 		})
 	);
@@ -653,8 +635,8 @@ export const updateSingleAddress = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleAddress = async (
-	req: Request<{ address: string }>,
-	res: Response,
+	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Start a transaction to ensure data integrity

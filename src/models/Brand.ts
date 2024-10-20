@@ -1,12 +1,19 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IBrand from "../interfaces/Brand.interface";
+import { IAttachmentDocument } from "./Attachment";
+import { IProductDocument } from "./Product";
 
 // adding schema methods here
-export interface IBrandDocument extends SoftDeleteInterface, IBrand, Document<string> {
+export interface IBrandDocument
+	extends SoftDeleteInterface,
+		Omit<IBrand, "logo" | "products">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	logo?: Types.ObjectId | IAttachmentDocument;
+	products: (Types.ObjectId | IProductDocument)[];
 }
 
 // adding statics methods here

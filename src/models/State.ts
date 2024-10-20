@@ -1,12 +1,17 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IState from "../interfaces/State.interface";
+import { ICountryDocument } from "./Country";
 
 // adding schema methods here
-export interface IStateDocument extends SoftDeleteInterface, IState, Document<string> {
+export interface IStateDocument
+	extends SoftDeleteInterface,
+		Omit<IState, "country">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	country: Types.ObjectId | ICountryDocument;
 }
 
 // adding statics methods here

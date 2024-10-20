@@ -1,12 +1,13 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import IState from "../interfaces/State.interface";
 import Country from "../models/Country";
-import State from "../models/State";
-import { formatResponseObject } from "../utils/helpers";
+import State, { IStateDocument } from "../models/State";
+import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -85,8 +86,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created state object.
  */
 export const postNewState = async (
-	req: Request<{}, {}, { name: string; code: string; country: string }>,
-	res: Response,
+	req: Request<{}, FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>, IState>,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ) => {
 	// Attempt to find the country the state belongs to,
@@ -106,7 +107,7 @@ export const postNewState = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdState.toJSON() },
+			entities: { data: createdState },
 			flashes: req.flash(),
 		})
 	);
@@ -140,7 +141,7 @@ export const postNewState = async (
 export const getStates = async (
 	req: Request<
 		{},
-		{},
+		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
 		{},
 		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 			q?: string;
@@ -148,7 +149,7 @@ export const getStates = async (
 			country?: string;
 		}
 	>,
-	res: Response,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Destructure the query parameters (req.query) into
@@ -175,7 +176,7 @@ export const getStates = async (
 	// Attempt to retrieve the states using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedStatesError, paginatedStates] = await to(
-		State.paginate(
+		State.paginate<IStateDocument>(
 			{
 				// If the query includes a search term, filter states by name or code
 				...((q && {
@@ -190,7 +191,13 @@ export const getStates = async (
 				...((isFilteredByCountry && { country }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
-			{ ...query }
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedStatesError) return next(paginatedStatesError);
@@ -224,8 +231,8 @@ export const getStates = async (
  * @throws {Error} 500 - Returns an error if the state retrieval fails.
  */
 export const getSingleState = async (
-	req: Request<{ state: string }>,
-	res: Response,
+	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Retrieve the state ID or slug from the request parameters
@@ -269,8 +276,12 @@ export const getSingleState = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the update process.
  */
 export const updateSingleState = async (
-	req: Request<{ state: string }, {}, { name?: string; code?: string; country?: string }>,
-	res: Response,
+	req: Request<
+		{ state: string },
+		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
+		Partial<IState>
+	>,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Attempt to find the country the state belongs to if country id exists in the request body,
@@ -315,7 +326,7 @@ export const updateSingleState = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: newState.toJSON() },
+			entities: { data: newState },
 			flashes: req.flash(),
 		})
 	);
@@ -337,8 +348,8 @@ export const updateSingleState = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleState = async (
-	req: Request<{ state: string }>,
-	res: Response,
+	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the state identifier from request parameters
@@ -383,8 +394,8 @@ export const deleteSingleState = async (
  * @throws {Error} 500 - If an error occurs during the restore process.
  */
 export const restoreSingleState = async (
-	req: Request<{ state: string }>,
-	res: Response,
+	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the state identifier from request parameters

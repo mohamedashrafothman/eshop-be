@@ -1,12 +1,17 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ITax from "../interfaces/Tax.interface";
+import { ICategoryDocument } from "./Category";
 
 // adding schema methods here
-export interface ITaxDocument extends SoftDeleteInterface, ITax, Document<string> {
+export interface ITaxDocument
+	extends SoftDeleteInterface,
+		Omit<ITax, "applicableCategories">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	applicableCategories: (Types.ObjectId | ICategoryDocument)[];
 }
 
 // adding statics methods here

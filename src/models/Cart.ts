@@ -1,14 +1,21 @@
-import { Document, Model, model, PaginateModel, Schema } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICart from "../interfaces/Cart.interface";
 import { ICartItemDocument } from "./CartItem";
 import { IProductDocument } from "./Product";
 import { ITaxDocument } from "./Tax";
+import { IUserDocument } from "./User";
 
 // adding schema methods here
-export interface ICartDocument extends SoftDeleteInterface, ICart, Document<string> {
+export interface ICartDocument
+	extends SoftDeleteInterface,
+		Omit<ICart, "user" | "items" | "taxes">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	user: Types.ObjectId | IUserDocument;
+	items: (Types.ObjectId | ICartItemDocument)[];
+	taxes: (Types.ObjectId | ITaxDocument)[];
 }
 
 // adding statics methods here

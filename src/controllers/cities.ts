@@ -1,13 +1,14 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
-import City from "../models/City";
+import ICity from "../interfaces/City.interface";
+import City, { ICityDocument } from "../models/City";
 import Country from "../models/Country";
 import State from "../models/State";
-import { formatResponseObject } from "../utils/helpers";
+import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -86,8 +87,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created city object.
  */
 export const postNewCity = async (
-	req: Request<{}, {}, { name: string; country: string; state: string }>,
-	res: Response,
+	req: Request<{}, FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>, ICity>,
+	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ) => {
 	// Attempt to find the country the city belongs to,
@@ -112,7 +113,7 @@ export const postNewCity = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdCity.toJSON() },
+			entities: { data: createdCity },
 			flashes: req.flash(),
 		})
 	);
@@ -146,7 +147,7 @@ export const postNewCity = async (
 export const getCities = async (
 	req: Request<
 		{},
-		{},
+		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
 		{},
 		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 			q?: string;
@@ -155,7 +156,7 @@ export const getCities = async (
 			state?: string;
 		}
 	>,
-	res: Response,
+	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Destructure the query parameters (req.query) into
@@ -185,7 +186,7 @@ export const getCities = async (
 	// Attempt to retrieve the cities using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedCitiesError, paginatedCities] = await to(
-		City.paginate(
+		City.paginate<ICityDocument>(
 			{
 				// If the query includes a search term, filter cities by name
 				...((q && {
@@ -202,7 +203,13 @@ export const getCities = async (
 				...((isFilteredByState && { state }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
-			{ ...query }
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedCitiesError) return next(paginatedCitiesError);
@@ -236,8 +243,8 @@ export const getCities = async (
  * @throws {Error} 500 - Returns an error if the city retrieval fails.
  */
 export const getSingleCity = async (
-	req: Request<{ city: string }>,
-	res: Response,
+	req: Request<{ city: string }, FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Retrieve the city ID or slug from the request parameters
@@ -281,8 +288,12 @@ export const getSingleCity = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the update process.
  */
 export const updateSingleCity = async (
-	req: Request<{ city: string }, {}, { name?: string; country?: string; state?: string }>,
-	res: Response,
+	req: Request<
+		{ city: string },
+		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
+		Partial<ICityDocument>
+	>,
+	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Attempt to find the country the city belongs to if country id exists in the request body,
@@ -334,7 +345,7 @@ export const updateSingleCity = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: newCity.toJSON() },
+			entities: { data: newCity },
 			flashes: req.flash(),
 		})
 	);
@@ -356,8 +367,8 @@ export const updateSingleCity = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleCity = async (
-	req: Request<{ city: string }>,
-	res: Response,
+	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the city identifier from request parameters
@@ -402,8 +413,8 @@ export const deleteSingleCity = async (
  * @throws {Error} 500 - If an error occurs during the restore process.
  */
 export const restoreSingleCity = async (
-	req: Request<{ city: string }>,
-	res: Response,
+	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the city identifier from request parameters

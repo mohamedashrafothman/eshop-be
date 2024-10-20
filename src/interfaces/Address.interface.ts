@@ -1,9 +1,3 @@
-import { Types } from "mongoose";
-import { ICityDocument } from "../models/City";
-import { ICountryDocument } from "../models/Country";
-import { IStateDocument } from "../models/State";
-import { IUserDocument } from "../models/User";
-
 export default interface Address {
 	name: string;
 	street: string;
@@ -11,10 +5,10 @@ export default interface Address {
 	floor?: number;
 	apartment?: string;
 	area: string;
-	country: Types.ObjectId | ICountryDocument;
-	state: Types.ObjectId | IStateDocument;
-	city?: Types.ObjectId | ICityDocument;
+	country: string;
+	state: string;
+	city?: string;
 	zip?: string | null;
 	default: boolean;
-	user: Types.ObjectId | IUserDocument;
+	user: string;
 }

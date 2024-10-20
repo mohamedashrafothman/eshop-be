@@ -3,8 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
-import mongoose, { Types } from "mongoose";
-import ICartItem from "../interfaces/CartItem.interface";
+import mongoose from "mongoose";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Product, { IProductDocument } from "../models/Product";
@@ -208,13 +207,11 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 	}
 
 	let cart = carts?.[0] as ICartDocument;
-	let items = [...(cart?.items || [])] as ICartItem[];
-	const itemIndex = items.findIndex(
-		(item) =>
-			(item?.product?._id && item.product._id?.toString() === product) ||
-			(Types.ObjectId.isValid(item?.product?.toString()) &&
-				item?.product?.toString() === product)
-	);
+	let items = [...(cart?.items || [])] as ICartDocument["items"];
+	const itemIndex = items.findIndex((item) => {
+		const cartItem = item as ICartItemDocument;
+		return (cartItem?.product?._id || cartItem?.product)?.toString() === product;
+	});
 
 	if (itemIndex > -1) {
 		let cartItem = items[itemIndex] as ICartItemDocument;
@@ -236,7 +233,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			...(items.slice(0, itemIndex) || []),
 			cartItem._id,
 			...(items.slice(itemIndex + 1) || []),
-		] as ICartItem[];
+		] as ICartDocument["items"];
 	} else {
 		const noStockError = _checkProductStock(existsProduct?.toJSON(), quantity);
 		if (noStockError) {
@@ -252,7 +249,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			return next(newCartItemError);
 		}
 
-		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
+		items = [...(items || []), newCartItem[0]._id] as ICartDocument["items"];
 	}
 
 	const [taxesError, taxes] = await to(
@@ -261,11 +258,11 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 				{ applicableToAllProducts: true },
 				{
 					applicableCategories: {
-						$in: items?.map(
-							(item) =>
-								(item?.product as IProductDocument)?.category?._id ||
-								(item?.product as IProductDocument)?.category
-						),
+						$in: items?.map((item) => {
+							const cartItem = item as ICartItemDocument;
+							const cartItemProduct = cartItem?.product as IProductDocument;
+							return cartItemProduct?.category?._id || cartItemProduct?.category;
+						}),
 					},
 				},
 			],
