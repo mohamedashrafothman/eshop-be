@@ -11,6 +11,7 @@ import citiesRouter from "./cities";
 import countriesRouter from "./countries";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
+import shippingMethodsRouter from "./shippingMethods";
 import statesRouter from "./states";
 import taxesRouter from "./taxes";
 import usersRouter from "./users";
@@ -27,12 +28,6 @@ router.use("/categories", categoriesRouter);
 router.use("/brands", brandsRouter);
 router.use("/products", productsRouter);
 router.use(
-	"/cart",
-	authController.passportJWTAuthenticate,
-	permission.check(vars.auth.roles.user),
-	cartRouter
-);
-router.use(
 	"/taxes",
 	authController.passportJWTAuthenticate,
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
@@ -46,6 +41,18 @@ router.use(
 	authController.passportJWTAuthenticate,
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 	zonesRouter
+);
+router.use(
+	"/shipping-methods",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	shippingMethodsRouter
+);
+router.use(
+	"/cart",
+	authController.passportJWTAuthenticate,
+	permission.check(vars.auth.roles.user),
+	cartRouter
 );
 router.use("/reviews", reviewsRouter);
 

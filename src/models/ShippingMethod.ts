@@ -49,6 +49,7 @@ const ShippingMethodSchema: Schema<IShippingMethodDocument, object, IShippingMet
 			zone: {
 				type: Schema.Types.ObjectId,
 				ref: "Zone",
+				index: true,
 				required: [true, "Zone is required!"],
 				autopopulate: { maxDepth: 1, select: "name rate countries states cities" },
 			},

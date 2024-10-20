@@ -154,7 +154,7 @@ export const getStates = async (
 ) => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), country (id of country), and query (pagination & sorting options)
-	const { q, deleted, country, ...query } = req.query || {};
+	const { q, deleted, country } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilteredByDeleted: boolean = "deleted" in req.query;

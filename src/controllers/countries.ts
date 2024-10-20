@@ -380,7 +380,7 @@ export const restoreSingleCountry = async (
 
 	// Attempt to restore the found country, and if there is an error during the restoration,
 	// pass the error to the next middleware
-	const [restoreCountryError, restoredCountry] = await to(Country.restore(singleCountryQuery));
+	const [restoreCountryError] = await to(Country.restore(singleCountryQuery));
 	if (restoreCountryError) return next(restoreCountryError);
 
 	// Flash success message and respond with success status
