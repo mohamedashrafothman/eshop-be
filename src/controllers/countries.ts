@@ -1,11 +1,12 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
-import Country from "../models/Country";
-import { formatResponseObject } from "../utils/helpers";
+import ICountry from "../interfaces/Country.interface";
+import Country, { ICountryDocument } from "../models/Country";
+import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -68,8 +69,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created country object.
  */
 export const postNewCountry = async (
-	req: Request<{}, {}, { name: string; code: string }>,
-	res: Response,
+	req: Request<{}, FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>, ICountry>,
+	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ) => {
 	// Create a new country from the request body data, and if there was an error,
@@ -85,7 +86,7 @@ export const postNewCountry = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdCountry.toJSON() },
+			entities: { data: createdCountry },
 			flashes: req.flash(),
 		})
 	);
@@ -117,19 +118,19 @@ export const postNewCountry = async (
 export const getCountries = async (
 	req: Request<
 		{},
-		{},
+		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
 		{},
 		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 			q?: string;
 			deleted?: boolean | number;
 		}
 	>,
-	res: Response,
+	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
-	const { q, deleted, ...query } = req.query || {};
+	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilteredByDeleted: boolean = "deleted" in req.query;
@@ -148,7 +149,7 @@ export const getCountries = async (
 	// Attempt to retrieve the countries using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedCountriesError, paginatedCountries] = await to(
-		Country.paginate(
+		Country.paginate<ICountryDocument>(
 			{
 				// If the query includes a search term, filter countries by name or code
 				...((q && {
@@ -161,7 +162,13 @@ export const getCountries = async (
 				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
-			{ ...query }
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedCountriesError) return next(paginatedCountriesError);
@@ -196,8 +203,8 @@ export const getCountries = async (
  * @throws {Error} 500 - Returns an error if the country retrieval fails.
  */
 export const getSingleCountry = async (
-	req: Request<{ country: string }>,
-	res: Response,
+	req: Request<{ country: string }, FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Retrieve the country ID or slug from the request parameters
@@ -240,8 +247,12 @@ export const getSingleCountry = async (
  * @throws {Error} 500 - Returns an error if the country update fails.
  */
 export const updateSingleCountry = async (
-	req: Request<{ country: string }, {}, { name?: string; code?: string }>,
-	res: Response,
+	req: Request<
+		{ country: string },
+		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
+		Partial<ICountry>
+	>,
+	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract country identifier from request parameters
@@ -278,7 +289,7 @@ export const updateSingleCountry = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: newCountry.toJSON() },
+			entities: { data: newCountry },
 			flashes: req.flash(),
 		})
 	);
@@ -300,8 +311,8 @@ export const updateSingleCountry = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleCountry = async (
-	req: Request<{ country: string }>,
-	res: Response,
+	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the country identifier from request parameters
@@ -346,8 +357,8 @@ export const deleteSingleCountry = async (
  * @throws {Error} 500 - If an error occurs during the restore process.
  */
 export const restoreSingleCountry = async (
-	req: Request<{ country: string }>,
-	res: Response,
+	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ) => {
 	// Extract the country identifier from request parameters

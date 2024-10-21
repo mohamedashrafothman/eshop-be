@@ -1,19 +1,24 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IToken from "../interfaces/Token.interface";
 import vars from "../utils/vars";
+import { IUserDocument } from "./User";
 
 // adding schema methods here
-export interface ITokenDocument extends SoftDeleteInterface, IToken, Document<string> {
+export interface ITokenDocument
+	extends SoftDeleteInterface,
+		Omit<IToken, "user">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	user: Types.ObjectId | IUserDocument;
 }
 
 // adding statics methods here
 export type ITokenModel = Model<ITokenDocument>;
 
 // schema definition
-const TokenSchema = new Schema<ITokenDocument, object, ITokenDocument>(
+const TokenSchema: Schema<ITokenDocument, object, ITokenDocument> = new Schema(
 	{
 		user: {
 			type: Schema.Types.ObjectId,
@@ -33,7 +38,7 @@ const TokenSchema = new Schema<ITokenDocument, object, ITokenDocument>(
 		},
 		expireAt: { type: Date },
 	},
-	{ timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 // modal definition

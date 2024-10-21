@@ -4,16 +4,18 @@ import _ from "lodash";
 import { ClientSession, Error, PaginateResult } from "mongoose";
 import vars from "../vars";
 
-export type FormatResponseObjectType<T> = {
+export type FormatResponseObjectType<T, S> = {
 	success?: boolean;
-	status: number;
-	entities?: {
-		data: T | T[];
-		meta?: {
-			pagination: Omit<PaginateResult<unknown>, "docs" | "meta">;
-			sort: { name: string; value: object }[];
-		};
-	};
+	status: S;
+	entities?:
+		| { data: T }
+		| {
+				data: T[];
+				meta: {
+					pagination: Omit<PaginateResult<T>, "docs" | "meta">;
+					sort: { name: string; value: object }[];
+				};
+		  };
 	flashes?: { [key: string]: string[] };
 	error?: Error;
 	message?: string;
@@ -58,14 +60,14 @@ export const isAPIHeaders = (req: Request) =>
 /**
  * format response object
  */
-export const formatResponseObject = <T = void>({
+export const formatResponseObject = <T = object | undefined, S = number>({
 	success = true,
 	status,
 	entities,
 	flashes,
 	error,
 	message,
-}: FormatResponseObjectType<T>): FormatResponseObjectType<T> => ({
+}: FormatResponseObjectType<T, S>): FormatResponseObjectType<T, S> => ({
 	success,
 	status,
 	entities,

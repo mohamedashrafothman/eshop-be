@@ -1,13 +1,20 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isInt from "validator/lib/isInt";
 import IReview from "../interfaces/Review.interface";
+import { IProductDocument } from "./Product";
+import { IUserDocument } from "./User";
 
 // adding schema methods here
-export interface IReviewDocument extends SoftDeleteInterface, IReview, Document<string> {
+export interface IReviewDocument
+	extends SoftDeleteInterface,
+		Omit<IReview, "product" | "user">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	product: Types.ObjectId | IProductDocument;
+	user: Types.ObjectId | IUserDocument;
 }
 
 // adding statics methods here

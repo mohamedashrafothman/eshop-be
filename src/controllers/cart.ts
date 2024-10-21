@@ -1,20 +1,24 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body, ValidationChain } from "express-validator";
+import { body, query, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
-import mongoose, { Types } from "mongoose";
-import ICartItem from "../interfaces/CartItem.interface";
+import mongoose from "mongoose";
+import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Product, { IProductDocument } from "../models/Product";
+import ShippingMethod from "../models/ShippingMethod";
 import Tax from "../models/Tax";
+import Zone from "../models/Zone";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
  */
-export const validator = (method: "create" | "update"): ValidationChain[] => {
+export const validator = (
+	method: "create" | "update" | "get-shipping" | "set-shipping"
+): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -42,6 +46,22 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isInt({ min: 1 })
 					.withMessage("quantity must be an integer greater than or equal 1!")
 					.toInt(),
+			];
+		case "get-shipping":
+			return [
+				query("address")
+					.isMongoId()
+					.withMessage("Invalid address id!")
+					.notEmpty()
+					.withMessage("You must supply an address id as a query param!"),
+			];
+		case "set-shipping":
+			return [
+				body("shippingMethod")
+					.isMongoId()
+					.withMessage("Invalid shipping method id!")
+					.notEmpty()
+					.withMessage("You must supply a shipping method id!"),
 			];
 		default:
 			return [];
@@ -208,13 +228,11 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 	}
 
 	let cart = carts?.[0] as ICartDocument;
-	let items = [...(cart?.items || [])] as ICartItem[];
-	const itemIndex = items.findIndex(
-		(item) =>
-			(item?.product?._id && item.product._id?.toString() === product) ||
-			(Types.ObjectId.isValid(item?.product?.toString()) &&
-				item?.product?.toString() === product)
-	);
+	let items = [...(cart?.items || [])] as ICartDocument["items"];
+	const itemIndex = items.findIndex((item) => {
+		const cartItem = item as ICartItemDocument;
+		return (cartItem?.product?._id || cartItem?.product)?.toString() === product;
+	});
 
 	if (itemIndex > -1) {
 		let cartItem = items[itemIndex] as ICartItemDocument;
@@ -236,7 +254,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			...(items.slice(0, itemIndex) || []),
 			cartItem._id,
 			...(items.slice(itemIndex + 1) || []),
-		] as ICartItem[];
+		] as ICartDocument["items"];
 	} else {
 		const noStockError = _checkProductStock(existsProduct?.toJSON(), quantity);
 		if (noStockError) {
@@ -252,7 +270,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			return next(newCartItemError);
 		}
 
-		items = [...(items || []), newCartItem[0]._id] as ICartItem[];
+		items = [...(items || []), newCartItem[0]._id] as ICartDocument["items"];
 	}
 
 	const [taxesError, taxes] = await to(
@@ -261,11 +279,11 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 				{ applicableToAllProducts: true },
 				{
 					applicableCategories: {
-						$in: items?.map(
-							(item) =>
-								(item?.product as IProductDocument)?.category?._id ||
-								(item?.product as IProductDocument)?.category
-						),
+						$in: items?.map((item) => {
+							const cartItem = item as ICartItemDocument;
+							const cartItemProduct = cartItem?.product as IProductDocument;
+							return cartItemProduct?.category?._id || cartItemProduct?.category;
+						}),
 					},
 				},
 			],
@@ -355,7 +373,7 @@ export const getSingleCart = async (req: Request, res: Response, next: NextFunct
  * @throws {Error} 401 - If the user is not logged in.
  * @throws {Error} 500 - If any database operation fails during the transaction.
  */
-export const removeFromCart = async (req: Request, res: Response, next: NextFunction) => {
+export const removeItemFromCart = async (req: Request, res: Response, next: NextFunction) => {
 	// check if user logged in
 	if (!req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -616,6 +634,121 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: {} },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Retrieves a list of shipping methods for the user's address.
+ * @description Fetches a list of shipping methods available for the user's address.
+ * The method checks if the user is authenticated, verifies the existence of the address and zone,
+ * and retrieves the shipping methods associated with the zone. If the user is not authenticated,
+ * or if the address, zone, or shipping methods are not found, an error is thrown.
+ *
+ * @param {Object} req - Express request object containing the address identifier.
+ * @param {Object} req.user - The currently logged-in user object.
+ * @param {Object} req.query.address - The ID of the address for which to retrieve shipping methods.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with a list of shipping methods.
+ * @property {Object} res.body.data - A list of shipping methods associated with the zone.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the address, zone, or shipping methods are not found.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ */
+export const getShippingMethods = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	const { address: addressIdentifier } = req.query;
+
+	const [addressError, address] = await to(
+		Address.findOne({ _id: addressIdentifier, user: req.user._id })
+	);
+	if (addressError || !address)
+		return next(addressError || new Error("No Shipping methods available."));
+
+	const [zoneError, zone] = await to(
+		Zone.findOne({
+			...(address.country && {
+				countries: { $in: [address.country?._id || address.country] },
+			}),
+			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
+			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
+		})
+	);
+	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
+
+	const [shippingMethodsError, shippingMethods] = await to(
+		ShippingMethod.find({ zone: zone._id })
+	);
+	if (shippingMethodsError) return next(shippingMethodsError);
+
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: shippingMethods },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Updates the shipping method of the user's cart.
+ * @description This function takes the ID of a shipping method as a request body parameter,
+ * retrieves the shipping method and cart of the currently logged-in user, and updates the
+ * cart with the selected shipping method. If the user is not authenticated, it returns a 401
+ * error. If the shipping method or cart are not found, it returns a 404 error. If there is an
+ * issue during the database operations, it returns a 500 error.
+ *
+ * @param {Object} req - Express request object containing the shipping method ID.
+ * @param {Object} req.user - The currently logged-in user object.
+ * @param {Object} req.body.shippingMethod - The ID of the shipping method to update the cart with.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the updated cart data.
+ * @property {Object} res.body.data - The updated cart object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the shipping method or cart are not found.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ */
+export const postShippingMethod = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	const { shippingMethod: shippingMethodIdentifier } = req.body;
+
+	// get shipping method
+	const [shippingMethodError, shippingMethod] = await to(
+		ShippingMethod.findOne({ _id: shippingMethodIdentifier })
+	);
+	if (shippingMethodError || !shippingMethod) return next(shippingMethodError);
+
+	// get cart for current logged in user
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
+	if (cartError || !cart) return next(cartError);
+
+	// update cart
+	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
+
+	// save cart
+	const [saveCartError, updatedCart] = await to(newCart.save());
+	if (saveCartError) return next(saveCartError);
+
+	req.flash("success", "Cart updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedCart.toJSON() },
 			flashes: req.flash(),
 		})
 	);

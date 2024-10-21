@@ -1,12 +1,21 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICategory from "../interfaces/Category.interface";
+import { IAttachmentDocument } from "./Attachment";
+import { IProductDocument } from "./Product";
 
 // adding schema methods here
-export interface ICategoryDocument extends SoftDeleteInterface, ICategory, Document<string> {
+export interface ICategoryDocument
+	extends SoftDeleteInterface,
+		Omit<ICategory, "icon" | "parent" | "children" | "products">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	icon: Types.ObjectId | IAttachmentDocument;
+	parent: (Types.ObjectId | ICategoryDocument)[];
+	children: (Types.ObjectId | ICategoryDocument)[];
+	products: (Types.ObjectId | IProductDocument)[];
 }
 
 // adding statics methods here

@@ -11,9 +11,11 @@ import citiesRouter from "./cities";
 import countriesRouter from "./countries";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
+import shippingMethodsRouter from "./shippingMethods";
 import statesRouter from "./states";
 import taxesRouter from "./taxes";
 import usersRouter from "./users";
+import zonesRouter from "./zones";
 
 // defining express router
 const router = Router();
@@ -26,12 +28,6 @@ router.use("/categories", categoriesRouter);
 router.use("/brands", brandsRouter);
 router.use("/products", productsRouter);
 router.use(
-	"/cart",
-	authController.passportJWTAuthenticate,
-	permission.check(vars.auth.roles.user),
-	cartRouter
-);
-router.use(
 	"/taxes",
 	authController.passportJWTAuthenticate,
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
@@ -40,6 +36,24 @@ router.use(
 router.use("/countries", countriesRouter);
 router.use("/states", statesRouter);
 router.use("/cities", citiesRouter);
+router.use(
+	"/zones",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	zonesRouter
+);
+router.use(
+	"/shipping-methods",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	shippingMethodsRouter
+);
+router.use(
+	"/cart",
+	authController.passportJWTAuthenticate,
+	permission.check(vars.auth.roles.user),
+	cartRouter
+);
 router.use("/reviews", reviewsRouter);
 
 // exporting router

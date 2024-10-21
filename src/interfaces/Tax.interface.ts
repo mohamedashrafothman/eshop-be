@@ -1,11 +1,8 @@
-import { Types } from "mongoose";
-import { ICategoryDocument } from "../models/Category";
-
 export default interface Tax {
 	name: string;
 	rate: number;
 	description?: string;
 	isPercentage: boolean;
-	applicableCategories: (Types.ObjectId | ICategoryDocument)[];
+	applicableCategories: string[];
 	applicableToAllProducts: boolean;
 }

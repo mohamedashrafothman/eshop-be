@@ -1,17 +1,22 @@
 import to from "await-to-js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isEmail from "validator/lib/isEmail.js";
 import IUser from "../interfaces/User.interface";
 import vars from "../utils/vars";
+import { IAddressDocument } from "./Address";
 
 // adding schema methods here
-export interface IUserDocument extends SoftDeleteInterface, IUser, Document<string> {
+export interface IUserDocument
+	extends SoftDeleteInterface,
+		Omit<IUser, "addresses">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	addresses: (Types.ObjectId | IAddressDocument)[] | [];
 	comparePassword: (
 		password: string,
 		next: (err?: Error | null | boolean, check?: boolean | null | undefined) => any

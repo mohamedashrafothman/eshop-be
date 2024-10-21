@@ -1,4 +1,4 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isInt from "validator/lib/isInt";
 import ICartItem from "../interfaces/CartItem.interface";
@@ -6,9 +6,13 @@ import vars from "../utils/vars";
 import { IProductDocument } from "./Product";
 
 // adding schema methods here
-export interface ICartItemDocument extends SoftDeleteInterface, ICartItem, Document<string> {
+export interface ICartItemDocument
+	extends SoftDeleteInterface,
+		Omit<ICartItem, "product">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
+	product: Types.ObjectId | IProductDocument;
 }
 
 // adding statics methods here

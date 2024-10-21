@@ -129,7 +129,6 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Normal price is required!"),
 				body("price.sale")
 					.optional()
-					.optional()
 					.isFloat({ min: 0 })
 					.withMessage("Sale price must be greater than or equal to 0!")
 					.custom((value, { req }) => {

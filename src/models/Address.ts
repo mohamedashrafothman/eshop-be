@@ -1,12 +1,23 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, PaginateModel, Schema, Types, model } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IAddress from "../interfaces/Address.interface";
+import { ICityDocument } from "./City";
+import { ICountryDocument } from "./Country";
+import { IStateDocument } from "./State";
+import { IUserDocument } from "./User";
 
 // adding schema methods here
-export interface IAddressDocument extends SoftDeleteInterface, IAddress, Document<string> {
+export interface IAddressDocument
+	extends SoftDeleteInterface,
+		Omit<IAddress, "country" | "state" | "city" | "user">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	country: Types.ObjectId | ICountryDocument;
+	state: Types.ObjectId | IStateDocument;
+	city?: Types.ObjectId | ICityDocument;
+	user: Types.ObjectId | IUserDocument;
 }
 
 // adding statics methods here

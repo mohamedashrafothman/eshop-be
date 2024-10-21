@@ -1,15 +1,29 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isHexColor from "validator/lib/isHexColor";
 import isInt from "validator/lib/isInt";
 import IProduct from "../interfaces/Product.interface";
 import vars from "../utils/vars";
+import { IAttachmentDocument } from "./Attachment";
+import { IBrandDocument } from "./Brand";
+import { ICategoryDocument } from "./Category";
+import { IReviewDocument } from "./Review";
+import { IUserDocument } from "./User";
 
 // adding schema methods here
-export interface IProductDocument extends SoftDeleteInterface, IProduct, Document<string> {
+export interface IProductDocument
+	extends SoftDeleteInterface,
+		Omit<IProduct, "images" | "thumbnail" | "brand" | "category" | "user" | "reviews">,
+		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	images?: (Types.ObjectId | IAttachmentDocument)[];
+	thumbnail: Types.ObjectId | IAttachmentDocument;
+	brand: Types.ObjectId | IBrandDocument;
+	category: Types.ObjectId | ICategoryDocument;
+	user: Types.ObjectId | IUserDocument;
+	reviews: (Types.ObjectId | IReviewDocument)[];
 }
 
 // adding statics methods here
@@ -147,10 +161,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 		},
 		reviewCount: { type: Number, default: 0, index: true },
 	},
-	{
-		toJSON: { versionKey: false, virtual: true },
-		timestamps: true,
-	}
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
 ProductSchema.pre("save", function (next) {
