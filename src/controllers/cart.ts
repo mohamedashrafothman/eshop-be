@@ -1,19 +1,22 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body, ValidationChain } from "express-validator";
+import { body, query, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
 import mongoose from "mongoose";
+import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Product, { IProductDocument } from "../models/Product";
+import ShippingMethod from "../models/ShippingMethod";
 import Tax from "../models/Tax";
+import Zone from "../models/Zone";
 import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
  */
-export const validator = (method: "create" | "update"): ValidationChain[] => {
+export const validator = (method: "create" | "update" | "get-shipping"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -41,6 +44,14 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isInt({ min: 1 })
 					.withMessage("quantity must be an integer greater than or equal 1!")
 					.toInt(),
+			];
+		case "get-shipping":
+			return [
+				query("address")
+					.isMongoId()
+					.withMessage("Invalid address id!")
+					.notEmpty()
+					.withMessage("You must supply an address id as a query param!"),
 			];
 		default:
 			return [];
@@ -352,7 +363,7 @@ export const getSingleCart = async (req: Request, res: Response, next: NextFunct
  * @throws {Error} 401 - If the user is not logged in.
  * @throws {Error} 500 - If any database operation fails during the transaction.
  */
-export const removeFromCart = async (req: Request, res: Response, next: NextFunction) => {
+export const removeItemFromCart = async (req: Request, res: Response, next: NextFunction) => {
 	// check if user logged in
 	if (!req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -613,6 +624,65 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: {} },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Retrieves a list of shipping methods for the user's address.
+ * @description Fetches a list of shipping methods available for the user's address.
+ * The method checks if the user is authenticated, verifies the existence of the address and zone,
+ * and retrieves the shipping methods associated with the zone. If the user is not authenticated,
+ * or if the address, zone, or shipping methods are not found, an error is thrown.
+ *
+ * @param {Object} req - Express request object containing the address identifier.
+ * @param {Object} req.user - The currently logged-in user object.
+ * @param {Object} req.query.address - The ID of the address for which to retrieve shipping methods.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with a list of shipping methods.
+ * @property {Object} res.body.data - A list of shipping methods associated with the zone.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the address, zone, or shipping methods are not found.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ */
+export const getShippingMethods = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	const { address: addressIdentifier } = req.query;
+
+	const [addressError, address] = await to(
+		Address.findOne({ _id: addressIdentifier, user: req.user._id })
+	);
+	if (addressError || !address)
+		return next(addressError || new Error("No Shipping methods available."));
+
+	const [zoneError, zone] = await to(
+		Zone.findOne({
+			...(address.country && {
+				countries: { $in: [address.country?._id || address.country] },
+			}),
+			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
+			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
+		})
+	);
+	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
+
+	const [shippingMethodsError, shippingMethods] = await to(
+		ShippingMethod.find({ zone: zone._id })
+	);
+	if (shippingMethodsError) return next(shippingMethodsError);
+
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: shippingMethods },
 			flashes: req.flash(),
 		})
 	);
