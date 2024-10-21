@@ -1,21 +1,25 @@
 import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICart from "../interfaces/Cart.interface";
+import { IAddressDocument } from "./Address";
 import { ICartItemDocument } from "./CartItem";
 import { IProductDocument } from "./Product";
+import { IShippingMethodDocument } from "./ShippingMethod";
 import { ITaxDocument } from "./Tax";
 import { IUserDocument } from "./User";
 
 // adding schema methods here
 export interface ICartDocument
 	extends SoftDeleteInterface,
-		Omit<ICart, "user" | "items" | "taxes">,
+		Omit<ICart, "user" | "items" | "taxes" | "shippingMethod" | "address">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	user: Types.ObjectId | IUserDocument;
 	items: (Types.ObjectId | ICartItemDocument)[];
 	taxes: (Types.ObjectId | ITaxDocument)[];
+	shippingMethod: Types.ObjectId | IShippingMethodDocument;
+	address: Types.ObjectId | IAddressDocument;
 }
 
 // adding statics methods here
@@ -43,6 +47,16 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 				autopopulate: { maxDepth: 1, select: "name rate isPercentage" },
 			},
 		],
+		shippingMethod: {
+			type: Schema.Types.ObjectId,
+			ref: "ShippingMethod",
+			autopopulate: { maxDepth: 1 },
+		},
+		address: {
+			type: Schema.Types.ObjectId,
+			ref: "Address",
+			autopopulate: { maxDepth: 1 },
+		},
 		subtotal: { type: Number, default: 0 },
 		total: { type: Number, default: 0 },
 	},
@@ -52,17 +66,25 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 // schema hooks
 CartSchema.pre("save", async function (next) {
 	// check if items is modified
-	if (!this.isModified("items") && !this.isModified("taxes")) return next();
+	if (
+		!this.isModified("items") &&
+		!this.isModified("taxes") &&
+		!this.isModified("shippingMethod")
+	)
+		return next();
 
 	// populate items to get total value from each cart item product.
 	await this.populate("items");
 	await this.populate("taxes");
+	await this.populate("shippingMethod");
 
 	// calculate subtotal and taxes based on cart items, and applicable taxes
 	const cartTaxes = this.taxes as ITaxDocument[];
 	const cartItems = this.items as ICartItemDocument[];
+	const cartShippingMethod = this.shippingMethod as IShippingMethodDocument;
 	let taxesTotal: number = 0;
 	let cartItemsTotal: number = 0;
+	const shippingMethodTotal: number = cartShippingMethod.rate || 0;
 
 	cartItems.forEach((cartItem) => {
 		const cartItemProduct = cartItem.product as IProductDocument;
@@ -87,7 +109,7 @@ CartSchema.pre("save", async function (next) {
 	});
 
 	this.subtotal = cartItemsTotal;
-	this.total = cartItemsTotal + taxesTotal;
+	this.total = cartItemsTotal + taxesTotal + shippingMethodTotal;
 
 	next();
 });

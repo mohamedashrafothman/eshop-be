@@ -16,7 +16,9 @@ import { formatResponseObject, handleTransactionError } from "../utils/helpers";
 /**
  * Validates the input fields based on the method provided.
  */
-export const validator = (method: "create" | "update" | "get-shipping"): ValidationChain[] => {
+export const validator = (
+	method: "create" | "update" | "get-shipping" | "set-shipping"
+): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -52,6 +54,14 @@ export const validator = (method: "create" | "update" | "get-shipping"): Validat
 					.withMessage("Invalid address id!")
 					.notEmpty()
 					.withMessage("You must supply an address id as a query param!"),
+			];
+		case "set-shipping":
+			return [
+				body("shippingMethod")
+					.isMongoId()
+					.withMessage("Invalid shipping method id!")
+					.notEmpty()
+					.withMessage("You must supply a shipping method id!"),
 			];
 		default:
 			return [];
@@ -683,6 +693,62 @@ export const getShippingMethods = async (req: Request, res: Response, next: Next
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: shippingMethods },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Updates the shipping method of the user's cart.
+ * @description This function takes the ID of a shipping method as a request body parameter,
+ * retrieves the shipping method and cart of the currently logged-in user, and updates the
+ * cart with the selected shipping method. If the user is not authenticated, it returns a 401
+ * error. If the shipping method or cart are not found, it returns a 404 error. If there is an
+ * issue during the database operations, it returns a 500 error.
+ *
+ * @param {Object} req - Express request object containing the shipping method ID.
+ * @param {Object} req.user - The currently logged-in user object.
+ * @param {Object} req.body.shippingMethod - The ID of the shipping method to update the cart with.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the updated cart data.
+ * @property {Object} res.body.data - The updated cart object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the shipping method or cart are not found.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ */
+export const postShippingMethod = async (req: Request, res: Response, next: NextFunction) => {
+	// check if user logged in
+	if (!req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	const { shippingMethod: shippingMethodIdentifier } = req.body;
+
+	// get shipping method
+	const [shippingMethodError, shippingMethod] = await to(
+		ShippingMethod.findOne({ _id: shippingMethodIdentifier })
+	);
+	if (shippingMethodError || !shippingMethod) return next(shippingMethodError);
+
+	// get cart for current logged in user
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
+	if (cartError || !cart) return next(cartError);
+
+	// update cart
+	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
+
+	// save cart
+	const [saveCartError, updatedCart] = await to(newCart.save());
+	if (saveCartError) return next(saveCartError);
+
+	req.flash("success", "Cart updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedCart.toJSON() },
 			flashes: req.flash(),
 		})
 	);

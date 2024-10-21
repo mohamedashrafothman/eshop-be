@@ -35,6 +35,11 @@ router
 		cartController.validator("get-shipping"),
 		unprocessableEntityValidator,
 		cartController.getShippingMethods
+	)
+	.post(
+		cartController.validator("set-shipping"),
+		unprocessableEntityValidator,
+		cartController.postShippingMethod
 	);
 
 // exporting router
