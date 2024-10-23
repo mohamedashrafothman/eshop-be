@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
-import mongoose from "mongoose";
+import mongoose, { ClientSession } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isHexColor from "validator/lib/isHexColor";
 import isMongoId from "validator/lib/isMongoId";
@@ -241,7 +241,7 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
  */
 export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	if (!req.user || ![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)) {
@@ -251,7 +251,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 	}
 
 	// upload images to storage
-	let createdThumbnailError: Error | null;
+	let createdThumbnailError: Error | null = null;
 	let createdThumbnail: IAttachmentDocument[] | undefined;
 	if (req.body?.thumbnail) {
 		[createdThumbnailError, createdThumbnail] = await to(
@@ -271,7 +271,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	let createdImagesError: Error | null;
+	let createdImagesError: Error | null = null;
 	let createdImages: IAttachmentDocument[] | undefined;
 	if (req.body?.images && req.body.images.length) {
 		[createdImagesError, createdImages] = await to(
@@ -314,7 +314,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 
 	// add product to category
 	let newCategory: ICategoryDocument | undefined;
-	let saveCategoryError: Error | null;
+	let saveCategoryError: Error | null = null;
 	let [categoryError, category] = await to(
 		Category.findOne({ _id: req.body.category }).session(session)
 	);
@@ -335,7 +335,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 
 	// add product to brand
 	let newBrand: IBrandDocument | undefined;
-	let saveBrandError: Error | null;
+	let saveBrandError: Error | null = null;
 	let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }).session(session));
 	if (brandError) {
 		handleTransactionError(session);
@@ -353,7 +353,7 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -409,7 +409,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 		maxPrice = 0,
 		...query
 	} = req.query || {};
-	const isFilteredByDeleted = "deleted" in req.query;
+	const isFilterByDeletedAllowed = "deleted" in req.query;
 	const querySearchFields = ["name", "description"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -432,7 +432,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
+					isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) ||
 					{}),
 				...(categories && categories.length && { category: { $in: categories } }),
 				...(brands && brands.length && { brand: { $in: brands } }),
@@ -546,7 +546,7 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
  */
 export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { product: productIdentifier } = req.params || {};
@@ -568,7 +568,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		return next();
 	}
 
-	let createdThumbnailError: Error | null;
+	let createdThumbnailError: Error | null = null;
 	let createdThumbnail: IAttachmentDocument[] | undefined;
 	if (req.body?.thumbnail) {
 		const [productThumbnailError, productThumbnail] = await to(
@@ -611,7 +611,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	let createdImagesError: Error | null;
+	let createdImagesError: Error | null = null;
 	let createdImages: IAttachmentDocument[] | undefined;
 	if (req.body?.images && req.body.images.length) {
 		const [productImagesError, productImages] = await to(
@@ -739,7 +739,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		return next(saveError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

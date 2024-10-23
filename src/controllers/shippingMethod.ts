@@ -131,7 +131,7 @@ export const postNewShippingMethod = async (
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Check if the zone ID provided in the request body exist in the database
 	// and if there was an error, return the error and end the request
 	// If the zone ID do not exist in the database, return an error
@@ -202,16 +202,16 @@ export const getShippingMethods = async (
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted shipping methods), zone (id of zone) and query (pagination & sorting options)
 	const { q, deleted, zone } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
 
 	// Check if the query includes a zone
-	const isFilteredByZone: boolean = "zone" in req.query;
+	const isFilterByZoneAllowed: boolean = "zone" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -237,9 +237,9 @@ export const getShippingMethods = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted shipping methods
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// If the query includes a zone, include zone shipping methods
-				...((isFilteredByZone && { zone: Boolean(zone) }) || {}),
+				...((isFilterByZoneAllowed && { zone: Boolean(zone) }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -290,7 +290,7 @@ export const getSingleShippingMethod = async (
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the shipping method ID or slug from the request parameters
 	const { method: shippingMethodIdentifier } = req.params || {};
 
@@ -321,7 +321,7 @@ export const updateSingleShippingMethod = async (
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Check if the zone ID provided in the request body exist in the database
 	// and if there was an error, return the error and end the request
 	// If the zone ID do not exist in the database, return an error
@@ -392,7 +392,7 @@ export const deleteSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the shipping method identifier from request parameters
 	const { method: shippingMethodIdentifier } = req.params || {};
 
@@ -426,7 +426,7 @@ export const restoreSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the shipping method identifier from request parameters
 	const { method: shippingMethodIdentifier } = req.params || {};
 

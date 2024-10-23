@@ -4,7 +4,7 @@ import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { ClientSession } from "mongoose";
 import passport, { type Profile } from "passport";
 import { type VerifyFunctionWithRequest as FacebookVerifyFunctionWithRequest } from "passport-facebook";
 import { type VerifyCallback as GoogleVerifyCallback } from "passport-google-oauth20";
@@ -201,7 +201,7 @@ export const _passportGoogleStrategy = async (
 	done: GoogleVerifyCallback
 ) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	if (req.isAuthenticated()) {
@@ -271,7 +271,7 @@ export const _passportGoogleStrategy = async (
 			return done(saveError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -304,7 +304,7 @@ export const _passportGoogleStrategy = async (
 			return done(userError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -349,7 +349,7 @@ export const _passportGoogleStrategy = async (
 		return done(newRefreshTokenError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -365,7 +365,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	done: (verifyError: Error | null, user?: Express.User | false, options?: IVerifyOptions) => void
 ) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	if (req.isAuthenticated()) {
@@ -450,7 +450,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 			return done(saveError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -483,7 +483,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 			return done(userError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -540,7 +540,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 		return done(newRefreshTokenError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -595,7 +595,7 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  */
 export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	if (req.isAuthenticated()) {
@@ -711,7 +711,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 			return next(newRefreshTokenError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -826,7 +826,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 			return next(newRefreshTokenError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -929,7 +929,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 		return next(newRefreshTokenError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -961,7 +961,7 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
  */
 export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { provider } = req.params || {};
@@ -986,7 +986,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
 		return next(updateUserError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1012,7 +1012,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { email } = req.body;
@@ -1113,7 +1113,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 			return next(newRefreshTokenError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -1144,7 +1144,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  */
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const _id = req?.user?._id || "";
@@ -1180,7 +1180,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
 			return next(err);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -1208,7 +1208,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  */
 export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { refreshToken: refreshToken } = req.body as { refreshToken: string };
@@ -1277,7 +1277,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
 				return next(newRefreshTokenError);
 			}
 
-			// commit the transaction
+			// Commit the transaction
 			await session.commitTransaction();
 			session.endSession();
 
@@ -1308,7 +1308,7 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  */
 export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { email } = req.body;
@@ -1394,7 +1394,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
 		return next(newEmailError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1418,7 +1418,7 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
  */
 export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const [resetPasswordTokenError, resetPasswordToken] = await to(
@@ -1488,7 +1488,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
 		return next(newEmailError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1512,7 +1512,7 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  */
 export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const [verifyEmailTokenError, verifyEmailToken] = await to(
@@ -1556,7 +1556,7 @@ export const getEmailVerification = async (req: Request, res: Response, next: Ne
 		return next(deleteVerifyEmailTokenError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -1581,7 +1581,7 @@ export const getResendEmailVerification = async (
 	next: NextFunction
 ) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const [userError, user] = await to(
@@ -1669,7 +1669,7 @@ export const getResendEmailVerification = async (
 		return next(newEmailError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

@@ -2,7 +2,7 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import httpStatus from "http-status";
-import mongoose from "mongoose";
+import mongoose, { ClientSession } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isMongoId from "validator/lib/isMongoId";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
@@ -90,7 +90,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} req.body.icon - The uploaded icon file data.
  *   * @throws {Error} 400 - Returns an error if the file type is invalid or the file size exceeds the limit.
  */
-export const uploadCategoryIcon = async (req: Request, res: Response, next: NextFunction) => {
+export const uploadCategoryIcon = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	const storageEngine = new StorageEngine({
 		accept: ["image"],
 		square: true,
@@ -142,10 +146,10 @@ export const uploadCategoryIcon = async (req: Request, res: Response, next: Next
  */
 export const postNewCategory = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	let createdAttachmentError: Error | null;
+	let createdAttachmentError: Error | null = null;
 	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.icon) {
 		[createdAttachmentError, createdAttachment] = await to(
@@ -194,7 +198,7 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
 		}
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -202,7 +206,7 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: createdCategory },
+			entities: { data: createdCategory[0] },
 			flashes: req.flash(),
 		})
 	);
@@ -228,7 +232,7 @@ export const postNewCategory = async (req: Request, res: Response, next: NextFun
  */
 export const getCategories = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, deleted, ...query } = req.query || {};
-	const isFilteredByDeleted = "deleted" in req.query;
+	const isFilterByDeletedAllowed = "deleted" in req.query;
 	const querySearchFields = ["name", "description"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -249,7 +253,7 @@ export const getCategories = async (req: Request, res: Response, next: NextFunct
 				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
 					req.user?.role || ""
 				) &&
-					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
+					isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) ||
 					{}),
 				parent: { $size: 0 },
 			},
@@ -327,7 +331,7 @@ export const getSingleCategory = async (req: Request, res: Response, next: NextF
  */
 export const updateSingleCategory = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { category: categoryIdentifier } = req.params || {};
@@ -344,7 +348,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 		return next(categoryError);
 	}
 
-	let createdAttachmentError: Error | null;
+	let createdAttachmentError: Error | null = null;
 	let createdAttachment: IAttachmentDocument[] | undefined;
 	if (req.body?.icon) {
 		const [categoryAttachmentError, categoryAttachment] = await to(
@@ -400,7 +404,7 @@ export const updateSingleCategory = async (req: Request, res: Response, next: Ne
 		return next(saveError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

@@ -1,11 +1,11 @@
 import { Router } from "express";
 import versionOneRouter from "./v1";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router.use("/v1", versionOneRouter);
 
-// exporting router
+// Exporting router
 export default router;

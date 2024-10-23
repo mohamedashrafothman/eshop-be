@@ -90,7 +90,7 @@ export const postNewCity = async (
 	req: Request<{}, FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>, ICity>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Attempt to find the country the city belongs to,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
@@ -158,19 +158,19 @@ export const getCities = async (
 	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), country (id of country), state (id of state), and query (pagination & sorting options)
 	const { q, deleted, country, state, ...query } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
 
 	// Check if the query includes a country id
-	const isFilteredByCountry: boolean = "country" in req.query;
+	const isFilterByCountryAllowed: boolean = "country" in req.query;
 
 	// Check if the query includes a state id
-	const isFilteredByState: boolean = "state" in req.query;
+	const isFilterByStateAllowed: boolean = "state" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name"];
@@ -196,11 +196,11 @@ export const getCities = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted cities
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// If the query includes a country id, filter cities by country
-				...((isFilteredByCountry && { country }) || {}),
+				...((isFilterByCountryAllowed && { country }) || {}),
 				// If the query includes a state id, filter cities by state
-				...((isFilteredByState && { state }) || {}),
+				...((isFilterByStateAllowed && { state }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -246,7 +246,7 @@ export const getSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the city ID or slug from the request parameters
 	const { city: cityIdentifier } = req.params || {};
 
@@ -295,7 +295,7 @@ export const updateSingleCity = async (
 	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Attempt to find the country the city belongs to if country id exists in the request body,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	if (req.body?.country) {
@@ -370,7 +370,7 @@ export const deleteSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the city identifier from request parameters
 	const { city: cityIdentifier } = req.params || {};
 
@@ -416,7 +416,7 @@ export const restoreSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the city identifier from request parameters
 	const { city: cityIdentifier } = req.params || {};
 

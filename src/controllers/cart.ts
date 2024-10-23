@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, query, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus from "http-status";
-import mongoose from "mongoose";
+import mongoose, { ClientSession } from "mongoose";
 import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
@@ -134,7 +134,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 	}
 
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { product, quantity, color, size } = req.body;
@@ -153,7 +153,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 
 	// check if cart exists
 	let carts: ICartDocument[] | undefined;
-	let cartsError: Error | null;
+	let cartsError: Error | null = null;
 	[cartsError, carts] = await to(Cart.find({ user: req.user._id }).session(session));
 	if (cartsError) {
 		handleTransactionError(session);
@@ -213,7 +213,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 			return next(newCartError);
 		}
 
-		// commit the transaction
+		// Commit the transaction
 		await session.commitTransaction();
 		session.endSession();
 
@@ -305,7 +305,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		return next(saveCartError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -381,7 +381,7 @@ export const removeItemFromCart = async (req: Request, res: Response, next: Next
 	}
 
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { cartItem: cartItemId } = req.params;
@@ -460,7 +460,7 @@ export const removeItemFromCart = async (req: Request, res: Response, next: Next
 		}
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -503,7 +503,7 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
 	}
 
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { cartItem: cartItemId } = req.params;
@@ -561,7 +561,7 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
 		return next(saveCartError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -600,7 +600,7 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	}
 
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	// get cart for current logged in user
@@ -625,7 +625,7 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 		return next(deleteCartError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 

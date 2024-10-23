@@ -6,10 +6,10 @@ import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
@@ -46,5 +46,5 @@ router
 	)
 	.patch(statesController.restoreSingleState);
 
-// exporting router
+// Exporting router
 export default router;

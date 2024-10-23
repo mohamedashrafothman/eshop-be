@@ -72,7 +72,7 @@ export const postNewCountry = async (
 	req: Request<{}, FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>, ICountry>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Create a new country from the request body data, and if there was an error,
 	// return the error and end the request
 	const [createdCountryError, createdCountry] = await to(
@@ -127,13 +127,13 @@ export const getCountries = async (
 	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "code"];
@@ -159,7 +159,7 @@ export const getCountries = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted countries
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -180,10 +180,7 @@ export const getCountries = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: {
-				data: [...(docs || [])],
-				meta: { pagination, sort },
-			},
+			entities: { data: [...(docs || [])], meta: { pagination, sort } },
 		})
 	);
 };
@@ -206,7 +203,7 @@ export const getSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the country ID or slug from the request parameters
 	const { country: countryIdentifier } = req.params || {};
 
@@ -254,7 +251,7 @@ export const updateSingleCountry = async (
 	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
@@ -314,7 +311,7 @@ export const deleteSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
@@ -360,7 +357,7 @@ export const restoreSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 

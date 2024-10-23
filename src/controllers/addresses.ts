@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
-import mongoose, { PaginateOptions } from "mongoose";
+import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import IAddress from "../interfaces/Address.interface";
 import Address, { IAddressDocument } from "../models/Address";
 import City from "../models/City";
@@ -172,9 +172,9 @@ export const postNewAddress = async (
 	req: Request<{}, FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>, IAddress>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	// Check if the user is authenticated and has permission to create a new address.
@@ -318,13 +318,13 @@ export const getAddresses = async (
 	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
 	const { q, deleted, ...query } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted = "deleted" in req.query;
+	const isFilterByDeletedAllowed = "deleted" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields = ["name", "street"];
@@ -350,7 +350,7 @@ export const getAddresses = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted addresses
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// If the user is authenticated, filter by user
 				...((req.user && { user: req.user._id }) || {}),
 			},
@@ -400,7 +400,7 @@ export const getSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the address ID from the request parameters
 	const { address: addressIdentifier } = req.params || {};
 
@@ -461,9 +461,9 @@ export const updateSingleAddress = async (
 	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	// Attempt to find the country the city belongs to if country id exists in the request body,
@@ -638,9 +638,9 @@ export const deleteSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	// Extract the address identifier from request parameters

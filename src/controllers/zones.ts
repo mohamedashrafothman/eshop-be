@@ -138,7 +138,7 @@ export const postNewZone = async (
 	req: Request<{}, FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>, IZone>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Check if the country IDs provided in the request body exist in the database
 	// and if there was an error, return the error and end the request
 	// If the country IDs do not exist in the database, return an error
@@ -240,13 +240,13 @@ export const getZones = async (
 	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted zones), and query (pagination & sorting options)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -272,7 +272,7 @@ export const getZones = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted zones
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -305,7 +305,7 @@ export const getSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the zone ID or slug from the request parameters
 	const { zone: zoneIdentifier } = req.params || {};
 
@@ -356,7 +356,7 @@ export const updateSingleZone = async (
 	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract zone identifier from request parameters
 	const { zone: zoneIdentifier } = req.params || {};
 
@@ -467,7 +467,7 @@ export const deleteSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the zone identifier from request parameters
 	const { zone: zoneIdentifier } = req.params || {};
 
@@ -513,7 +513,7 @@ export const restoreSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the zone identifier from request parameters
 	const { zone: zoneIdentifier } = req.params || {};
 

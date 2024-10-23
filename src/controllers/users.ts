@@ -4,7 +4,7 @@ import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import jsonwebtoken from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose, { ClientSession } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
 import Email from "../models/Email";
 import Session from "../models/Session";
@@ -138,7 +138,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  */
 export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { email } = req.body;
@@ -242,7 +242,7 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		}
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -288,9 +288,9 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  */
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
 	const { q, emailVerified, deleted, active, ...query } = req.query || {};
-	const isFilteredByDeleted = "deleted" in req.query;
-	const isFilteredByEmailVerified = "emailVerified" in req.query;
-	const isFilteredByActive = "active" in req.query;
+	const isFilterByDeletedAllowed = "deleted" in req.query;
+	const isFilterByEmailVerificationAllowed = "emailVerified" in req.query;
+	const isFilterByActiveAllowed = "active" in req.query;
 	const querySearchFields = ["name", "email"];
 	const sort = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -311,9 +311,9 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 					})),
 				}) ||
 					{}),
-				...((isFilteredByActive && { active }) || {}),
-				...((isFilteredByEmailVerified && { emailVerified }) || {}),
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByActiveAllowed && { active }) || {}),
+				...((isFilterByEmailVerificationAllowed && { emailVerified }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				_id: { $ne: req?.user?._id || "" },
 			},
 			{ ...query }
@@ -411,7 +411,7 @@ export const getCurrentAuthenticatedUser = async (
  */
 export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { user: userIdentifier } = req.params || {};
@@ -522,7 +522,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		}
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
@@ -549,7 +549,7 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
  */
 export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { user: userIdentifier } = req.params || {};
@@ -587,7 +587,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 		return next(deleteTokenError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
