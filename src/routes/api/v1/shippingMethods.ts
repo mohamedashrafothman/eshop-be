@@ -1,6 +1,6 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
-import * as shippingMethodsController from "../../../controllers/shippingMethod";
+import * as shippingMethodsController from "../../../controllers/shippingMethods";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 
 // Defining express router

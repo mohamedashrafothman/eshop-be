@@ -485,7 +485,7 @@ export const deleteSingleZone = async (
 
 	// Attempt to soft-delete the found zone, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteZoneError] = await to(Zone.deleteById(zone._id, req?.user?._id));
+	const [deleteZoneError] = await to(Zone.deleteById(zone._id, req.user?._id));
 	if (deleteZoneError) return next(deleteZoneError);
 
 	// Flash success message and respond with success status

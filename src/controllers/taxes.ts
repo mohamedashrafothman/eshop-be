@@ -159,7 +159,7 @@ export const getTaxes = async (
 	];
 
 	const [paginatedTaxesError, paginatedTaxes] = await to(
-		Tax.paginate(
+		Tax.paginate<ITaxDocument>(
 			{
 				// If the query includes a search term, filter taxes by name or code
 				...((q && {
@@ -351,7 +351,7 @@ export const deleteSingleTax = async (
 
 	// Attempt to soft-delete the found tax, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteTaxError] = await to(Tax.deleteById(tax._id, req?.user?._id));
+	const [deleteTaxError] = await to(Tax.deleteById(tax._id, req.user?._id));
 	if (deleteTaxError) return next(deleteTaxError);
 
 	// Flash success message and respond with success status

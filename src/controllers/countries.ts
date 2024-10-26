@@ -329,7 +329,7 @@ export const deleteSingleCountry = async (
 
 	// Attempt to soft-delete the found country, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteCountryError] = await to(Country.deleteById(country._id, req?.user?._id));
+	const [deleteCountryError] = await to(Country.deleteById(country._id, req.user?._id));
 	if (deleteCountryError) return next(deleteCountryError);
 
 	// Flash success message and respond with success status

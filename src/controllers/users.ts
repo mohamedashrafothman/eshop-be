@@ -2,16 +2,22 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import jsonwebtoken from "jsonwebtoken";
-import mongoose, { ClientSession } from "mongoose";
+import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import IUser from "../interfaces/User.interface";
 import Email from "../models/Email";
 import Session from "../models/Session";
 import Token from "../models/Token";
-import User from "../models/User";
+import User, { IUserDocument } from "../models/User";
 import emailService from "../services/email";
-import { formatResponseObject, handleTransactionError } from "../utils/helpers";
+import {
+	createHashToken,
+	formatResponseObject,
+	FormatResponseObjectType,
+	handleTransactionError,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 /**
@@ -118,30 +124,61 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new user account.
- * @description Registers a new user with the provided information. A verification email will be sent to the provided email address.
+ * @summary Creates a new user in the system.
+ * @description Handles the creation of a new user in the system.
+ * If the user is not authenticated, creates access and refresh tokens.
+ * Sends an email with the verification token to the user.
+ * Creates the new user in the database and related email and token records.
+ * Commits the transaction and returns a success response.
  *
- * @param {Object} req - Express request object.
- * @param {String} req.body.email - User's email address (required).
- * @param {String} req.body.name - User's name (required).
- * @param {String} req.body.password - User's password (required).
- * @param {String} req.body.passwordConfirmation - User's password confirmation (required).
- * @param {String} req.body.role - User's role (optional, defaults to 'USER'). Valid roles include 'ADMIN', and 'USER'.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
+ * @param {Request} req - Express request object.
+ * @param {Response} res - Express response object.
+ * @param {Object} req.body - The data for creating a new user.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 201 - Created response containing the newly created user object (without password) and optional access tokens if not authenticated.
- *   * @property {Object} entities.data - The newly created user object.
- *      * @property {String} entities.data.accessToken - Access token (only included if not authenticated).
- *      * @property {String} entities.data.refreshToken - Refresh token (only included if not authenticated).
- *      * @property {String} entities.data.tokenType - Token type (only included if not authenticated, defaults to 'Bearer').
+ * @returns {void} 201 - Success response with the created user entity.
+ *   * @property {Object} entities.data - The created user object.
+ *   * @property {Object} [entities.data.accessToken] - The user's access token.
+ *   * @property {Object} [entities.data.refreshToken] - The user's refresh token.
+ *   * @property {Object} [entities.data.tokenType] - The token type.
+ *   * @property {Array} flashes - Success message for new user creation.
+ * @throws {Error} 401 - Returns an error if the user is not authorized to create a user.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
  */
-export const postNewUser = async (req: Request, res: Response, next: NextFunction) => {
+export const postNewUser = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<
+			IUserDocument & {
+				accessToken?: string;
+				refreshToken?: string;
+				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
+			},
+			HttpStatus["CREATED"]
+		>,
+		Omit<IUser, "password">
+	>,
+	res: Response<
+		FormatResponseObjectType<
+			IUserDocument & {
+				accessToken?: string;
+				refreshToken?: string;
+				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
+			},
+			HttpStatus["CREATED"]
+		>
+	>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
+	// Get email value from the request body.
 	const { email } = req.body;
+
+	// Check if user already exists, if so, or if there is an error,
+	// rollback the transaction and pass the error to the next middleware
 	const [userError, existsUser] = await to(User.findOne({ email }).session(session));
 	if (userError || existsUser) {
 		handleTransactionError(session);
@@ -152,15 +189,21 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		);
 	}
 
+	// Attempt to create the new user
+	// If there is an error creating the user,
+	// Rollback the transaction and pass the error to the next middleware
 	const [createdUserError, createdUser] = await to(
-		User.create([{ ...(req?.body || {}), active: true }], { session })
+		User.create([{ ...(req.body || {}), active: true }], { session })
 	);
 	if (createdUserError) {
 		handleTransactionError(session);
 		return next(createdUserError);
 	}
 
-	const token = await createdUser[0].createHashToken();
+	// Attempt to create a new email verification token
+	// If there is an error creating the token,
+	// Rollback the transaction and pass the error to the next middleware
+	const token = createHashToken();
 	const [newVerifyEmailTokenError] = await to(
 		Token.create(
 			[
@@ -179,6 +222,9 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		return next(newVerifyEmailTokenError);
 	}
 
+	// Attempt to send an email using the email service send method
+	// If there is an error sending the email,
+	// rollback the transaction and pass the error to the next middleware
 	const [sendEmailError, sendEmail] = await emailService.send({
 		to: createdUser[0],
 		from: vars.email.sender,
@@ -191,20 +237,20 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		return next(sendEmailError);
 	}
 
+	// Attempt to create a new email
+	// If there is an error creating the email,
+	// Rollback the transaction and pass the error to the next middleware
 	const [newEmailError] = await to(Email.create([sendEmail], { session }));
 	if (newEmailError) {
 		handleTransactionError(session);
 		return next(newEmailError);
 	}
 
-	req.flash(
-		"success",
-		"Account created successfully, to verify the account check entered e-mail address."
-	);
+	// Create variables to hold the created access and refresh tokens
+	let accessToken: string | undefined;
+	let refreshToken: string | undefined;
 
-	let accessToken;
-	let refreshToken;
-
+	// Create access and refresh tokens if the user is not authenticated to register a new user.
 	if (!req.isAuthenticated()) {
 		accessToken = jsonwebtoken.sign(
 			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
@@ -242,23 +288,30 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
 		}
 	}
 
+	// Add access and refresh tokens to the created user object
+	const newCreatedUser = Object.assign(createdUser[0], {
+		...(accessToken || refreshToken
+			? {
+					...(accessToken && { accessToken }),
+					...(refreshToken && { refreshToken }),
+					tokenType: vars.auth.strategies.jwt.tokenType,
+				}
+			: {}),
+	});
+
 	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
+	// Flash success message and respond with success status
+	req.flash(
+		"success",
+		"Account created successfully, to verify the account check entered e-mail address."
+	);
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: {
-				data: {
-					...(createdUser[0]?.toJSON() || {}),
-					...(!req.isAuthenticated() ? { accessToken } : {}),
-					...(!req.isAuthenticated() ? { refreshToken } : {}),
-					...(!req.isAuthenticated()
-						? { tokenType: vars.auth.strategies.jwt.tokenType }
-						: {}),
-				},
-			},
+			entities: { data: newCreatedUser },
 			flashes: req.flash(),
 		})
 	);
@@ -286,22 +339,53 @@ export const postNewUser = async (req: Request, res: Response, next: NextFunctio
  *     * @property {Number} entities.meta.pagination - An object containing the current page, total pages, and total results.
  *     * @property {array} entities.meta.sort - An array of available sorting options (see request parameter `sort`).
  */
-export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
-	const { q, emailVerified, deleted, active, ...query } = req.query || {};
+export const getUsers = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
+		{},
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+			emailVerified?: boolean | number;
+			active?: boolean | number;
+		}
+	>,
+	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Destructure the query parameters (req.query) into
+	// q (search term), emailVerified (filter by email verification status),
+	// deleted(include deleted countries), active (filter by active status),
+	// and query(pagination & sorting options)
+	const { q, emailVerified, deleted, active } = req.query || {};
+
+	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed = "deleted" in req.query;
+
+	// Check if the query includes a emailVerified flag
 	const isFilterByEmailVerificationAllowed = "emailVerified" in req.query;
+
+	// Check if the query includes a active flag
 	const isFilterByActiveAllowed = "active" in req.query;
+
+	// List of fields to search for the query term
 	const querySearchFields = ["name", "email"];
-	const sort = [
+
+	// List of sort options
+	const sort: { name: string; value: object }[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },
 		{ name: "Created Date Descending", value: { createdAt: -1 } },
 	];
 
+	// Attempt to retrieve the users using the given query and pagination options,
+	// and if there was an error, return the error and end the request
 	const [paginatedUsersError, paginatedUsers] = await to(
-		User.paginate(
+		User.paginate<IUserDocument>(
 			{
+				// If the query includes a search term, filter users by name or code
 				...((q && {
 					$or: querySearchFields.map((item) => ({
 						[item]: {
@@ -311,83 +395,106 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 					})),
 				}) ||
 					{}),
+				// If the query includes a active flag, include active users
 				...((isFilterByActiveAllowed && { active }) || {}),
+				// If the query includes a emailVerified flag, include deleted users
 				...((isFilterByEmailVerificationAllowed && { emailVerified }) || {}),
+				// If the query includes a emailVerified flag, include deleted users
 				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
-				_id: { $ne: req?.user?._id || "" },
+				// Exclude the current user
+				_id: { $ne: req.user?._id || "" },
 			},
-			{ ...query }
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedUsersError) return next(paginatedUsersError);
 
+	// Destructure the paginated users into the list of users (docs) and pagination metadata
 	const { docs, ...pagination } = paginatedUsers;
 
+	// Return the list of users, pagination metadata, and sort options in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: {
-				data: [...(docs || [])],
-				meta: { pagination, sort },
-			},
+			entities: { data: [...(docs || [])], meta: { pagination, sort } },
 		})
 	);
 };
 
 /**
- * @summary Retrieves a single user.
- * @description Fetches a user based on the provided slug or ID.
+ * @summary Retrieves a single user by identifier.
+ * @description Fetches a user based on the provided identifier, which can be either a slug or an ObjectId.
+ * Handles errors and returns the user data if found.
  *
  * @param {Object} req - Express request object.
- * @param {String} req.params.user - User slug or ID.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.user - The user identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response containing the user object.
- *   * @property {Object} entities.data - The user object.
+ * @returns {Object} 200 - Success response with the user data.
+ *   * @property {Object} entities.data - The retrieved user object.
+ * @throws {Error} 500 - Returns an error if the user retrieval fails.
+ * @throws {Error} 404 - Returns an error if no user is found.
  */
-export const getSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+export const getSingleUser = async (
+	req: Request<{ user: string }, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Retrieve the user ID or slug from the request parameters
 	const { user: userIdentifier } = req.params || {};
+
+	// Attempt to retrieve a user from the database with the given ID or slug,
+	// and if there was an error or no user was found, return the error and end the request
 	const [userError, user] = await to(
-		User.findOne({
+		User.findOneWithDeleted({
 			$or: [
 				{ slug: userIdentifier },
 				...(isMongoId(userIdentifier) ? [{ _id: userIdentifier }] : []),
 			],
 		})
 	);
-	if (userError) return next(userError);
-	if (!user) return next();
+	if (userError || !user) return next(userError);
 
+	// Return the retrieved user in the response
 	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: user },
-		})
+		formatResponseObject({ status: httpStatus.OK, entities: { data: user } })
 	);
 };
 
 /**
  * @summary Retrieves the currently authenticated user.
  * @description Fetches the user associated with the current authentication token.
+ * Handles errors and returns the user data if found.
  *
- * @param {Object} req - Express request object.
+ * @param {Object} req - Express request object containing user details.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response containing the user object.
- *   * @property {Object} entities.data - The user object.
+ * @returns {Object} 200 - Success response with the user data.
+ *   * @property {Object} entities.data - The retrieved user object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 500 - Returns an error if the user retrieval fails.
  */
 export const getCurrentAuthenticatedUser = async (
-	req: Request,
-	res: Response,
+	req: Request<{}, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
-	const _id = req?.user?._id || "";
-	const [userError, user] = await to(User.findOne({ _id }));
-	if (userError) return next(userError);
-	if (!user) return next();
+): Promise<void> => {
+	// Attempt to retrieve the user associated with the current authentication token,
+	// and if there was an error or no user was found, return the error and end the request
+	const [userError, user] = await to(User.findOne({ _id: req.user?._id }));
+	if (userError || !user) return next(userError);
 
+	// Return the retrieved user in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
@@ -398,7 +505,8 @@ export const getCurrentAuthenticatedUser = async (
 
 /**
  * @summary Updates a user.
- * @description Updates a user's profile information based on the provided data. Only the currently authenticated user can update their own profile.
+ * @description Updates a user's profile information based on the provided data.
+ * Only the currently authenticated user can update their own profile.
  *
  * @param {Object} req - Express request object.
  * @param {String} req.params.user - User slug or ID.
@@ -409,20 +517,39 @@ export const getCurrentAuthenticatedUser = async (
  * @returns {Object} 200 - Success response containing the updated user object and a success message.
  *   * @property {Object} entities.data - The updated user object.
  */
-export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+export const updateSingleUser = async (
+	req: Request<
+		{ user: string },
+		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
+		Partial<Omit<IUser, "password">> & {
+			oldPassword?: string;
+			password?: string;
+			passwordConfirmation?: string;
+		}
+	>,
+	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
+	// Retrieve the user ID or slug from the request parameters
 	const { user: userIdentifier } = req.params || {};
+
+	// Retrieve the update data from the request body
 	const {
 		oldPassword: _oldPassword,
 		passwordConfirmation: _passwordConfirmation,
 		...reqBody
 	} = req.body;
-	let isPasswordModified;
-	let isEmailModified;
 
+	// Create variables to hold the password and email modifications flags.
+	let isPasswordModified: boolean = false;
+	let isEmailModified: boolean = false;
+
+	// Attempt to retrieve a user from the database with the given ID or slug,
+	// and if there was an error or no user was found, return the error and end the request
 	let [userError, user] = await to(
 		User.findOne({
 			$or: [
@@ -447,15 +574,20 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 		});
 	}
 
+	// Merge the request body data into the existing user object
 	user = Object.assign(user, {
 		...(reqBody || {}),
 		...(isEmailModified ? { emailVerified: false } : {}),
 	});
+
+	// If the user is not found, pass control to the next middleware
 	if (!user) {
 		handleTransactionError(session);
 		return next();
 	}
 
+	// Save the updated user object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveError, newUser] = await to(user.save({ session }));
 	if (saveError) {
 		handleTransactionError(session);
@@ -463,7 +595,10 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 	}
 
 	if (isEmailModified) {
-		const token = await newUser.createHashToken();
+		// Attempt to create a new email verification token
+		// If there is an error creating the token,
+		// Rollback the transaction and pass the error to the next middleware
+		const token = createHashToken();
 		const [newVerifyEmailToken] = await to(
 			Token.create(
 				[
@@ -483,6 +618,9 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 			return next(newVerifyEmailToken);
 		}
 
+		// Attempt to send an email using the email service send method
+		// If there is an error sending the email,
+		// rollback the transaction and pass the error to the next middleware
 		const [sendEmailError, sendEmail] = await emailService.send({
 			to: newUser,
 			from: vars.email.sender,
@@ -495,6 +633,9 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 			return next(sendEmailError);
 		}
 
+		// Attempt to create a new email
+		// If there is an error creating the email,
+		// Rollback the transaction and pass the error to the next middleware
 		const [newEmailError] = await to(Email.create([sendEmail], { session }));
 		if (newEmailError) {
 			handleTransactionError(session);
@@ -503,6 +644,9 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 	}
 
 	if (isPasswordModified) {
+		// Attempt to send an email using the email service send method
+		// If there is an error sending the email,
+		// rollback the transaction and pass the error to the next middleware
 		const [sendEmailError, sendEmail] = await emailService.send({
 			to: newUser,
 			from: vars.email.sender,
@@ -515,6 +659,9 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 			return next(sendEmailError);
 		}
 
+		// Attempt to create a new email
+		// If there is an error creating the email,
+		// Rollback the transaction and pass the error to the next middleware
 		const [newEmailError] = await to(Email.create([sendEmail], { session }));
 		if (newEmailError) {
 			handleTransactionError(session);
@@ -526,11 +673,12 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 	await session.commitTransaction();
 	session.endSession();
 
+	// Flash success message and return the updated user data in the response
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: { ...(newUser?.toJSON() || {}) } },
+			entities: { data: newUser },
 			flashes: req.flash(),
 		})
 	);
@@ -538,22 +686,31 @@ export const updateSingleUser = async (req: Request, res: Response, next: NextFu
 
 /**
  * @summary Deletes a single user.
- * @description Deletes a user based on the provided slug or ID, along with associated sessions and tokens. Only the currently authenticated user can delete their own account or other users with appropriate permissions.
+ * @description Deletes a user based on the provided slug or ID, along with associated sessions and tokens.
+ * Uses transactions to ensure data integrity and handles errors appropriately.
  *
  * @param {Object} req - Express request object.
  * @param {String} req.params.user - User slug or ID.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a success message.
+ * @returns {void} 200 - Success response with a success message.
+ * @throws {Error} 500 - If an error occurs during the deletion process.
  */
-export const deleteSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteSingleUser = async (
+	req: Request<{ user: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
+	// Extract the user identifier from request parameters
 	const { user: userIdentifier } = req.params || {};
 
+	// Attempt to find the user by its ID or slug, and if there is an error or no user is found,
+	// pass the error to the next middleware
 	const [userError, user] = await to(
 		User.findOne({
 			$or: [
@@ -567,21 +724,27 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 		return next(userError);
 	}
 
-	const [deleteUserError] = await to(User.deleteById(user?._id, req?.user?._id).session(session));
+	// Attempt to soft-delete the found user, and if there is an error during the deletion,
+	// pass the error to the next middleware
+	const [deleteUserError] = await to(User.deleteById(user._id, req.user?._id).session(session));
 	if (deleteUserError) {
 		handleTransactionError(session);
 		return next(deleteUserError);
 	}
 
+	// Attempt to delete all sessions associated with the user, and if there is an error during the deletion,
+	// pass the error to the next middleware
 	const [deleteSessionsError] = await to(
-		Session.delete({ "session.passport.user._id": user?._id }).session(session)
+		Session.delete({ "session.passport.user._id": user._id }).session(session)
 	);
 	if (deleteSessionsError) {
 		handleTransactionError(session);
 		return next(deleteSessionsError);
 	}
 
-	const [deleteTokenError] = await to(Token.delete({ user: user?._id }).session(session));
+	// Attempt to delete all tokens associated with the user, and if there is an error during the deletion,
+	// pass the error to the next middleware
+	const [deleteTokenError] = await to(Token.delete({ user: user._id }).session(session));
 	if (deleteTokenError) {
 		handleTransactionError(session);
 		return next(deleteTokenError);
@@ -591,6 +754,7 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 	await session.commitTransaction();
 	session.endSession();
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
@@ -601,18 +765,28 @@ export const deleteSingleUser = async (req: Request, res: Response, next: NextFu
 };
 
 /**
- * @summary Restores a single deleted user.
- * @description Restores a previously deleted user based on the provided slug or ID.
+ * @summary Restores a single user by its ID or slug.
+ * @description This method restores a user that was previously soft-deleted from the database.
+ * The method handles errors and returns a success response when the user is successfully restored.
  *
  * @param {Object} req - Express request object.
- * @param {String} req.params.user - User slug or ID.
+ * @param {String} req.params.user - The ID or slug of the user to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a success message.
+ * @returns {Object} 200 - Success response indicating the user was restored.
+ * @throws {Error} 404 - If no user is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the restore process.
  */
-export const restoreSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+export const restoreSingleUser = async (
+	req: Request<{ user: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Extract the user identifier from request parameters
 	const { user: userIdentifier } = req.params || {};
+
+	// Create a query to find the user by its ID or slug
 	const singleUserQuery = {
 		$or: [
 			{ slug: userIdentifier },
@@ -621,13 +795,17 @@ export const restoreSingleUser = async (req: Request, res: Response, next: NextF
 		deleted: true,
 	};
 
+	// Attempt to find the user by its ID or slug, and if there is an error or no user is found,
+	// pass the error to the next middleware
 	const [userError, user] = await to(User.findOneWithDeleted(singleUserQuery));
-	if (userError) return next(userError);
-	if (!user) return next();
+	if (userError || !user) return next(userError);
 
+	// Attempt to restore the found categories, and if there is an error during the restoration,
+	// pass the error to the next middleware
 	const [restoreUserError] = await to(User.restore(singleUserQuery));
 	if (restoreUserError) return next(restoreUserError);
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })

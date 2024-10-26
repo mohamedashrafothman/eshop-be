@@ -85,22 +85,22 @@ const _checkProductStock = (
 	product: Partial<IProductDocument>,
 	quantity: number = 0
 ): HttpError | null => {
-	// check if product has quantity
+	// Check if product has quantity
 	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
 		return createError(httpStatus.INTERNAL_SERVER_ERROR, "passed product has no quantity");
 
-	// check if product is out of stock
+	// Check if product is out of stock
 	if (product.quantity === 0)
 		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
 
-	// check if there's enough product quantity in the stock
+	// Check if there's enough product quantity in the stock
 	if (product.quantity - quantity < 0)
 		return createError(
 			httpStatus.BAD_REQUEST,
 			"There're no enough product quantity in the stock"
 		);
 
-	// no error
+	// No error
 	return null;
 };
 
@@ -126,9 +126,9 @@ const _checkProductStock = (
  * @throws {Error} 401 - If the user is not logged in.
  * @throws {Error} 500 - If any database operation fails during the transaction.
  */
-export const addToCart = async (req: Request, res: Response, next: NextFunction) => {
-	// check if user logged in
-	if (!req.user) {
+export const addToCart = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+	// Check if user logged in
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -218,13 +218,14 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 		session.endSession();
 
 		req.flash("success", "Product added to cart successfully.");
-		return res.status(httpStatus.CREATED).json(
+		res.status(httpStatus.CREATED).json(
 			formatResponseObject({
 				status: httpStatus.CREATED,
 				entities: { data: newCart[0].toJSON() },
 				flashes: req.flash(),
 			})
 		);
+		return;
 	}
 
 	let cart = carts?.[0] as ICartDocument;
@@ -335,9 +336,13 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
  * @throws {Error} 500 - Returns an error if there is an issue retrieving the cart from the database.
  */
-export const getSingleCart = async (req: Request, res: Response, next: NextFunction) => {
+export const getSingleCart = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -373,9 +378,13 @@ export const getSingleCart = async (req: Request, res: Response, next: NextFunct
  * @throws {Error} 401 - If the user is not logged in.
  * @throws {Error} 500 - If any database operation fails during the transaction.
  */
-export const removeItemFromCart = async (req: Request, res: Response, next: NextFunction) => {
+export const removeItemFromCart = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -495,9 +504,13 @@ export const removeItemFromCart = async (req: Request, res: Response, next: Next
  * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
-export const updateCartItem = async (req: Request, res: Response, next: NextFunction) => {
+export const updateCartItem = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -592,9 +605,9 @@ export const updateCartItem = async (req: Request, res: Response, next: NextFunc
  * @throws {Error} 404 - Returns an error if the cart or cart items are not found.
  * @throws {Error} 500 - Returns an error if there is an issue during the transaction or database operations.
  */
-export const emptyCart = async (req: Request, res: Response, next: NextFunction) => {
+export const emptyCart = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -658,9 +671,13 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
  * @throws {Error} 404 - Returns an error if the address, zone, or shipping methods are not found.
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
  */
-export const getShippingMethods = async (req: Request, res: Response, next: NextFunction) => {
+export const getShippingMethods = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -718,9 +735,13 @@ export const getShippingMethods = async (req: Request, res: Response, next: Next
  * @throws {Error} 404 - Returns an error if the shipping method or cart are not found.
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
  */
-export const postShippingMethod = async (req: Request, res: Response, next: NextFunction) => {
+export const postShippingMethod = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// check if user logged in
-	if (!req.user) {
+	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}

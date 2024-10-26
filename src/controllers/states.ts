@@ -369,7 +369,7 @@ export const deleteSingleState = async (
 
 	// Attempt to soft-delete the found state, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteStateError] = await to(State.deleteById(state._id, req?.user?._id));
+	const [deleteStateError] = await to(State.deleteById(state._id, req.user?._id));
 	if (deleteStateError) return next(deleteStateError);
 
 	// Flash success message and respond with success status

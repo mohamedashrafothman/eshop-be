@@ -268,7 +268,7 @@ export const getBrands = async (
 	// Attempt to retrieve the brands using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedBrandsError, paginatedBrands] = await to(
-		Brand.paginate(
+		Brand.paginate<IBrandDocument>(
 			{
 				// If the query includes a search term, filter brands by name or code
 				...((q && {
@@ -512,7 +512,7 @@ export const deleteSingleBrand = async (
 
 	// Attempt to soft-delete the found brand, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req?.user?._id));
+	const [deleteBrandError] = await to(Brand.deleteById(brand._id, req.user?._id));
 	if (deleteBrandError) return next(deleteBrandError);
 
 	// Flash success message and respond with success status

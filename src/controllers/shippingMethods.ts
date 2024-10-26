@@ -411,7 +411,7 @@ export const deleteSingleShippingMethod = async (
 	// Attempt to soft-delete the found shipping method, and if there is an error during the deletion,
 	// pass the error to the next middleware
 	const [deleteShippingMethodError] = await to(
-		ShippingMethod.deleteById(shippingMethod._id, req?.user?._id)
+		ShippingMethod.deleteById(shippingMethod._id, req.user?._id)
 	);
 	if (deleteShippingMethodError) return next(deleteShippingMethodError);
 

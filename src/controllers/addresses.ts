@@ -181,7 +181,7 @@ export const postNewAddress = async (
 	// If the user is not authenticated or does not have permission,
 	// Rollback the transaction and pass the error to the next middleware
 	if (
-		!req.user ||
+		!req.isAuthenticated() ||
 		([vars.auth.roles.user].includes(req.user.role) &&
 			req.body.user !== req.user._id?.toString())
 	) {
@@ -321,7 +321,7 @@ export const getAddresses = async (
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
-	const { q, deleted, ...query } = req.query || {};
+	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed = "deleted" in req.query;
@@ -522,7 +522,7 @@ export const updateSingleAddress = async (
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	let addressesError = null;
+	let addressesError: Error | null = null;
 	let addresses: IAddressDocument[] | undefined | null = [];
 
 	if (isDefaultModified && !Boolean(req.body.default)) {

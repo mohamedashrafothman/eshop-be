@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
+import { HttpStatus } from "http-status";
+import { PaginateOptions } from "mongoose";
+import IReview from "../interfaces/Review.interface";
+import { IReviewDocument } from "../models/Review";
+import { FormatResponseObjectType } from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -76,26 +81,62 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 	}
 };
 
-export const postNewReview = async (req: Request, res: Response, next: NextFunction) => {
+export const postNewReview = async (
+	req: Request<{}, FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>, IReview>,
+	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement post new review functionality.
 };
 
-export const getReviews = async (req: Request, res: Response, next: NextFunction) => {
+export const getReviews = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
+		{},
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+		}
+	>,
+	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement get reviews functionality.
 };
 
-export const getSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+export const getSingleReview = async (
+	req: Request<{ review: string }, FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement get single review functionality.
 };
 
-export const updateSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+export const updateSingleReview = async (
+	req: Request<
+		{ review: string },
+		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
+		Partial<IReview> & { icon?: Express.Multer.File }
+	>,
+	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement update single review functionality.
 };
 
-export const deleteSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteSingleReview = async (
+	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement delete single review functionality.
 };
 
-export const restoreSingleReview = async (req: Request, res: Response, next: NextFunction) => {
+export const restoreSingleReview = async (
+	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// TODO: Implement restore single review functionality.
 };

@@ -161,7 +161,7 @@ export const getCities = async (
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), country (id of country), state (id of state), and query (pagination & sorting options)
-	const { q, deleted, country, state, ...query } = req.query || {};
+	const { q, deleted, country, state } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
@@ -388,7 +388,7 @@ export const deleteSingleCity = async (
 
 	// Attempt to soft-delete the found city, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteCityError] = await to(City.deleteById(city._id, req?.user?._id));
+	const [deleteCityError] = await to(City.deleteById(city._id, req.user?._id));
 	if (deleteCityError) return next(deleteCityError);
 
 	// Flash success message and respond with success status
