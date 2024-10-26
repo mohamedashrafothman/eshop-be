@@ -514,8 +514,9 @@ export const updateSingleAddress = async (
 
 	// Check if the user is authorized to update the address
 	if (
-		req.user?.role === vars.auth.roles.user &&
-		address.user?._id?.toString() !== req.user?._id?.toString()
+		!req.isAuthenticated() ||
+		(req.user?.role === vars.auth.roles.user &&
+			address.user?._id?.toString() !== req.user._id?.toString())
 	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
