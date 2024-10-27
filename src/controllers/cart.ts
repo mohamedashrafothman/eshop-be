@@ -8,7 +8,7 @@ import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Product, { IProductDocument } from "../models/Product";
-import ShippingMethod from "../models/ShippingMethod";
+import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import Tax from "../models/Tax";
 import Zone from "../models/Zone";
 import {
@@ -387,29 +387,35 @@ export const getSingleCart = async (
 };
 
 /**
- * @summary Removes a product from the user's shopping cart.
- * @description This method removes a specific cart item from the user's cart. If it is the last item,
- * the cart is deleted. It also handles reapplying applicable taxes to the cart if there are still items remaining.
- * The method ensures all operations are executed within a transaction to maintain data integrity.
+ * @summary Removes a product from the user's cart.
+ * @description Handles the removal of a product from the user's cart.
+ * The method checks if the user is authenticated, verifies the existence of the cart item
+ * and the product's stock, and updates the cart with the new product. If the product already
+ * exists in the cart, it is updated with the new quantity. If the cart item exists in the cart,
+ * it is updated with the new quantity.
  *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Request parameters containing the cartItem ID to be removed.
- * @param {String} req.params.cartItem - The ID of the cart item to remove.
- * @param {Object} req.user - The currently logged-in user object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
+ * @param {Request} req - Express request object containing parameters and user details.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.cartItem - The cart item identifier, either a slug or an ObjectId.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the updated cart or an empty object if the cart is deleted.
- * @throws {Error} 400 - If the cart item is not found or the user does not have permission to modify the cart.
- * @throws {Error} 401 - If the user is not logged in.
- * @throws {Error} 500 - If any database operation fails during the transaction.
+ * @returns {Object} 200 - Success response indicating the cart was updated successfully.
+ *   * @property {Object} res.body.data - The updated cart data.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the cart item or product does not exist.
+ * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
 export const removeItemFromCart = async (
-	req: Request,
-	res: Response,
+	req: Request<
+		{ cartItem: string },
+		FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>
+	>,
+	res: Response<FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// check if user logged in
+	// Check if user logged in
 	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -419,30 +425,38 @@ export const removeItemFromCart = async (
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const { cartItem: cartItemId } = req.params;
+	// Retrieve the cart item ID or slug from the request parameters
+	const { cartItem: cartItemIdentifier } = req.params;
 
+	// Attempt to retrieve a cart from the database for logged in user,
+	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
 	}
 
+	// Check if the cart item included in the cart items to be removed
 	if (
-		!cart?.items ||
-		!cart?.items?.map((item) => (item?._id || item).toString())?.includes(cartItemId)
+		!cart.items ||
+		!cart.items?.map((item) => (item?._id || item).toString())?.includes(cartItemIdentifier)
 	) {
 		handleTransactionError(session);
 		return next();
 	}
 
+	// Attempt to retrieve a cart item from the database,
+	// and if there was an error, return the error and end the request
 	const [cartItemError, cartItem] = await to(
-		CartItem.findOne({ _id: cartItemId }).session(session)
+		CartItem.findOne({ _id: cartItemIdentifier }).session(session)
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
 		return next(cartItemError);
 	}
 
+	// Attempt to delete the cart item from the database,
+	// and if there was an error, return the error and end the request
 	const [deleteCartItemError] = await to(
 		CartItem.deleteOne({ _id: cartItem?._id }).session(session)
 	);
@@ -452,18 +466,23 @@ export const removeItemFromCart = async (
 	}
 
 	const cartFilteredItems = cart?.items.filter(
-		(item) => (item?._id || item).toString() !== cartItemId
+		(item) => (item?._id || item).toString() !== cartItemIdentifier
 	) as ICartItemDocument[];
 	const isCartItemsEmpty = cartFilteredItems.length === 0;
 	let newCart: ICartDocument | null = null;
 
+	// Check if the cart is empty
 	if (isCartItemsEmpty) {
+		// Delete the cart from the database, and if there is an error during saving,
+		// pass the error to the next middleware
 		const [deleteCartError] = await to(Cart.deleteOne({ _id: cart._id }).session(session));
 		if (deleteCartError) {
 			handleTransactionError(session);
 			return next(deleteCartError);
 		}
 	} else {
+		// The cart taxes are calculated based on the new cart items
+		// and if there is an error during saving, pass the error to the next middleware
 		const [taxesError, taxes] = await to(
 			Tax.find({
 				$or: [
@@ -484,10 +503,15 @@ export const removeItemFromCart = async (
 			handleTransactionError(session);
 			return next(taxesError);
 		}
+
+		// Merge the old cart data with the new cart taxes and items
 		newCart = Object.assign(cart, {
 			items: cartFilteredItems?.map((item) => item?._id || item),
 			taxes: taxes.map((tax) => tax?._id || tax),
 		}) as ICartDocument;
+
+		// Save the updated cart object to the database, and if there is an error during saving,
+		// pass the error to the next middleware
 		const [saveCartError] = await to(newCart.save({ session }));
 		if (saveCartError) {
 			handleTransactionError(session);
@@ -499,6 +523,8 @@ export const removeItemFromCart = async (
 	await session.commitTransaction();
 	session.endSession();
 
+	// Set a flash message to indicate that the cart was updated successfully,
+	// and return the updated cart in the response
 	req.flash("success", "Product removed from cart successfully.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
@@ -510,18 +536,18 @@ export const removeItemFromCart = async (
 };
 
 /**
- * @summary Updates the quantity of a product in the user's cart.
- * @description Handles the update of a specific cart item's quantity for the logged-in user.
- * The method checks if the user is authenticated, verifies the existence of the cart item
- * and the product's stock, and updates the quantity of the cart item. If the cart item
- * exists in the cart, it is updated with the new quantity.
+ * @summary Updates the quantity of a specific item in the user's cart.
+ * @description Handles the update of a cart item's quantity for the currently logged-in user.
+ * The method checks if the user is authenticated, verifies the existence of the cart item,
+ * checks product stock availability, and updates the cart item and cart accordingly.
  *
- * @param {Object} req - Express request object containing parameters and user details.
- * @param {Object} req.user - The logged-in user object.
- * @param {String} req.params.cartItem - The ID of the cart item to update.
- * @param {Object} req.body.quantity - The new quantity for the cart item.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
+ * @param {Request} req - Express request object containing parameters and user details.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.cartItem - The cart item identifier, either a slug or an ObjectId.
+ * @param {Object} req.body - Request body containing the new quantity.
+ * @param {Number} req.body.quantity - The updated quantity for the cart item.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response indicating the cart was updated successfully.
  * @property {Object} res.body.data - The updated cart data.
@@ -531,11 +557,15 @@ export const removeItemFromCart = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
 export const updateCartItem = async (
-	req: Request,
-	res: Response,
+	req: Request<
+		{ cartItem: string },
+		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
+		{ quantity: number }
+	>,
+	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// check if user logged in
+	// Check if user logged in
 	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -545,36 +575,51 @@ export const updateCartItem = async (
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const { cartItem: cartItemId } = req.params;
+	// Retrieve the cart item ID or slug from the request parameters
+	const { cartItem: cartItemIdentifier } = req.params;
+
+	// Retrieve the quantity from the request body
 	const { quantity } = req.body;
 
+	// Attempt to retrieve a cart item from the database,
+	// and if there was an error, return the error and end the request
 	const [cartItemError, cartItem] = await to(
-		CartItem.findOne({ _id: cartItemId }).populate("product").session(session)
+		CartItem.findOne({ _id: cartItemIdentifier }).populate("product").session(session)
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
 		return next(cartItemError);
 	}
 
+	// Attempt to retrieve a cart from the database for logged in user,
+	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
 	}
 
+	// Get product data from the cart item
 	const product = cartItem.product as IProductDocument;
+	// Merge the old cart item data with the new cart item quantity
 	const newCartItem = Object.assign(cartItem, { quantity });
+	// Get the cart items from the cart
 	let cartItems = [
 		...(cart.items?.map((item) => (item?._id || item)?.toString()) || []),
 	] as string[];
+	// Find the index of the cart item in the cart items array
 	const itemIndex = cartItems.indexOf(cartItem?._id?.toString() || cartItem?._id || "");
 
+	// Check if the product stock is sufficient, and if there was an error,
+	// return the error and end the request
 	const noStockError = _checkProductStock(product?.toJSON(), newCartItem.quantity);
 	if (noStockError) {
 		handleTransactionError(session);
 		return next({ ...(noStockError || {}), status: noStockError.status });
 	}
 
+	// Save the updated cart item to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveCartItemError] = await to(newCartItem.save({ session }));
 	if (saveCartItemError) {
 		handleTransactionError(session);
@@ -586,14 +631,16 @@ export const updateCartItem = async (
 		return next();
 	}
 
+	// Merge the old cart items data with the new cart item id
 	cartItems = [
 		...(cartItems.slice(0, itemIndex) || []),
 		cartItem._id,
 		...(cartItems.slice(itemIndex + 1) || []),
 	] as string[];
-
 	const newCart = Object.assign(cart, { items: cartItems }) as ICartDocument;
 
+	// Save the updated cart to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveCartError, updatedCart] = await to(newCart.save({ session }));
 	if (saveCartError) {
 		handleTransactionError(session);
@@ -604,11 +651,13 @@ export const updateCartItem = async (
 	await session.commitTransaction();
 	session.endSession();
 
+	// Set a flash message to indicate that the cart was updated successfully,
+	// and return the updated cart in the response
 	req.flash("success", "Cart updated successfully.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: updatedCart.toJSON() },
+			entities: { data: updatedCart },
 			flashes: req.flash(),
 		})
 	);
@@ -616,23 +665,27 @@ export const updateCartItem = async (
 
 /**
  * @summary Empties the user's cart.
- * @description Clears all items from the cart of the currently logged-in user by deleting both
- * the cart items and the cart document itself. The method checks if the user is authenticated
- * and uses a transaction to ensure the atomicity of the deletion process.
+ * @description This function removes all items from the user's cart and deletes the cart itself.
+ * It checks if the user is authenticated, retrieves the cart for the logged-in user, and deletes
+ * all cart items as well as the cart. If the user is not authenticated, it returns a 401 error. If
+ * there is an issue during database operations, it returns a 500 error. Upon success, it returns
+ * a 200 response indicating the cart was cleared successfully.
  *
- * @param {Object} req - Express request object containing the logged-in user details.
- * @param {Object} req.user - The logged-in user object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
+ * @param {Request} req - Express request object containing user details.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
  *
  * @returns {Object} 200 - Success response indicating the cart was cleared successfully.
- * @property {Object} res.body.data - Empty object after the cart is cleared.
+ * @property {Object} res.body.data - An empty object.
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the cart or cart items are not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the transaction or database operations.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
  */
-export const emptyCart = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-	// check if user logged in
+export const emptyCart = async (
+	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
+	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
 	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -642,13 +695,15 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	// get cart for current logged in user
+	// Attempt to retrieve a cart from the database for logged in user,
+	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
 	}
 
+	// Get the cart items from the cart
 	const cartItemsIds = [...(cart?.items || [])].map((item) => item?._id || item);
 	const [deleteCartItemsError] = await to(
 		CartItem.deleteMany({ _id: { $in: cartItemsIds } }).session(session)
@@ -658,6 +713,8 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 		return next(deleteCartItemsError);
 	}
 
+	// Attempt to delete the cart from the database, and if there was an error,
+	// return the error and end the request
 	const [deleteCartError] = await to(Cart.deleteOne({ _id: cart._id }).session(session));
 	if (deleteCartError) {
 		handleTransactionError(session);
@@ -668,6 +725,8 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	await session.commitTransaction();
 	session.endSession();
 
+	// Set a flash message to indicate that the cart was cleared successfully,
+	// and return the empty object in the response
 	req.flash("success", "Cart cleared successfully.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
@@ -678,44 +737,35 @@ export const emptyCart = async (req: Request, res: Response, next: NextFunction)
 	);
 };
 
-/**
- * @summary Retrieves a list of shipping methods for the user's address.
- * @description Fetches a list of shipping methods available for the user's address.
- * The method checks if the user is authenticated, verifies the existence of the address and zone,
- * and retrieves the shipping methods associated with the zone. If the user is not authenticated,
- * or if the address, zone, or shipping methods are not found, an error is thrown.
- *
- * @param {Object} req - Express request object containing the address identifier.
- * @param {Object} req.user - The currently logged-in user object.
- * @param {Object} req.query.address - The ID of the address for which to retrieve shipping methods.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of shipping methods.
- * @property {Object} res.body.data - A list of shipping methods associated with the zone.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the address, zone, or shipping methods are not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
- */
 export const getShippingMethods = async (
-	req: Request,
-	res: Response,
+	req: Request<
+		{},
+		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>,
+		{},
+		{ address: string }
+	>,
+	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// check if user logged in
+	// Check if user logged in
 	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
+	// Retrieve the address id from the request query params
 	const { address: addressIdentifier } = req.query;
 
+	// Attempt to retrieve an address from the database for logged in user,
+	// and if there was an error, return the error and end the request
 	const [addressError, address] = await to(
 		Address.findOne({ _id: addressIdentifier, user: req.user._id })
 	);
 	if (addressError || !address)
 		return next(addressError || new Error("No Shipping methods available."));
 
+	// Attempt to retrieve a zone from the database for the address,
+	// and if there was an error, return the error and end the request
 	const [zoneError, zone] = await to(
 		Zone.findOne({
 			...(address.country && {
@@ -727,11 +777,14 @@ export const getShippingMethods = async (
 	);
 	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
 
+	// Attempt to retrieve shipping methods from the database for the zone,
+	// and if there was an error, return the error and end the request
 	const [shippingMethodsError, shippingMethods] = await to(
 		ShippingMethod.find({ zone: zone._id })
 	);
 	if (shippingMethodsError) return next(shippingMethodsError);
 
+	// Return the shipping methods data in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
@@ -743,59 +796,67 @@ export const getShippingMethods = async (
 
 /**
  * @summary Updates the shipping method of the user's cart.
- * @description This function takes the ID of a shipping method as a request body parameter,
- * retrieves the shipping method and cart of the currently logged-in user, and updates the
- * cart with the selected shipping method. If the user is not authenticated, it returns a 401
- * error. If the shipping method or cart are not found, it returns a 404 error. If there is an
- * issue during the database operations, it returns a 500 error.
+ * @description This function retrieves a shipping method and a cart for the currently logged-in user,
+ * updates the cart with the new shipping method, and saves the updated cart to the database.
+ * If the user is not authenticated, it returns a 401 error. If the shipping method or cart are not found,
+ * or if there is an error during the database operations, it returns the respective error.
  *
- * @param {Object} req - Express request object containing the shipping method ID.
+ * @param {Request} req - Express request object containing the shipping method ID in the body.
  * @param {Object} req.user - The currently logged-in user object.
- * @param {Object} req.body.shippingMethod - The ID of the shipping method to update the cart with.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the updated cart data.
+ * @returns {void} 200 - Success response with the updated cart data.
  * @property {Object} res.body.data - The updated cart object.
  * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the shipping method or cart are not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ * @throws {Error} - Returns an error if the shipping method or cart are not found,
+ * or if there is an issue during the database operations.
  */
 export const postShippingMethod = async (
-	req: Request,
-	res: Response,
+	req: Request<
+		{},
+		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
+		{ shippingMethod: string }
+	>,
+	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// check if user logged in
+	// Check if user logged in
 	if (!req.isAuthenticated()) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
+	// Retrieve the shipping method id from the request body
 	const { shippingMethod: shippingMethodIdentifier } = req.body;
 
-	// get shipping method
+	// Attempt to retrieve shipping methods from the database,
+	// and if there was an error, return the error and end the request
 	const [shippingMethodError, shippingMethod] = await to(
 		ShippingMethod.findOne({ _id: shippingMethodIdentifier })
 	);
 	if (shippingMethodError || !shippingMethod) return next(shippingMethodError);
 
-	// get cart for current logged in user
+	// Attempt to retrieve a cart from the database for logged in user,
+	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
 	if (cartError || !cart) return next(cartError);
 
-	// update cart
+	// Merge the old cart data with the new cart shipping methods
 	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
 
-	// save cart
+	// Save the updated cart object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveCartError, updatedCart] = await to(newCart.save());
 	if (saveCartError) return next(saveCartError);
 
+	// Set a flash message to indicate that the cart was updated successfully,
+	// and return the updated object in the response
 	req.flash("success", "Cart updated successfully.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: updatedCart.toJSON() },
+			entities: { data: updatedCart },
 			flashes: req.flash(),
 		})
 	);

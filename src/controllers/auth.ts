@@ -598,7 +598,11 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
  *   * @property {Object} entities.data - The user data.
  */
-export const postSocialUser = async (req: Request, res: Response, next: NextFunction) => {
+export const postSocialUser = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -965,7 +969,11 @@ export const postSocialUser = async (req: Request, res: Response, next: NextFunc
 
  * @returns {Object} 200 - Success response with a success message.
  */
-export const getSocialUnlink = async (req: Request, res: Response, next: NextFunction) => {
+export const getSocialUnlink = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1016,7 +1024,7 @@ export const getSocialUnlink = async (req: Request, res: Response, next: NextFun
  * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
  *   * @property {Object} entities.data - The user data.
  */
-export const postLogin = async (req: Request, res: Response, next: NextFunction) => {
+export const postLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1187,7 +1195,7 @@ export const _loginRateLimitHandler = async (
  *
  * @returns {Object} 200 - Success response with a success message.
  */
-export const logout = async (req: Request, res: Response, next: NextFunction) => {
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1251,7 +1259,11 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
  * @returns {Object} 200 - Success response containing a new access token and a refresh token.
  *   * @property {Object} entities.data - The data containing new tokens.
  */
-export const postRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
+export const postRefreshToken = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1271,9 +1283,10 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
 	if (!userRefreshToken) {
 		handleTransactionError(session);
 		req.flash("danger", "Token has been expired, please login again!");
-		return res
-			.status(httpStatus.FORBIDDEN)
-			.json(formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() }));
+		res.status(httpStatus.FORBIDDEN).json(
+			formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() })
+		);
+		return;
 	}
 
 	jsonwebtoken.verify(
@@ -1352,7 +1365,11 @@ export const postRefreshToken = async (req: Request, res: Response, next: NextFu
  *
  * @returns {Object} 200 - Success response with a success message.
  */
-export const postForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const postForgotPassword = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1462,7 +1479,11 @@ export const postForgotPassword = async (req: Request, res: Response, next: Next
 
  * @returns {Object} 200 - Success response with a success message.
  */
-export const postResetPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const postResetPassword = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1556,7 +1577,11 @@ export const postResetPassword = async (req: Request, res: Response, next: NextF
  *
  * @returns {Object} 200 - Success response with a success message.
  */
-export const getEmailVerification = async (req: Request, res: Response, next: NextFunction) => {
+export const getEmailVerification = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
