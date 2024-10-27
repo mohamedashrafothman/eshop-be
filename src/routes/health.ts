@@ -2,14 +2,14 @@ import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as healthController from "../controllers/health";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get"]))
 	.get(healthController.getHealth);
 
-// exporting router
+// Exporting router
 export default router;

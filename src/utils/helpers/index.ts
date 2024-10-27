@@ -1,6 +1,13 @@
+import crypto from "crypto";
+import { Request } from "express";
 export * from "./attachment";
 export * from "./server";
 
+/**
+ * Calculates the time difference between a given date and the current time in days, hours, minutes and seconds.
+ * @param date Date or string representing the date to calculate the time difference from
+ * @returns Object containing days, hours, minutes and seconds
+ */
 export const countDownTimer = (
 	date: Date | string
 ): { days: number; hours: number; minutes: number; seconds: number } => {
@@ -20,4 +27,33 @@ export const countDownTimer = (
 		minutes: Math.floor((_distance % _hour) / _minute),
 		seconds: Math.floor((_distance % _minute) / _second),
 	};
+};
+
+/**
+ * Creates a random hash token
+ * @returns A random hash token
+ */
+export const createHashToken = (): string => crypto.randomBytes(32).toString("hex");
+
+/**
+ * Generates a unique key for each request to be used with the express-rate-limit
+ * middleware. The key is a combination of the request's IP address, browser name
+ * and operating system name, hashed with SHA256.
+ * @param req Express request object
+ * @returns A unique key for the given request
+ */
+export const rateLimitKeyGenerator = (req: Request): string => {
+	// Generate a unique key for each request
+	const ip =
+		req.ip ||
+		req.ips?.[0] ||
+		req.socket.remoteAddress ||
+		(req.headers["x-forwarded-for"] as string).split(",")?.[0] ||
+		"unknown";
+	const browser = req.userAgent.getBrowser()?.name || "unknown";
+	const os = req.userAgent.getOS()?.name || "unknown";
+	const key = `${ip}-${browser}-${os}`;
+
+	// Hash the key to create a unique identifier
+	return crypto.createHash("sha256").update(key).digest("hex");
 };

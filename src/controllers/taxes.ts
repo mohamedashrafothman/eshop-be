@@ -1,11 +1,16 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import httpStatus from "http-status";
-import mongoose from "mongoose";
+import httpStatus, { HttpStatus } from "http-status";
+import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
-import Tax from "../models/Tax";
-import { formatResponseObject, handleTransactionError } from "../utils/helpers";
+import ITax from "../interfaces/Tax.interface";
+import Tax, { ITaxDocument } from "../models/Tax";
+import {
+	formatResponseObject,
+	FormatResponseObjectType,
+	handleTransactionError,
+} from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -66,8 +71,6 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 /**
  * @summary Creates a new tax entry in the database.
  * @description Handles the creation of a new tax entity using the data provided in the request body.
- * This method starts a MongoDB transaction to ensure data integrity during the tax creation process.
- * If an error occurs, the transaction is aborted and an error response is returned.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.body - The payload containing details for the new tax entity.
@@ -76,23 +79,21 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *
  * @returns {void} 201 - Success response with the created tax entity.
  *   * @property {Object} entities.data - The newly created tax entity.
+ *   * @property {Array} flashes - Success message for tax creation.
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
  */
-export const postNewTax = async (req: Request, res: Response, next: NextFunction) => {
-	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
-	session.startTransaction();
+export const postNewTax = async (
+	req: Request<{}, FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>, ITax>,
+	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Create a new tax from the request body data, and if there was an error,
+	// return the error and end the request
+	const [taxError, tax] = await to(Tax.create([req.body]));
+	if (taxError) return next(taxError);
 
-	const [taxError, tax] = await to(Tax.create([{ ...(req.body || {}) }], { session }));
-	if (taxError) {
-		handleTransactionError(session);
-		return next(taxError);
-	}
-
-	// commit the transaction
-	await session.commitTransaction();
-	session.endSession();
-
+	// Set a flash message to indicate that the tax was created successfully,
+	// and return the created tax in the response
 	req.flash("success", "Tax created successfully.");
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
@@ -104,32 +105,53 @@ export const postNewTax = async (req: Request, res: Response, next: NextFunction
 };
 
 /**
- * @summary Retrieves a list of tax entries with optional filters and pagination.
- * @description Fetches tax entries from the database based on search queries,
- * deletion status, and other filtering criteria. Supports pagination, sorting,
- * and searching across specific fields such as tax name and description.
+ * @summary Retrieves a paginated list of taxes.
+ * @description Fetches taxes based on query parameters. Supports filtering by name,
+ * description, and deletion status. Also includes pagination and sorting options.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and pagination.
- * @param {String} [req.query.q] - Search query to match against tax name and description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted tax entries in the response.
- * @param {Object} [req.query.page] - Pagination page number.
- * @param {Object} [req.query.limit] - Pagination limit for the number of entries per page.
+ * @param {Object} req.query - The query parameters for filtering and pagination.
+ * @param {String} [req.query.sort] - The field to sort by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of states to retrieve per page.
+ * @param {String} [req.query.offset] - The number of states to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
+ * @param {String} [req.query.q] - Search term for filtering taxes by name or description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted taxes.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a list of taxes and pagination metadata.
- *   * @property {Array<Object>} entities.data - The list of retrieved tax entries.
- *   * @property {Object} entities.meta - Pagination and sorting metadata.
- *   * @property {Object} entities.meta.pagination - Pagination details for the tax list.
- *   * @property {Array<Object>} entities.meta.sort - Available sort options for the taxes.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @returns {Object} 200 - Success response with paginated taxes and metadata.
+ *   * @property {Array} entities.data - List of retrieved tax objects.
+ *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
+ *   * @property {Array} entities.meta.sort - Available sort options for the taxes.
+ * @throws {Error} 500 - Returns an error if the tax retrieval fails.
  */
-export const getTaxes = async (req: Request, res: Response, next: NextFunction) => {
-	const { q, deleted, ...query } = req.query || {};
-	const isFilteredByDeleted = "deleted" in req.query;
+export const getTaxes = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
+		{},
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+		}
+	>,
+	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Destructure the query parameters (req.query) into
+	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
+	const { q, deleted } = req.query || {};
+
+	// Check if the query includes a deleted flag
+	const isFilterByDeletedAllowed = "deleted" in req.query;
+
+	// List of fields to search for the query term
 	const querySearchFields = ["name", "description"];
-	const sort = [
+
+	// List of sort options
+	const sort: { name: string; value: object }[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },
@@ -137,23 +159,34 @@ export const getTaxes = async (req: Request, res: Response, next: NextFunction) 
 	];
 
 	const [paginatedTaxesError, paginatedTaxes] = await to(
-		Tax.paginate(
+		Tax.paginate<ITaxDocument>(
 			{
+				// If the query includes a search term, filter taxes by name or code
 				...((q && {
 					$or: querySearchFields.map((item) => ({
 						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
 					})),
 				}) ||
 					{}),
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				// If the query includes a deleted flag, include deleted taxes
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 			},
-			{ ...query }
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
+			}
 		)
 	);
 	if (paginatedTaxesError) return next(paginatedTaxesError);
 
+	// Destructure the paginated taxes into the list of taxes (docs) and pagination metadata
 	const { docs, ...pagination } = paginatedTaxes;
 
+	// Return the list of taxes, pagination metadata, and sort options in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
@@ -163,22 +196,31 @@ export const getTaxes = async (req: Request, res: Response, next: NextFunction) 
 };
 
 /**
- * @summary Retrieves a single tax entry by its slug or ID.
- * @description This method fetches a single tax record from the database using either the tax slug or the MongoDB object ID. If the provided identifier is a valid MongoDB ID, it will attempt to find the tax by its ID; otherwise, it will search by the slug. It also accounts for deleted tax records.
+ * @summary Retrieves a single tax by identifier.
+ * @description Fetches a tax based on the provided identifier, which can be either a slug or an ObjectId.
+ * Handles errors and returns the tax data if found.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.tax - The slug or ID of the tax entry to retrieve.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.tax - The tax identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the retrieved tax data.
+ * @returns {Object} 200 - Success response with the tax data.
  *   * @property {Object} entities.data - The retrieved tax object.
- * @throws {Error} 404 - If no tax is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the retrieval process.
+ * @throws {Error} 500 - Returns an error if the tax retrieval fails.
+ * @throws {Error} 404 - Returns an error if no tax is found.
  */
-export const getSingleTax = async (req: Request, res: Response, next: NextFunction) => {
+export const getSingleTax = async (
+	req: Request<{ tax: string }, FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Retrieve the tax ID or slug from the request parameters
 	const { tax: taxIdentifier } = req.params || {};
+
+	// Attempt to retrieve a tax from the database with the given ID or slug,
+	// and if there was an error or no tax was found, return the error and end the request
 	const [taxError, tax] = await to(
 		Tax.findOneWithDeleted({
 			$or: [
@@ -187,36 +229,46 @@ export const getSingleTax = async (req: Request, res: Response, next: NextFuncti
 			],
 		})
 	);
-	if (taxError) return next(taxError);
-	if (!tax) return next();
+	if (taxError || !tax) return next(taxError);
 
+	// Return the retrieved tax in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, entities: { data: tax } })
 	);
 };
 
 /**
- * @summary Updates a single tax entry by its slug or ID.
- * @description This method updates an existing tax record in the database using the provided slug or MongoDB object ID. The tax entry is updated with the new data from the request body. The method also handles updating deleted tax entries and ensures the operation is wrapped within a MongoDB transaction for atomicity.
+ * @summary Retrieves a single tax.
+ * @description Fetches a single tax based on the provided tax ID or slug.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.tax - The slug or ID of the tax entry to update.
- * @param {Object} req.body - The updated data for the tax entry.
+ * @param {String} req.params.tax - The tax ID or slug.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the updated tax data.
- *   * @property {Object} entities.data - The updated tax object.
- * @throws {Error} 404 - If no tax is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the update process.
+ * @returns {Object} 200 - Success response with the retrieved tax.
+ *   * @property {Object} entities.data - The retrieved tax object.
+ * @throws {Error} 404 - Returns an error if the tax is not found.
+ * @throws {Error} 500 - Returns an error if the tax retrieval fails.
  */
-export const updateSingleTax = async (req: Request, res: Response, next: NextFunction) => {
+export const updateSingleTax = async (
+	req: Request<
+		{ tax: string },
+		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
+		Partial<Omit<ITax, "logo">> & { logo?: Express.Multer.File }
+	>,
+	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
+	// Retrieve the tax ID or slug from the request parameters
 	const { tax: taxIdentifier } = req.params || {};
+
+	// Attempt to retrieve a tax from the database with the given ID or slug,
+	// and if there was an error or no tax was found, return the error and end the request
 	let [taxError, tax] = await to(
 		Tax.findOneWithDeleted({
 			$or: [
@@ -230,39 +282,46 @@ export const updateSingleTax = async (req: Request, res: Response, next: NextFun
 		return next(taxError);
 	}
 
-	tax = Object.assign(tax, { ...(req?.body || {}) });
+	// Merge the request body data into the existing tax object
+	tax = Object.assign(tax, req.body);
+
+	// If the tax is not found, pass control to the next middleware
 	if (!tax) {
 		handleTransactionError(session);
 		return next();
 	}
 
+	// Save the updated tax object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveError, newTax] = await to(tax.save({ session }));
 	if (saveError) {
 		handleTransactionError(session);
 		return next(saveError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
+	// Flash success message and return the updated tax data in the response
 	req.flash("success", "successfully updated.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: { ...(newTax?.toJSON() || {}) } },
+			entities: { data: newTax },
 			flashes: req.flash(),
 		})
 	);
 };
 
 /**
- * @summary Deletes a single tax entry by its slug or ID.
- * @description This method deletes a tax entry from the database using the provided slug or MongoDB object ID. The tax is soft-deleted by marking it as deleted, ensuring it can be restored if needed. The method handles errors and returns a success response when the deletion is successful.
+ * @summary Deletes a single tax by its ID or slug.
+ * @description This method deletes a tax from the database using the provided slug or MongoDB object ID.
+ * The tax is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
+ * The method handles errors and returns a success response when the deletion is successful.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.tax - The slug or ID of the tax entry to delete.
+ * @param {String} req.params.tax - The ID or slug of the tax to delete.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
@@ -270,8 +329,16 @@ export const updateSingleTax = async (req: Request, res: Response, next: NextFun
  * @throws {Error} 404 - If no tax is found with the provided identifier.
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
-export const deleteSingleTax = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteSingleTax = async (
+	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Extract the tax identifier from request parameters
 	const { tax: taxIdentifier } = req.params || {};
+
+	// Attempt to find the tax by its ID or slug, and if there is an error or no tax is found,
+	// pass the error to the next middleware
 	const [taxError, tax] = await to(
 		Tax.findOne({
 			$or: [
@@ -280,12 +347,14 @@ export const deleteSingleTax = async (req: Request, res: Response, next: NextFun
 			],
 		})
 	);
-	if (taxError) return next(taxError);
-	if (!tax) return next();
+	if (taxError || !tax) return next(taxError);
 
-	const [deleteTaxError] = await to(Tax.deleteById(tax._id, req?.user?._id));
+	// Attempt to soft-delete the found tax, and if there is an error during the deletion,
+	// pass the error to the next middleware
+	const [deleteTaxError] = await to(Tax.deleteById(tax._id, req.user?._id));
 	if (deleteTaxError) return next(deleteTaxError);
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
@@ -293,36 +362,47 @@ export const deleteSingleTax = async (req: Request, res: Response, next: NextFun
 };
 
 /**
- * @summary Restores a soft-deleted tax entry by its slug or ID.
- * @description This method restores a tax entry that has been soft-deleted (marked as deleted) by searching for the tax using its slug or MongoDB object ID. If a matching deleted tax is found, it is restored to an active state. The method handles errors and returns a success response when the restoration is successful.
+ * @summary Restores a single tax by its ID or slug.
+ * @description This method restores a tax that was previously soft-deleted from the database.
+ * The method handles errors and returns a success response when the tax is successfully restored.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.tax - The slug or ID of the tax entry to restore.
+ * @param {String} req.params.tax - The ID or slug of the tax to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response indicating the tax was successfully restored.
- * @throws {Error} 404 - If no deleted tax is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restoration process.
+ * @returns {Object} 200 - Success response indicating the tax was restored.
+ * @throws {Error} 404 - If no tax is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the restore process.
  */
-export const restoreSingleTax = async (req: Request, res: Response, next: NextFunction) => {
+export const restoreSingleTax = async (
+	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Extract the tax identifier from request parameters
 	const { tax: taxIdentifier } = req.params || {};
+
+	// Create a query to find the tax by its ID or slug
 	const singleTaxQuery = {
 		$or: [
-			{ slug: taxIdentifier },
-			...(isMongoId(taxIdentifier) ? [{ _id: taxIdentifier }] : []),
+			{ slug: taxIdentifier }, // search by slug
+			...(isMongoId(taxIdentifier) ? [{ _id: taxIdentifier }] : []), // search by ID
 		],
-		deleted: true,
+		deleted: true, // only find soft-deleted countries
 	};
 
+	// Attempt to find the tax by its ID or slug, and if there is an error or no tax is found,
+	// pass the error to the next middleware
 	const [taxError, tax] = await to(Tax.findOneWithDeleted(singleTaxQuery));
-	if (taxError) return next(taxError);
-	if (!tax) return next();
+	if (taxError || !tax) return next(taxError);
 
+	// Attempt to restore the found tax, and if there is an error during the restoration,
+	// pass the error to the next middleware
 	const [restoreTaxError] = await to(Tax.restore(singleTaxQuery));
 	if (restoreTaxError) return next(restoreTaxError);
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })

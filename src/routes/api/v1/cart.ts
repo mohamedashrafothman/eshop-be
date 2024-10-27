@@ -3,10 +3,10 @@ import { Router } from "express";
 import * as cartController from "../../../controllers/cart";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get", "post", "delete"]))
@@ -42,5 +42,5 @@ router
 		cartController.postShippingMethod
 	);
 
-// exporting router
+// Exporting router
 export default router;

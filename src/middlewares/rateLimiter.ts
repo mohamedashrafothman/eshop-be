@@ -1,9 +1,7 @@
-import crypto from "crypto";
 import rateLimit from "express-rate-limit";
-import createError from "http-errors";
-import httpStatus from "http-status";
 import MongoStore from "rate-limit-mongo";
-import { countDownTimer, formatResponseObject } from "../utils/helpers";
+import * as authController from "../controllers/auth";
+import { rateLimitKeyGenerator } from "../utils/helpers";
 import vars from "../utils/vars";
 
 const middleware = rateLimit({
@@ -34,43 +32,8 @@ export const loginRateLimiter = rateLimit({
 	skipSuccessfulRequests: true,
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-	keyGenerator: (req) => {
-		// Generate a unique key for each request
-		const ip =
-			req.ip ||
-			req.ips?.[0] ||
-			req.socket.remoteAddress ||
-			(req.headers["x-forwarded-for"] as string).split(",")?.[0] ||
-			"unknown";
-		const browser = req.userAgent.getBrowser()?.name || "unknown";
-		const os = req.userAgent.getOS()?.name || "unknown";
-		const key = `${ip}-${browser}-${os}`;
-
-		// Hash the key to create a unique identifier
-		return crypto.createHash("sha256").update(key).digest("hex");
-	},
-	handler: (req, res, next) => {
-		const resetTime = req.rateLimit?.resetTime;
-
-		// Check if the reset time is valid
-		if (!resetTime) {
-			const error = createError(httpStatus.INTERNAL_SERVER_ERROR);
-			return next({ ...(error || {}), status: error.status });
-		}
-
-		// Check if the user has exceeded the maximum attempts
-		const remainingTime = countDownTimer(resetTime);
-		req.flash(
-			"danger",
-			`Too Many Login Attempts. Please try again in ${remainingTime.minutes}:${remainingTime.seconds} ${remainingTime?.minutes ? "minutes" : "seconds"}.`
-		);
-		return res.status(httpStatus.TOO_MANY_REQUESTS).json(
-			formatResponseObject({
-				status: httpStatus.TOO_MANY_REQUESTS,
-				flashes: req.flash(),
-			})
-		);
-	},
+	keyGenerator: rateLimitKeyGenerator,
+	handler: authController._loginRateLimitHandler,
 });
 
 export default middleware;

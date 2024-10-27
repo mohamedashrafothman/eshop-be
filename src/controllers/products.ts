@@ -2,20 +2,21 @@ import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
-import httpStatus from "http-status";
-import mongoose from "mongoose";
+import httpStatus, { HttpStatus } from "http-status";
+import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isHexColor from "validator/lib/isHexColor";
 import isMongoId from "validator/lib/isMongoId";
 import IProduct from "../interfaces/Product.interface";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
-import Brand, { IBrandDocument } from "../models/Brand";
-import Category, { ICategoryDocument } from "../models/Category";
-import Product from "../models/Product";
+import Brand from "../models/Brand";
+import Category from "../models/Category";
+import Product, { IProductDocument } from "../models/Product";
 import StorageEngine from "../services/storage";
 import {
 	deleteFileFromDisk,
 	formatResponseObject,
+	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
 } from "../utils/helpers";
@@ -182,7 +183,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 	}
 };
 
-export const uploadImages = async (req: Request, res: Response, next: NextFunction) => {
+export const uploadImages = async (
+	req: Request,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	const storageEngine = new StorageEngine({
 		accept: ["image"],
 		square: false,
@@ -218,42 +223,88 @@ export const uploadImages = async (req: Request, res: Response, next: NextFuncti
 				thumbnail: Express.Multer.File[];
 				images: Express.Multer.File[];
 			};
-			req.body = { ...req.body, thumbnail: thumbnail?.[0], images };
+			req.body = {
+				...req.body,
+				...(thumbnail?.[0] && { thumbnail: thumbnail[0] }),
+				...(images && { images }),
+			};
 		}
 		next();
 	});
 };
 
 /**
- * @summary Creates a new product with associated images and categories.
- * @description This function handles the uploading of a product's thumbnail and images, creates a new product in the database, and associates it with the specified category and brand. It sends a success response with the created product details, including associated category and brand information, or passes any errors to the next middleware.
+ * @summary Creates a new product.
+ * @description Handles the creation of a new product in the system.
+ * Optionally uploads and attaches a thumbnail and images if provided in the request.
+ * The product is then saved to the database, and related category and brand associations are updated.
+ * A success message is set upon successful creation.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.body - The request body containing product data.
+ * @param {Object} req.body - The data for creating a new product. Optionally includes `thumbnail` and
+ * `images` files for product images.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {void} 201 - Success response with the created product details.
- *   * @property {Object} entities - Object containing the product data.
- *   * @property {Object} entities.data - The created product with associated category and brand, if applicable.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
- * @throws {Error} 404 - Returns an error if the specified category or brand is not found.
+ * @returns {void} 201 - Success response with the newly created product data.
+ *   * @property {Object} entities.data - The created product object.
+ *   * @property {Array} flashes - Success message for product creation.
+ * @throws {Error} 500 - Returns an error if the product, thumbnail, or images creation fails.
+ * @throws {Error} 401 - Returns an error if the user is not authorized to create a product.
  */
-export const postNewProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const postNewProduct = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>,
+		Omit<IProduct, "thumbnail" | "images"> & {
+			thumbnail?: Express.Multer.File;
+			images?: Express.Multer.File[];
+		}
+	>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	if (!req.user || ![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)) {
+	// Check if user is authorized as an admin or super admin.
+	// if not, return an error
+	if (
+		!req.isAuthenticated() ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// upload images to storage
-	let createdThumbnailError: Error | null;
+	// Check if category exists in the request body, and if there was an error,
+	// return the error and end the request
+	const [categoryError, category] = await to(
+		Category.findOne({ _id: req.body.category }).session(session)
+	);
+	if (categoryError || !category) {
+		handleTransactionError(session);
+		return next(categoryError);
+	}
+
+	// Check if brand exists in the request body, and if there was an error,
+	// return the error and end the request
+	const [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }).session(session));
+	if (brandError || !brand) {
+		handleTransactionError(session);
+		return next(brandError);
+	}
+
+	// create variables to hold the created product and attachment
+	let createdThumbnailError: Error | null = null;
 	let createdThumbnail: IAttachmentDocument[] | undefined;
+
+	// Check if attachment exists in the request body.
 	if (req.body?.thumbnail) {
+		// Create a new attachment from the request body attachment, and if there was an error,
+		// return the error and end the request
 		[createdThumbnailError, createdThumbnail] = await to(
 			Attachment.create(
 				[
@@ -271,12 +322,16 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	let createdImagesError: Error | null;
+	// create variables to hold the created product and images
+	let createdImagesError: Error | null = null;
 	let createdImages: IAttachmentDocument[] | undefined;
+	// Check if images exists in the request body.
 	if (req.body?.images && req.body.images.length) {
+		// Create a new attachment from the request body icon, and if there was an error,
+		// return the error and end the request
 		[createdImagesError, createdImages] = await to(
 			Attachment.create(
-				req.body?.images.map((image: Express.Multer.File) =>
+				req.body.images.map((image: Express.Multer.File) =>
 					handleFileToUpload(
 						image,
 						`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
@@ -291,16 +346,19 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		}
 	}
 
-	// create product
-	const thumbnail = createdThumbnail?.[0]?._id || undefined;
-	const images = createdImages?.map(({ _id }) => _id) || [];
+	// Extract thumbnail and images mongoose ids from the created attachments
+	const thumbnail: string | undefined = createdThumbnail?.[0]?._id || undefined;
+	const images: (string | undefined)[] = createdImages?.map(({ _id }) => _id) || [];
+
+	// Create a new category from the request body data, and if there was an error,
+	// return the error and end the request
 	const [createdProductError, createdProduct] = await to(
 		Product.create(
 			[
 				{
 					...(req.body || {}),
 					...(thumbnail ? { thumbnail } : {}),
-					...(images?.length ? { images } : {}),
+					...(images.length ? { images } : {}),
 					user: req.user._id,
 				},
 			],
@@ -312,92 +370,92 @@ export const postNewProduct = async (req: Request, res: Response, next: NextFunc
 		return next(createdProductError);
 	}
 
-	// add product to category
-	let newCategory: ICategoryDocument | undefined;
-	let saveCategoryError: Error | null;
-	let [categoryError, category] = await to(
-		Category.findOne({ _id: req.body.category }).session(session)
-	);
-	if (categoryError) {
+	// Save the updated category object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const updatedCategory = Object.assign(category, {
+		products: [...(category.products || []), createdProduct[0]._id],
+	});
+	const [saveCategoryError] = await to(updatedCategory.save({ session }));
+	if (saveCategoryError) {
 		handleTransactionError(session);
-		return next(categoryError);
-	}
-	if (category) {
-		category = Object.assign(category, {
-			products: [...(category.products || []), createdProduct[0]._id],
-		});
-		[saveCategoryError, newCategory] = await to(category.save({ session }));
-		if (saveCategoryError) {
-			handleTransactionError(session);
-			return next(saveCategoryError);
-		}
+		return next(saveCategoryError);
 	}
 
-	// add product to brand
-	let newBrand: IBrandDocument | undefined;
-	let saveBrandError: Error | null;
-	let [brandError, brand] = await to(Brand.findOne({ _id: req.body.brand }).session(session));
-	if (brandError) {
+	// Save the updated brand object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const updatedBrand = Object.assign(brand, {
+		products: [...(brand.products || []), createdProduct[0]._id],
+	});
+	const [saveBrandError] = await to(updatedBrand.save({ session }));
+	if (saveBrandError) {
 		handleTransactionError(session);
-		return next(brandError);
-	}
-	if (brand) {
-		brand = Object.assign(brand, {
-			products: [...(brand.products || []), createdProduct[0]._id],
-		});
-
-		[saveBrandError, newBrand] = await to(brand.save({ session }));
-		if (saveBrandError) {
-			handleTransactionError(session);
-			return next(saveBrandError);
-		}
+		return next(saveBrandError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
+	// Set a flash message to indicate that the product was created successfully,
+	// and return the created product in the response
 	req.flash("success", "Product created successfully.");
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: {
-				data: {
-					...(createdProduct[0].toJSON() || {}),
-					...(newCategory && { category: newCategory }),
-					...(newBrand && { brand: newBrand }),
-				},
-			},
+			entities: { data: createdProduct[0] },
 			flashes: req.flash(),
 		})
 	);
 };
 
 /**
- * @summary Retrieves a list of products based on filters and search criteria.
- * @description Fetches products from the database using various filters, including search queries, categories, brands, sizes, colors, and price ranges. Supports pagination and sorting options. If the user is an admin or super admin, deleted products can also be included in the results.
+ * @summary Retrieves a paginated list of products based on filters and search criteria.
+ * @description Fetches products from the database using various filters, including search queries, categories, brands, sizes, colors, and price range. Supports pagination and sorting options. If the user is an admin or super admin, deleted products can also be included in the results.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for filtering and sorting.
+ * @param {String} [req.query.sort] - The field to sort by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of products to retrieve per page.
+ * @param {String} [req.query.offset] - The number of products to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
  * @param {String} [req.query.q] - Search query to match against product name and description.
  * @param {Boolean} [req.query.deleted] - Flag to include deleted products in the response.
- * @param {Array<string>} [req.query.categories] - List of category identifiers to filter products.
- * @param {Array<string>} [req.query.brands] - List of brand identifiers to filter products.
- * @param {Array<string>} [req.query.sizes] - List of sizes to filter products.
- * @param {Array<string>} [req.query.colors] - List of colors to filter products.
- * @param {Number} [req.query.minPrice] - Minimum price for filtering products.
- * @param {Number} [req.query.maxPrice] - Maximum price for filtering products.
+ * @param {String[]} [req.query.categories] - List of category IDs to filter products by.
+ * @param {String[]} [req.query.brands] - List of brand IDs to filter products by.
+ * @param {String[]} [req.query.sizes] - List of size IDs to filter products by.
+ * @param {String[]} [req.query.colors] - List of color IDs to filter products by.
+ * @param {Number} [req.query.minPrice] - Minimum price to filter products by.
+ * @param {Number} [req.query.maxPrice] - Maximum price to filter products by.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a list of products and pagination metadata.
- *   * @property {Array<Object>} entities.data - The list of retrieved products.
- *   * @property {Object} meta - Pagination and sort metadata.
- *   * @property {Object} meta.pagination - Pagination details for the product list.
- *   * @property {Array<Object>} meta.sort - Available sort options for the products.
+ * @returns {Object} 200 - Success response with a list of products, pagination metadata, and sort options.
  * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
  */
-export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+export const getProducts = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
+		{},
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+			q?: string;
+			deleted?: boolean | number;
+			categories?: string[];
+			brands?: string[];
+			sizes?: string[];
+			colors?: string[];
+			minPrice?: number;
+			maxPrice?: number;
+		}
+	>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Destructure the query parameters (req.query) into
+	// q (search term), deleted (include deleted countries), categories (list of category ids), brands (list of brand ids),
+	// sizes (list of product sizes), colors (list of product colors name or value), minPrice, maxPrice,
+	// and query(pagination & sorting options)
 	const {
 		q,
 		deleted,
@@ -407,11 +465,18 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 		colors = [],
 		minPrice = 0,
 		maxPrice = 0,
-		...query
 	} = req.query || {};
-	const isFilteredByDeleted = "deleted" in req.query;
-	const querySearchFields = ["name", "description"];
-	const sort = [
+
+	// Check if the query includes a deleted flag
+	const isFilterByDeletedAllowed: boolean =
+		"deleted" in req.query &&
+		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user?.role || "");
+
+	// List of fields to search for the query term
+	const querySearchFields: string[] = ["name", "description"];
+
+	// List of sort options
+	const sort: { name: string; value: object }[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Price Ascending", value: { price: 1 } },
@@ -420,23 +485,27 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 		{ name: "Created Date Descending", value: { createdAt: -1 } },
 	];
 
+	// Attempt to retrieve the products using the given query and pagination options,
+	// and if there was an error, return the error and end the request
 	const [paginatedProductsError, paginatedProducts] = await to(
-		Product.paginate(
+		Product.paginate<IProductDocument>(
 			{
+				// If the query includes a search term, filter products by name or code
 				...((q && {
 					$or: querySearchFields.map((item) => ({
 						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
 					})),
 				}) ||
 					{}),
-				...(([vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(
-					req.user?.role || ""
-				) &&
-					isFilteredByDeleted && { deleted: Boolean(deleted) }) ||
-					{}),
+				// If the query includes a deleted flag, include deleted products
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
+				// Filter products by categories.
 				...(categories && categories.length && { category: { $in: categories } }),
+				// Filter products by brands.
 				...(brands && brands.length && { brand: { $in: brands } }),
+				// Filter products by sizes.
 				...(sizes && sizes.length && { sizes: { $in: sizes } }),
+				// Filter products by colors.
 				...(colors &&
 					colors.length && {
 						$or: [
@@ -444,6 +513,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 							{ "colors.value": { $in: colors } },
 						],
 					}),
+				// Filter products by price range
 				...(((minPrice || maxPrice) && {
 					$or: [
 						{
@@ -463,22 +533,30 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 				}) ||
 					{}),
 			},
+			// Use the query parameters for pagination and sorting
 			{
-				...query,
-				...(query.sort &&
-					"price" in (query.sort as object) && {
+				...("sort" in req.query && {
+					sort: req.query.sort,
+					...("price" in (req.query.sort as object) && {
 						sort: {
-							"price.sale": (query.sort as { price: any }).price,
-							"price.normal": (query.sort as { price: any }).price,
+							"price.sale": (req.query.sort as { price: any }).price,
+							"price.normal": (req.query.sort as { price: any }).price,
 						},
 					}),
+				}),
+				...("page" in req.query && { page: req.query.page }),
+				...("limit" in req.query && { limit: req.query.limit }),
+				...("offset" in req.query && { offset: req.query.offset }),
+				...("pagination" in req.query && { pagination: req.query.pagination }),
 			}
 		)
 	);
 	if (paginatedProductsError) return next(paginatedProductsError);
 
+	// Destructure the paginated products into the list of products (docs) and pagination metadata
 	const { docs, ...pagination } = paginatedProducts;
 
+	// Return the list of products, pagination metadata, and sort options in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
@@ -489,28 +567,35 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 
 /**
  * @summary Retrieves a single product by identifier.
- * @description Fetches a product based on the provided identifier, which can be a slug or a MongoDB ObjectId. The method used to find the product depends on the user's role (admin or super admin may include deleted products). If the product is found, it returns the product details; otherwise, it handles the error appropriately.
+ * @description Fetches a product based on the provided identifier, which can be either a slug or an ObjectId.
+ * Handles errors and returns the product data if found.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or a MongoDB ObjectId.
+ * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the product details.
- *   * @property {Object} entities - Object containing the product data.
- *   * @property {Object} entities.data - The retrieved product.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
- * @throws {Error} 404 - Returns an error if the product is not found.
+ * @returns {Object} 200 - Success response with the product data.
+ *   * @property {Object} entities.data - The retrieved product object.
+ * @throws {Error} 500 - Returns an error if the product retrieval fails.
+ * @throws {Error} 404 - Returns an error if no product is found.
  */
-export const getSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const getSingleProduct = async (
+	req: Request<{ product: string }, FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Retrieve the product ID or slug from the request parameters
 	const { product: productIdentifier } = req.params || {};
+
+	// Attempt to retrieve the product using the given identifier, and if there was an error,
+	// return the error
 	const findMethodName =
 		req.user?.role &&
 		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
 			? "findOneWithDeleted"
 			: "findOne";
-
 	const [productError, product] = await to(
 		Product[findMethodName]({
 			$or: [
@@ -519,38 +604,53 @@ export const getSingleProduct = async (req: Request, res: Response, next: NextFu
 			],
 		})
 	);
-	if (productError) return next(productError);
-	if (!product) return next();
+	if (productError || !product) return next(productError);
 
+	// Return the retrieved category in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, entities: { data: product } })
 	);
 };
 
 /**
- * @summary Updates an existing product by its identifier.
- * @description This endpoint updates a product's details, including its thumbnail, images, category, and brand. The product can be identified by a slug or MongoDB ObjectId. If images or thumbnails are provided, the old ones are replaced. The method also updates related category and brand associations if specified.
+ * @summary Updates a single product by identifier.
+ * @description Handles the update of a product's details, including its category, brand, thumbnail, and images.
+ * Utilizes transactions to ensure data integrity. If the update is successful, the updated product data is returned.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or MongoDB ObjectId.
- * @param {Object} req.body - The request body containing the product data.
+ * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
+ * @param {Object} req.body - The updated product data. Optionally includes `thumbnail` and `images` files.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with the updated product details.
- *    * @property {Object} entities - Contains the updated product data.
- *    * @property {Object} entities.data - The updated product.
- * @throws {Error} 500 - Internal server error if there's a problem updating the product.
- * @throws {Error} 404 - Product not found.
+ * @returns {Object} 200 - Success response with the updated product data.
+ *   * @property {Object} entities.data - The updated product object.
+ *   * @property {Array} flashes - Success message for product update.
+ * @throws {Error} 500 - Returns an error if the product update fails.
+ * @throws {Error} 404 - Returns an error if the product is not found.
  */
-export const updateSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const updateSingleProduct = async (
+	req: Request<
+		{ product: string },
+		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
+		Partial<Omit<IProduct, "thumbnail" | "images">> & {
+			thumbnail?: Express.Multer.File;
+			images?: Express.Multer.File[];
+		}
+	>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
-	const session = await mongoose.startSession();
+	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
+	// Retrieve the product ID or slug from the request parameters
 	const { product: productIdentifier } = req.params || {};
 
+	// Attempt to retrieve a product from the database with the given ID or slug,
+	// and if there was an error or no product was found, return the error and end the request
 	let [productError, product] = await to(
 		Product.findOneWithDeleted({
 			$or: [
@@ -559,20 +659,20 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 			],
 		}).session(session)
 	);
-	if (productError) {
+	if (productError || !product) {
 		handleTransactionError(session);
 		return next(productError);
 	}
-	if (!product) {
-		handleTransactionError(session);
-		return next();
-	}
 
-	let createdThumbnailError: Error | null;
+	// create variables to hold the created thumbnail attachment
+	let createdThumbnailError: Error | null = null;
 	let createdThumbnail: IAttachmentDocument[] | undefined;
+
+	// Check if thumbnail exists in the request body.
 	if (req.body?.thumbnail) {
+		// Find the thumbnail associated with the product
 		const [productThumbnailError, productThumbnail] = await to(
-			Attachment.findOne({ _id: product?.thumbnail?._id || product?.thumbnail }).session(
+			Attachment.findOne({ _id: product.thumbnail?._id || product.thumbnail }).session(
 				session
 			)
 		);
@@ -581,6 +681,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 			return next(productThumbnailError);
 		}
 
+		// If the thumbnail exists, delete it, and delete the file from disk
 		if (productThumbnail?._id) {
 			const [deletedProductThumbnailError] = await to(
 				Attachment.deleteOne({ _id: productThumbnail._id }).session(session)
@@ -594,6 +695,8 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 			deleteFileFromDisk(productThumbnail.path);
 		}
 
+		// Create a new thumbnail from the request body logo, and if there was an error,
+		// return the error and end the request
 		[createdThumbnailError, createdThumbnail] = await to(
 			Attachment.create(
 				[
@@ -611,13 +714,17 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	let createdImagesError: Error | null;
+	// create variables to hold the created images attachments
+	let createdImagesError: Error | null = null;
 	let createdImages: IAttachmentDocument[] | undefined;
+
+	// Check if images exists in the request body.
 	if (req.body?.images && req.body.images.length) {
+		// Find the images associated with the product
 		const [productImagesError, productImages] = await to(
 			Attachment.find({
 				_id: {
-					$in: product?.images?.map((singleImage) => singleImage?._id || singleImage),
+					$in: product.images?.map((singleImage) => singleImage?._id || singleImage),
 				},
 			}).session(session)
 		);
@@ -626,6 +733,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 			return next(productImagesError);
 		}
 
+		// If the images exists, delete it, and delete the file from disk
 		if (productImages?.length) {
 			const [deletedProductImagesError] = await to(
 				Attachment.deleteMany({ _id: { $in: productImages.map((_id) => _id) } }).session(
@@ -641,13 +749,14 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 			productImages?.forEach(({ path }) => path && deleteFileFromDisk(path));
 		}
 
-		const handledImages = req.body?.images.map((image: Express.Multer.File) =>
+		// Create a new thumbnail from the request body logo, and if there was an error,
+		// return the error and end the request
+		const handledImages = req.body?.images.map((image) =>
 			handleFileToUpload(
 				image,
 				`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
 			)
 		);
-
 		[createdImagesError, createdImages] = await to(
 			Attachment.create(handledImages, { session })
 		);
@@ -657,8 +766,8 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	// update product's category if category is provided
-	if (req.body?.category && req.body.category !== product.category) {
+	// Update product's category if category is provided
+	if (req.body?.category && req.body.category !== (product.category?._id || product?.category)) {
 		const [categoryUpdateError] = await to(
 			Category.updateOne(
 				{ _id: product.category },
@@ -680,7 +789,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 
 		if (category) {
 			category = Object.assign(category, {
-				products: [...(category?.products || []), product?._id],
+				products: [...(category?.products || []), product._id],
 			});
 
 			const [updatedProductCategoryError] = await to(category.save({ session }));
@@ -691,8 +800,8 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	// update product's brand if brand is provided
-	if (req.body?.brand && req.body.brand !== product.brand) {
+	// Update product's brand if brand is provided
+	if (req.body?.brand && req.body.brand !== (product.brand?._id || product?.brand)) {
 		const [brandUpdateError] = await to(
 			Brand.updateOne({ _id: product.brand }, { $pull: { products: product._id } }).session(
 				session
@@ -711,7 +820,7 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 
 		if (brand) {
 			brand = Object.assign(brand, {
-				products: [...(brand?.products || []), product?._id],
+				products: [...(brand?.products || []), product._id],
 			});
 
 			const [updatedProductBrandError] = await to(brand.save({ session }));
@@ -722,54 +831,67 @@ export const updateSingleProduct = async (req: Request, res: Response, next: Nex
 		}
 	}
 
-	// update product with new data
+	// Merge the request body data into the existing product object
 	product = Object.assign(product, {
-		...(req?.body || {}),
+		...(req.body || {}),
 		...(createdThumbnail?.[0]?._id ? { thumbnail: createdThumbnail[0]._id } : {}),
 		...(createdImages?.length ? { images: createdImages?.map(({ _id }) => _id) } : {}),
 	});
+
+	// If the product is not found, pass control to the next middleware
 	if (!product) {
 		handleTransactionError(session);
 		return next();
 	}
 
+	// Save the updated product object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
 	const [saveError, newProduct] = await to(product.save({ session }));
 	if (saveError) {
 		handleTransactionError(session);
 		return next(saveError);
 	}
 
-	// commit the transaction
+	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
 
+	// Flash success message and return the updated category data in the response
 	req.flash("success", "Product successfully updated.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: { ...(newProduct?.toJSON() || {}) } },
+			entities: { data: newProduct },
 			flashes: req.flash(),
 		})
 	);
 };
 
 /**
- * @summary Deletes a single product by identifier.
- * @description Deletes a product based on the provided identifier, which can be a slug or an ObjectId. Upon successful deletion, returns a success message.
+ * @summary Deletes a single product by its ID or slug.
+ * @description This method deletes a product from the database using the provided slug or MongoDB object ID.
+ * The product is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
+ * The method handles errors and returns a success response when the deletion is successful.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
+ * @param {String} req.params.product - The ID or slug of the product to delete.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a flash message.
- *   * @property {String} flashes.success - Success message indicating the product was successfully deleted.
- * @throws {Error} 500 - Returns an error if any issue occurs during the deletion process.
- * @throws {Error} 404 - Returns an error if the product is not found.
+ * @returns {Object} 200 - Success response indicating the product was deleted.
+ * @throws {Error} 404 - If no product is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the deletion process.
  */
-export const deleteSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteSingleProduct = async (
+	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Extract the product identifier from request parameters
 	const { product: productIdentifier } = req.params || {};
+
+	// Attempt to find the product by its ID or slug, and if there is an error or no product is found,
+	// pass the error to the next middleware
 	const [productError, product] = await to(
 		Product.findOne({
 			$or: [
@@ -780,9 +902,12 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 	);
 	if (productError || !product) return next(productError);
 
-	const [deleteProductError] = await to(Product.deleteById(product._id, req?.user?._id));
+	// Attempt to soft-delete the found product, and if there is an error during the deletion,
+	// pass the error to the next middleware
+	const [deleteProductError] = await to(Product.deleteById(product._id, req.user?._id));
 	if (deleteProductError) return next(deleteProductError);
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
@@ -790,36 +915,47 @@ export const deleteSingleProduct = async (req: Request, res: Response, next: Nex
 };
 
 /**
- * @summary Restores a single product by identifier.
- * @description Restores a product that has been soft-deleted, based on the provided identifier, which can be a slug or an ObjectId. Upon successful restoration, returns a success message.
+ * @summary Restores a single product by its ID or slug.
+ * @description This method restores a product that was previously soft-deleted from the database.
+ * The method handles errors and returns a success response when the product is successfully restored.
  *
  * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
+ * @param {String} req.params.product - The ID or slug of the product to restore.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
- * @returns {Object} 200 - Success response with a flash message.
- *   * @property {String} flashes.success - Success message indicating the product was successfully restored.
- * @throws {Error} 500 - Returns an error if any issue occurs during the restoration process.
- * @throws {Error} 404 - Returns an error if the product is not found or if the product was not soft-deleted.
+ * @returns {Object} 200 - Success response indicating the product was restored.
+ * @throws {Error} 404 - If no product is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the restore process.
  */
-export const restoreSingleProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const restoreSingleProduct = async (
+	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Extract the product identifier from request parameters
 	const { product: productIdentifier } = req.params || {};
+
+	// Create a query to find the product by its ID or slug
 	const singleProductQuery = {
 		$or: [
-			{ slug: productIdentifier },
-			...(isMongoId(productIdentifier) ? [{ _id: productIdentifier }] : []),
+			{ slug: productIdentifier }, // search by slug
+			...(isMongoId(productIdentifier) ? [{ _id: productIdentifier }] : []), // search by ID
 		],
-		deleted: true,
+		deleted: true, // only find soft-deleted countries
 	};
 
+	// Attempt to find the product by its ID or slug, and if there is an error or no product is found,
+	// pass the error to the next middleware
 	const [productError, product] = await to(Product.findOneWithDeleted(singleProductQuery));
 	if (productError || !product) return next(productError);
 
+	// Attempt to restore the found product, and if there is an error during the restoration,
+	// pass the error to the next middleware
 	const [restoreProductError] = await to(Product.restore(singleProductQuery));
 	if (restoreProductError) return next(restoreProductError);
 
+	// Flash success message and respond with success status
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })

@@ -21,7 +21,6 @@ export interface IUserDocument
 		password: string,
 		next: (err?: Error | null | boolean, check?: boolean | null | undefined) => any
 	) => Promise<void>;
-	createHashToken: () => string;
 	gravatar: (user: IUser["email"], size: number) => string;
 }
 
@@ -83,10 +82,6 @@ UserSchema.methods.comparePassword = async function (candidatePassword, next) {
 	if (!this.password) return next(false, null);
 	const [isMatchError, isMatch] = await to(bcrypt.compare(candidatePassword, this.password));
 	next(isMatchError, isMatch);
-};
-
-UserSchema.methods.createHashToken = function () {
-	return crypto.randomBytes(32).toString("hex");
 };
 
 UserSchema.methods.gravatar = function (user, size = 200) {

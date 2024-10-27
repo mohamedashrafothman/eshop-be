@@ -42,6 +42,13 @@ const _transporter = (data: EmailTransporterParamsType) =>
 		})
 		.sendMail(data);
 
+/**
+ * @function send
+ * @description Sends an email using nodemailer
+ * @param {EmailParamsType} data - email data
+ * @returns {Promise<[Error, EmailTransporterParamsType]>} an array with the error as the first
+ * element and the email transporter options as the second element
+ */
 const send = async (data: EmailParamsType) => {
 	const html = _HTMLGenerator(data);
 	const text = convert(html);
@@ -51,8 +58,8 @@ const send = async (data: EmailParamsType) => {
 		html,
 		text,
 	};
-	const [error] = await to(_transporter(options));
-	return [error, options];
+
+	return await to(_transporter(options));
 };
 
 export { send };

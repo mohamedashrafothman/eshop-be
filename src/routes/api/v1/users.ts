@@ -5,10 +5,10 @@ import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]), permission.check(vars.auth.roles.superAdmin))
@@ -40,5 +40,5 @@ router
 	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
 	.patch(usersController.restoreSingleUser);
 
-// exporting router
+// Exporting router
 export default router;

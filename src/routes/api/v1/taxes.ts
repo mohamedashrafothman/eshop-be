@@ -3,10 +3,10 @@ import { Router } from "express";
 import * as taxesController from "../../../controllers/taxes";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["post", "get"]))
@@ -33,5 +33,5 @@ router
 	.all(allowMethods(["patch"]))
 	.patch(taxesController.restoreSingleTax);
 
-// exporting router
+// Exporting router
 export default router;

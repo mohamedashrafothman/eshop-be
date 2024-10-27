@@ -3,10 +3,10 @@ import { Router } from "express";
 import * as zonesController from "../../../controllers/zones";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
@@ -33,5 +33,5 @@ router
 	.all(allowMethods(["patch"]))
 	.patch(zonesController.restoreSingleZone);
 
-// exporting router
+// Exporting router
 export default router;

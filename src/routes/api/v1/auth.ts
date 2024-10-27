@@ -6,10 +6,10 @@ import { loginRateLimiter } from "../../../middlewares/rateLimiter";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/logout")
 	.all(allowMethods(["post", "get"]), authController.passportJWTAuthenticate)
@@ -88,5 +88,5 @@ router
 	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
 	.get(authController.getSocialUnlink);
 
-// exporting router
+// Exporting router
 export default router;

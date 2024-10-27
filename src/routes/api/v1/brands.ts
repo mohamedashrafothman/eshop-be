@@ -6,10 +6,10 @@ import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
@@ -48,5 +48,5 @@ router
 	)
 	.patch(brandsController.restoreSingleBrand);
 
-// exporting router
+// Exporting router
 export default router;

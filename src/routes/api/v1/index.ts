@@ -17,10 +17,10 @@ import taxesRouter from "./taxes";
 import usersRouter from "./users";
 import zonesRouter from "./zones";
 
-// defining express router
+// Defining express router
 const router = Router();
 
-// endpoints
+// Endpoints
 router.use("/auth", authRouter);
 router.use("/users", authController.passportJWTAuthenticate, usersRouter);
 router.use("/addresses", authController.passportJWTAuthenticate, addressesRouter);
@@ -56,5 +56,5 @@ router.use(
 );
 router.use("/reviews", reviewsRouter);
 
-// exporting router
+// Exporting router
 export default router;

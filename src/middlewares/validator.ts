@@ -5,19 +5,19 @@ import httpStatus from "http-status";
 import { formatValidationErrorMessagesResponse } from "../utils/helpers";
 
 /**
- * @summary Express middleware to handle express-validator validation errors.
- * @description It flashes the validation errors and sends a 422 Unprocessable Entity
- * response if there are any validation errors. Otherwise, it calls the next
- * middleware or route handler.
+ * Express middleware to handle validation errors.
  *
- * @param {Request} req - The Express request object.
- * @param {Response} _res - The Express response object. Not used.
- * @param {NextFunction} next - The Express next middleware or route handler.
+ * @summary Checks for validation errors, adds them to the flash if any, and returns an error.
+ * @description This middleware is a wrapper around express-validator's validationResult.
+ * It checks if there are any validation errors, adds them to the flash if any, and returns
+ * a 422 Unprocessable Entity error with the validation errors as the response body.
  *
- * @returns {Promise<void>} - Returns nothing.
- * @throws {Error} 422 - Returns an error if there are validation errors.
+ * @param {Object} req - Express request object.
+ * @param {Object} _res - Express response object (not used).
+ * @param {Function} next - Express next middleware function to handle errors.
+ * @returns {void}
  */
-const middleware = (req: Request, _res: Response, next: NextFunction) => {
+const middleware = (req: Request, _res: Response, next: NextFunction): void => {
 	// Get the validation errors if any
 	const validationErrors = validationResult(req);
 	if (validationErrors.isEmpty()) return next();

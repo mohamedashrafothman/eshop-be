@@ -89,7 +89,7 @@ export const postNewState = async (
 	req: Request<{}, FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>, IState>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Attempt to find the country the state belongs to,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
@@ -151,16 +151,16 @@ export const getStates = async (
 	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), country (id of country), and query (pagination & sorting options)
 	const { q, deleted, country } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilteredByDeleted: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
 
 	// Check if the query includes a country id
-	const isFilteredByCountry: boolean = "country" in req.query;
+	const isFilterByCountryAllowed: boolean = "country" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "code"];
@@ -186,9 +186,9 @@ export const getStates = async (
 				}) ||
 					{}),
 				// If the query includes a deleted flag, include deleted states
-				...((isFilteredByDeleted && { deleted: Boolean(deleted) }) || {}),
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// If the query includes a country id, filter states by country
-				...((isFilteredByCountry && { country }) || {}),
+				...((isFilterByCountryAllowed && { country }) || {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -234,7 +234,7 @@ export const getSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Retrieve the state ID or slug from the request parameters
 	const { state: stateIdentifier } = req.params || {};
 
@@ -283,7 +283,7 @@ export const updateSingleState = async (
 	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Attempt to find the country the state belongs to if country id exists in the request body,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	if (req.body?.country) {
@@ -351,7 +351,7 @@ export const deleteSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the state identifier from request parameters
 	const { state: stateIdentifier } = req.params || {};
 
@@ -369,7 +369,7 @@ export const deleteSingleState = async (
 
 	// Attempt to soft-delete the found state, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteStateError] = await to(State.deleteById(state._id, req?.user?._id));
+	const [deleteStateError] = await to(State.deleteById(state._id, req.user?._id));
 	if (deleteStateError) return next(deleteStateError);
 
 	// Flash success message and respond with success status
@@ -397,7 +397,7 @@ export const restoreSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-) => {
+): Promise<void> => {
 	// Extract the state identifier from request parameters
 	const { state: stateIdentifier } = req.params || {};
 
