@@ -181,7 +181,8 @@ export const postNewAddress = async (
 	// If the user is not authenticated or does not have permission,
 	// Rollback the transaction and pass the error to the next middleware
 	if (
-		!req.isAuthenticated() ||
+		req.isUnauthenticated() ||
+		!req?.user ||
 		([vars.auth.roles.user].includes(req.user.role) &&
 			req.body.user !== req.user._id?.toString())
 	) {
@@ -514,7 +515,8 @@ export const updateSingleAddress = async (
 
 	// Check if the user is authorized to update the address
 	if (
-		!req.isAuthenticated() ||
+		req.isUnauthenticated() ||
+		!req?.user ||
 		(req.user?.role === vars.auth.roles.user &&
 			address.user?._id?.toString() !== req.user._id?.toString())
 	) {

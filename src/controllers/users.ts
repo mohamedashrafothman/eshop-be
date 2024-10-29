@@ -251,7 +251,7 @@ export const postNewUser = async (
 	let refreshToken: string | undefined;
 
 	// Create access and refresh tokens if the user is not authenticated to register a new user.
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated()) {
 		accessToken = jsonwebtoken.sign(
 			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.accessTokenSecret,

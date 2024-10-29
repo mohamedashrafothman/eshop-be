@@ -271,7 +271,8 @@ export const postNewProduct = async (
 	// Check if user is authorized as an admin or super admin.
 	// if not, return an error
 	if (
-		!req.isAuthenticated() ||
+		req.isUnauthenticated() ||
+		!req?.user ||
 		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
 	) {
 		handleTransactionError(session);

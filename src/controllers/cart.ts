@@ -137,7 +137,7 @@ export const addToCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -366,7 +366,7 @@ export const getSingleCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -416,7 +416,7 @@ export const removeItemFromCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -566,7 +566,7 @@ export const updateCartItem = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -686,7 +686,7 @@ export const emptyCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -748,7 +748,7 @@ export const getShippingMethods = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -822,7 +822,7 @@ export const postShippingMethod = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (!req.isAuthenticated()) {
+	if (req.isUnauthenticated() || !req?.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
