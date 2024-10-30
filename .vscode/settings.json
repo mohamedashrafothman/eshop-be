@@ -1,6 +1,8 @@
 {
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.bracketPairColorization.enabled": true,
 	"editor.formatOnSave": true,
+	"editor.formatOnPaste": true,
 	"editor.codeActionsOnSave": {
 		"source.fixAll": "explicit",
 		"source.sortImports": "explicit",

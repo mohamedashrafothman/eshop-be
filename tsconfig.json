@@ -1,7 +1,8 @@
 {
 	"compilerOptions": {
 		"target": "es2016",
-		"module": "commonjs",
+		"module": "Node16",
+		"moduleResolution": "Node16",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -9,7 +10,6 @@
 		"rootDir": "./src",
 		"baseUrl": "./src",
 		"outDir": "./build",
-		"allowJs": true,
 		"noImplicitAny": true,
 		"removeComments": true,
 		"declaration": true,

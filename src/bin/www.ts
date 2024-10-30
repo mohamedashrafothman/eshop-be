@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import "../config/i18n";
 import "../config/mongoose";
 import "../config/pagination";
