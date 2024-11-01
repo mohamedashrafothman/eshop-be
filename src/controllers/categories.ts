@@ -133,8 +133,8 @@ export const uploadCategoryIcon = async (
 /**
  * @summary Creates a new category.
  * @description Handles the creation of a new category in the system.
- * Optionally uploads and attaches a logo image if provided in the request.
- * If a logo image is provided, it will be uploaded and linked to the category.
+ * Optionally uploads and attaches a icon image if provided in the request.
+ * If a icon image is provided, it will be uploaded and linked to the category.
  * The category is then saved to the database. A success message is set upon successful creation.
  *
  * @param {Object} req - Express request object.
@@ -145,7 +145,7 @@ export const uploadCategoryIcon = async (
  * @returns {void} 201 - Success response with the newly created category data.
  *   * @property {Object} entities.data - The created category object.
  *   * @property {Array} flashes - Success message for category creation.
- * @throws {Error} 500 - Returns an error if the category or logo creation fails.
+ * @throws {Error} 500 - Returns an error if the category or icon creation fails.
  */
 export const postNewCategory = async (
 	req: Request<
@@ -432,7 +432,7 @@ export const updateSingleCategory = async (
 	let createdAttachmentError: Error | null = null;
 	let createdAttachment: IAttachmentDocument[] | undefined;
 
-	// Check if logo exists in the request body.
+	// Check if icon exists in the request body.
 	if (req.body?.icon) {
 		// Find the attachment associated with the category
 		const [categoryAttachmentError, categoryAttachment] = await to(
@@ -457,7 +457,7 @@ export const updateSingleCategory = async (
 			deleteFileFromDisk(categoryAttachment.path);
 		}
 
-		// Create a new attachment from the request body logo, and if there was an error,
+		// Create a new attachment from the request body icon, and if there was an error,
 		// return the error and end the request
 		[createdAttachmentError, createdAttachment] = await to(
 			Attachment.create(
@@ -481,12 +481,6 @@ export const updateSingleCategory = async (
 		...(req?.body || {}),
 		...(createdAttachment?.[0]?._id ? { icon: createdAttachment[0]._id } : {}),
 	});
-
-	// If the category is not found, pass control to the next middleware
-	if (!category) {
-		handleTransactionError(session);
-		return next();
-	}
 
 	// Save the updated category object to the database, and if there is an error during saving,
 	// pass the error to the next middleware

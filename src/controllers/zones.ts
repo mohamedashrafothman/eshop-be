@@ -428,9 +428,6 @@ export const updateSingleZone = async (
 		...(req.body?.cities && { cities: req.body.cities }),
 	});
 
-	// If the zone is not found, pass control to the next middleware
-	if (!zone) return next();
-
 	// Save the updated zone object to the database, and if there is an error during saving,
 	// pass the error to the next middleware
 	const [saveError, newZone] = await to(zone.save());

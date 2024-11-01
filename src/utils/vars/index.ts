@@ -106,6 +106,7 @@ type VarsTypes = {
 		sizes: ["S", "M", "L", "XL", "XXL"];
 		imagesMaxLength: number;
 	};
+	paymentMethods: { cashOnDelivery: { name: "cash_on_delivery" }; paymob: { name: "paymob" } };
 };
 
 const vars: VarsTypes = {
@@ -220,6 +221,7 @@ const vars: VarsTypes = {
 		sizes: ["S", "M", "L", "XL", "XXL"],
 		imagesMaxLength: 10,
 	},
+	paymentMethods: { cashOnDelivery: { name: "cash_on_delivery" }, paymob: { name: "paymob" } },
 };
 
 export default vars;

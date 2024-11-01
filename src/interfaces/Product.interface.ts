@@ -6,7 +6,7 @@ export default interface Product {
 	price: { normal: number; sale?: number | null; discount: number; percentage: number };
 	quantity: number;
 	colors: { name: string; value: string }[];
-	sizes: typeof vars.products.sizes;
+	sizes: (typeof vars.products.sizes)[number][];
 	images?: string[];
 	thumbnail: string;
 	brand: string;

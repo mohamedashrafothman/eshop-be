@@ -273,9 +273,6 @@ export const updateSingleCountry = async (
 		...(req.body?.code && { code: req.body.code }),
 	});
 
-	// If the country is not found, pass control to the next middleware
-	if (!country) return next();
-
 	// Save the updated country object to the database, and if there is an error during saving,
 	// pass the error to the next middleware
 	const [saveError, newCountry] = await to(country.save());

@@ -3,6 +3,7 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICart from "../interfaces/Cart.interface";
 import { IAddressDocument } from "./Address";
 import { ICartItemDocument } from "./CartItem";
+import { IPaymentMethodDocument } from "./PaymentMethod";
 import { IProductDocument } from "./Product";
 import { IShippingMethodDocument } from "./ShippingMethod";
 import { ITaxDocument } from "./Tax";
@@ -11,7 +12,7 @@ import { IUserDocument } from "./User";
 // adding schema methods here
 export interface ICartDocument
 	extends SoftDeleteInterface,
-		Omit<ICart, "user" | "items" | "taxes" | "shippingMethod" | "address">,
+		Omit<ICart, "user" | "items" | "taxes" | "shippingMethod" | "address" | "paymentMethod">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
@@ -19,6 +20,7 @@ export interface ICartDocument
 	items: (Types.ObjectId | ICartItemDocument)[];
 	taxes: (Types.ObjectId | ITaxDocument)[];
 	shippingMethod: Types.ObjectId | IShippingMethodDocument;
+	paymentMethod: Types.ObjectId | IPaymentMethodDocument;
 	address: Types.ObjectId | IAddressDocument;
 }
 
@@ -50,6 +52,11 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 		shippingMethod: {
 			type: Schema.Types.ObjectId,
 			ref: "ShippingMethod",
+			autopopulate: { maxDepth: 1 },
+		},
+		paymentMethod: {
+			type: Schema.Types.ObjectId,
+			ref: "PaymentMethod",
 			autopopulate: { maxDepth: 1 },
 		},
 		address: {

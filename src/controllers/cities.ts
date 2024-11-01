@@ -332,9 +332,6 @@ export const updateSingleCity = async (
 		...(req.body?.state && { state: req.body.state }),
 	});
 
-	// If the city is not found, pass control to the next middleware
-	if (!city) return next();
-
 	// Save the updated city object to the database, and if there is an error during saving,
 	// pass the error to the next middleware
 	const [saveError, newCity] = await to(city.save());

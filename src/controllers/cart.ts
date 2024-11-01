@@ -7,6 +7,7 @@ import mongoose, { ClientSession } from "mongoose";
 import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
+import PaymentMethod, { IPaymentMethodDocument } from "../models/PaymentMethod";
 import Product, { IProductDocument } from "../models/Product";
 import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import Tax from "../models/Tax";
@@ -21,7 +22,7 @@ import {
  * Validates the input fields based on the method provided.
  */
 export const validator = (
-	method: "create" | "update" | "get-shipping" | "set-shipping"
+	method: "create" | "update" | "get-shipping" | "set-shipping" | "set-payment"
 ): ValidationChain[] => {
 	switch (method) {
 		case "create":
@@ -66,6 +67,14 @@ export const validator = (
 					.withMessage("Invalid shipping method id!")
 					.notEmpty()
 					.withMessage("You must supply a shipping method id!"),
+			];
+		case "set-payment":
+			return [
+				body("paymentMethod")
+					.isMongoId()
+					.withMessage("Invalid payment method id!")
+					.notEmpty()
+					.withMessage("You must supply a payment method id!"),
 			];
 		default:
 			return [];
@@ -844,6 +853,116 @@ export const postShippingMethod = async (
 
 	// Merge the old cart data with the new cart shipping methods
 	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
+
+	// Save the updated cart object to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const [saveCartError, updatedCart] = await to(newCart.save());
+	if (saveCartError) return next(saveCartError);
+
+	// Set a flash message to indicate that the cart was updated successfully,
+	// and return the updated object in the response
+	req.flash("success", "Cart updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedCart },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Retrieves a list of all payment methods.
+ * @description This function checks if the user is authenticated and then
+ * retrieves all available payment methods from the database. If the user is
+ * not authenticated, it returns a 401 error. If there is an error during the
+ * database retrieval, it passes the error to the next middleware.
+ *
+ * @param {Request} req - Express request object.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with a list of payment methods.
+ * @property {Object} res.body.data - The list of payment methods.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} - Returns an error if there is an issue during the database operations.
+ */
+export const getPaymentMethods = async (
+	req: Request<{}, FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>, {}>,
+	res: Response<FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req?.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Attempt to retrieve payment methods from the database for the zone,
+	// and if there was an error, return the error and end the request
+	const [paymentMethodsError, paymentMethods] = await to(PaymentMethod.find({}));
+	if (paymentMethodsError) return next(paymentMethodsError);
+
+	// Return the payment methods data in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: paymentMethods },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @summary Updates the payment method of the user's cart.
+ * @description This function retrieves a payment method and a cart for the currently logged-in user,
+ * updates the cart with the new payment method, and saves the updated cart to the database.
+ * If the user is not authenticated, it returns a 401 error. If the payment method or cart are not found,
+ * or if there is an error during the database operations, it returns the respective error.
+ *
+ * @param {Request} req - Express request object containing the payment method ID in the body.
+ * @param {Object} req.user - The currently logged-in user object.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 200 - Success response with the updated cart data.
+ * @property {Object} res.body.data - The updated cart object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} - Returns an error if the payment method or cart are not found,
+ * or if there is an issue during the database operations.
+ */
+export const postPaymentMethod = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
+		{ paymentMethod: string }
+	>,
+	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req?.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Retrieve the payment method id from the request body
+	const { paymentMethod: paymentMethodIdentifier } = req.body;
+
+	// Attempt to retrieve payment methods from the database,
+	// and if there was an error, return the error and end the request
+	const [paymentMethodError, paymentMethod] = await to(
+		PaymentMethod.findOne({ _id: paymentMethodIdentifier })
+	);
+	if (paymentMethodError || !paymentMethod) return next(paymentMethodError);
+
+	// Attempt to retrieve a cart from the database for logged in user,
+	// and if there was an error, return the error and end the request
+	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
+	if (cartError || !cart) return next(cartError);
+
+	// Merge the old cart data with the new cart payment methods
+	const newCart = Object.assign(cart, { paymentMethod: paymentMethod._id });
 
 	// Save the updated cart object to the database, and if there is an error during saving,
 	// pass the error to the next middleware

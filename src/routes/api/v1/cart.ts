@@ -42,5 +42,15 @@ router
 		cartController.postShippingMethod
 	);
 
+router
+	.route("/payment-methods")
+	.all(allowMethods(["get", "post"]))
+	.get(cartController.getPaymentMethods)
+	.post(
+		cartController.validator("set-payment"),
+		unprocessableEntityValidator,
+		cartController.postPaymentMethod
+	);
+
 // Exporting router
 export default router;

@@ -3,6 +3,7 @@ export default interface Cart {
 	items: string[];
 	taxes: string[];
 	shippingMethod: string;
+	paymentMethod: string;
 	address: string;
 	subtotal: number;
 	total: number;

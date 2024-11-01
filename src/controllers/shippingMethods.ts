@@ -171,7 +171,9 @@ export const postNewShippingMethod = async (
 
 /**
  * @summary Retrieves a list of shipping methods based on filters and search criteria.
- * @description Fetches shipping methods from the database using various filters, including search queries, zones, and deletion status. Supports pagination and sorting options. If the user is an admin or super admin, deleted shipping methods can also be included in the results.
+ * @description Fetches shipping methods from the database using various filters,
+ * including search queries, zones, and deletion status. Supports pagination and sorting options.
+ * If the user is an admin or super admin, deleted shipping methods can also be included in the results.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for filtering and sorting.
@@ -229,7 +231,7 @@ export const getShippingMethods = async (
 	const [paginatedShippingMethodsError, paginatedShippingMethods] = await to(
 		ShippingMethod.paginate<IShippingMethodDocument>(
 			{
-				// If the query includes a search term, filter shipping methods by name or code
+				// If the query includes a search term, filter shipping methods by name or description
 				...((q && {
 					$or: querySearchFields.map((item) => ({
 						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
@@ -253,10 +255,10 @@ export const getShippingMethods = async (
 	);
 	if (paginatedShippingMethodsError) return next(paginatedShippingMethodsError);
 
-	// Destructure the paginated shippingMethods into the list of shippingMethods (docs) and pagination metadata
+	// Destructure the paginated shipping methods into the list of shipping methods (docs) and pagination metadata
 	const { docs, ...pagination } = paginatedShippingMethods;
 
-	// Return the list of shippingMethods, pagination metadata, and sort options in the response
+	// Return the list of shipping methods, pagination metadata, and sort options in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
@@ -270,11 +272,14 @@ export const getShippingMethods = async (
 
 /**
  * @summary Retrieves a single shipping method by its slug or ID.
- * @description This function fetches a shipping method record from the database using either the shipping method slug or the MongoDB object ID. If the provided identifier is a valid MongoDB ID, it will attempt to find the shipping method by its ID; otherwise, it will search by the slug. It also accounts for deleted shipping method records.
+ * @description This function fetches a shipping method record from the database using
+ * either the shipping method slug or the MongoDB object ID. If the provided identifier
+ * is a valid MongoDB ID, it will attempt to find the shipping method by its ID; otherwise,
+ * it will search by the slug. It also accounts for deleted shipping method records.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Route parameters.
- * @param {String} req.params.shippingMethod - The slug or ID of the shipping method to retrieve.
+ * @param {String} req.params.method - The slug or ID of the shipping method to retrieve.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
@@ -313,6 +318,35 @@ export const getSingleShippingMethod = async (
 	);
 };
 
+/**
+ * @summary Updates a shipping method.
+ * @description This function retrieves a shipping method by ID or slug, and if it exists,
+ * merges the provided request body data into the existing shipping method object and saves
+ * the updated object to the database. It also checks if the zone ID provided in
+ * the request body exists in the database and if not, returns an error.
+ * If the user is not authenticated, it returns a 401 error.
+ * If the shipping method or cart are not found, or if there is an error during the database
+ * operations, it returns the respective error.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Route parameters.
+ * @param {String} req.params.method - The slug or ID of the shipping method to retrieve.
+ * @param {Object} req.body - The payload containing details for the updated shipping method.
+ * @param {String} req.body.name - The name of the shipping method (optional).
+ * @param {String} req.body.description - The description of the shipping method (optional).
+ * @param {Number} req.body.rate - The rate of the shipping method (optional).
+ * @param {String} req.body.zone - The ID of the zone associated with the shipping method (optional).
+ * @param {Object} req.body.deliveryTime - The delivery time object with min and max values (optional).
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the updated shipping method data, success message, and error messages.
+ *   * @property {Object} entities.data - The updated shipping method object.
+ *   * @property {String[]} flashes - Success and error messages.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - If no shipping method is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the retrieval process.
+ */
 export const updateSingleShippingMethod = async (
 	req: Request<
 		{ method: string },
@@ -369,9 +403,6 @@ export const updateSingleShippingMethod = async (
 		}),
 	});
 
-	// If the shipping method is not found, pass control to the next middleware
-	if (!shippingMethod) return next();
-
 	// Save the updated shipping method object to the database, and if there is an error during saving,
 	// pass the error to the next middleware
 	const [saveError, newShippingMethod] = await to(shippingMethod.save());
@@ -388,6 +419,22 @@ export const updateSingleShippingMethod = async (
 	);
 };
 
+/**
+ * @summary Deletes a single shipping method by its slug or ID.
+ * @description This function first attempts to find a shipping method by its slug or ID. If the shipping method is found,
+ * it then attempts to soft-delete the shipping method. If the deletion is successful, it flashes a success message and
+ * responds with a success status.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Route parameters.
+ * @param {String} req.params.method - The slug or ID of the shipping method to delete.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void}
+ * @throws {Error} 404 - If no shipping method is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the deletion process.
+ */
 export const deleteSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -422,6 +469,22 @@ export const deleteSingleShippingMethod = async (
 	);
 };
 
+/**
+ * @summary Restore a single shipping method by its slug or ID.
+ * @description This function first attempts to find a shipping method by its slug or ID. If the shipping method is found,
+ * it then attempts to restore the shipping method. If the restoration is successful, it flashes a success message and
+ * responds with a success status.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Route parameters.
+ * @param {String} req.params.method - The slug or ID of the shipping method to restore.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {void}
+ * @throws {Error} 404 - If no shipping method is found with the provided identifier.
+ * @throws {Error} 500 - If an error occurs during the restoration process.
+ */
 export const restoreSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
