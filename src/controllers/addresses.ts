@@ -57,21 +57,21 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.trim()
 					.escape()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid state id!")
 					.notEmpty()
 					.withMessage("You must supply a state!"),
 				body("city")
 					.trim()
 					.escape()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid city id!")
 					.notEmpty()
 					.withMessage("You must supply a city!"),
 				body("user")
 					.trim()
 					.escape()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid user id!")
 					.notEmpty()
 					.withMessage("You must supply a user!"),
 			];
@@ -125,7 +125,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.escape()
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid state id!")
 					.notEmpty()
 					.withMessage("You must supply a state!"),
 				body("city")
@@ -133,7 +133,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.escape()
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid city id!")
 					.notEmpty()
 					.withMessage("You must supply a city!"),
 			];

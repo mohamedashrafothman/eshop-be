@@ -8,7 +8,7 @@ export type FormatResponseObjectType<T, S> = {
 	success?: boolean;
 	status: S;
 	entities?:
-		| { data: T }
+		| { data: T; meta?: never }
 		| {
 				data: T[];
 				meta: {

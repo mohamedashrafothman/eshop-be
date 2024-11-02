@@ -16,6 +16,7 @@ import shippingMethodsRouter from "./shippingMethods";
 import statesRouter from "./states";
 import taxesRouter from "./taxes";
 import usersRouter from "./users";
+import wishlistsRouter from "./wishlists";
 import zonesRouter from "./zones";
 
 // Defining express router
@@ -28,6 +29,12 @@ router.use("/addresses", authController.passportJWTAuthenticate, addressesRouter
 router.use("/categories", categoriesRouter);
 router.use("/brands", brandsRouter);
 router.use("/products", productsRouter);
+router.use(
+	"/wishlists",
+	authController.passportJWTAuthenticate,
+	permission.check(vars.auth.roles.user),
+	wishlistsRouter
+);
 router.use(
 	"/taxes",
 	authController.passportJWTAuthenticate,

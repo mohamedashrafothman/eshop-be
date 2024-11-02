@@ -35,3 +35,5 @@ mongoose.connection
 		);
 		process.exit();
 	});
+
+import "../models/Review";
