@@ -1,6 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
+import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -274,6 +275,12 @@ export const getCategories = async (
 	res: Response<FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
 	const { q, deleted } = req.query || {};
@@ -281,7 +288,7 @@ export const getCategories = async (
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user?.role || "");
+		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "");
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -525,6 +532,16 @@ export const deleteSingleCategory = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Extract the category identifier from request parameters
 	const { category: categoryIdentifier } = req.params || {};
 
@@ -543,7 +560,7 @@ export const deleteSingleCategory = async (
 
 	// Attempt to soft-delete the found category, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteCategoryError] = await to(Category.deleteById(category._id, req.user?._id));
+	const [deleteCategoryError] = await to(Category.deleteById(category._id, req.user._id));
 	if (deleteCategoryError) return next(deleteCategoryError);
 
 	// Flash success message and respond with success status

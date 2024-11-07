@@ -974,12 +974,18 @@ export const getSocialUnlink = async (
 	res: Response,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const { provider } = req.params || {};
-	const _id = req.user?._id || "";
+	const _id = req.user._id || "";
 
 	const [deleteTokenError] = await to(
 		Token.deleteOne({
@@ -1196,11 +1202,17 @@ export const _loginRateLimitHandler = async (
  * @returns {Object} 200 - Success response with a success message.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const _id = req.user?._id || "";
+	const _id = req.user._id || "";
 
 	const [deleteTokenError] = await to(
 		Token.deleteMany({
@@ -1651,13 +1663,19 @@ export const getResendEmailVerification = async (
 	res: Response,
 	next: NextFunction
 ) => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
 	const [userError, user] = await to(
 		User.findOne({
-			_id: req.user?._id || "",
+			_id: req.user._id || "",
 			emailVerified: { $ne: true },
 		}).session(session)
 	);

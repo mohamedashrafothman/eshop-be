@@ -1,7 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
+import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -234,6 +234,42 @@ export const uploadImages = async (
 };
 
 /**
+ * @summary Checks the product stock availability.
+ * @description Validates if the product has sufficient stock to fulfill the requested quantity.
+ * It ensures that the product has a defined quantity, is not out of stock,
+ * and has enough items available in the stock for the given quantity.
+ *
+ * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
+ * @param {Number} [quantity=0] - The requested quantity to check against the product's stock.
+ *
+ * @returns {HttpError|null} - Returns an error if the product has no stock quantity, is out of stock, or the requested quantity exceeds the available stock. Returns `null` if there are no issues.
+ * @throws {Error} 500 - Returns an error if the product object does not contain a valid quantity field.
+ * @throws {Error} 400 - Returns an error if the product is out of stock or does not have enough stock to fulfill the request.
+ */
+export const _checkProductStock = (
+	product: Partial<IProductDocument>,
+	quantity: number = 0
+): HttpError | null => {
+	// Check if product has quantity
+	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
+		return createError(httpStatus.INTERNAL_SERVER_ERROR, "Product has no quantity");
+
+	// Check if product is out of stock
+	if (product.quantity === 0)
+		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
+
+	// Check if there's enough product quantity in the stock
+	if (product.quantity - quantity < 0)
+		return createError(
+			httpStatus.BAD_REQUEST,
+			"There're no enough product quantity in the stock"
+		);
+
+	// No error
+	return null;
+};
+
+/**
  * @summary Creates a new product.
  * @description Handles the creation of a new product in the system.
  * Optionally uploads and attaches a thumbnail and images if provided in the request.
@@ -264,21 +300,19 @@ export const postNewProduct = async (
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Start a transaction to ensure data integrity
-	const session: ClientSession = await mongoose.startSession();
-	session.startTransaction();
-
-	// Check if user is authorized as an admin or super admin.
-	// if not, return an error
+	// Check if user logged in
 	if (
 		req.isUnauthenticated() ||
-		!req?.user ||
+		!req.user ||
 		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
 	) {
-		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
+
+	// Start a transaction to ensure data integrity
+	const session: ClientSession = await mongoose.startSession();
+	session.startTransaction();
 
 	// Check if category exists in the request body, and if there was an error,
 	// return the error and end the request
@@ -471,7 +505,11 @@ export const getProducts = async (
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user?.role || "");
+		Boolean(
+			req.user &&
+				req.user.role &&
+				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+		);
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -593,8 +631,9 @@ export const getSingleProduct = async (
 	// Attempt to retrieve the product using the given identifier, and if there was an error,
 	// return the error
 	const findMethodName =
-		req.user?.role &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
+		req.user &&
+		req.user.role &&
+		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
 			? "findOneWithDeleted"
 			: "findOne";
 	const [productError, product] = await to(
@@ -888,6 +927,16 @@ export const deleteSingleProduct = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Extract the product identifier from request parameters
 	const { product: productIdentifier } = req.params || {};
 
@@ -905,7 +954,7 @@ export const deleteSingleProduct = async (
 
 	// Attempt to soft-delete the found product, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteProductError] = await to(Product.deleteById(product._id, req.user?._id));
+	const [deleteProductError] = await to(Product.deleteById(product._id, req.user._id));
 	if (deleteProductError) return next(deleteProductError);
 
 	// Flash success message and respond with success status

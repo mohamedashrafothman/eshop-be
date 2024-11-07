@@ -185,7 +185,7 @@ export const postNewUser = async (
 		let error;
 		if (existsUser) error = createError(httpStatus.CONFLICT, "Account already exists!");
 		return next(
-			userError || (existsUser && error && { ...(error || {}), status: error.status }) || null
+			userError || (existsUser && error && { ...(error || {}), status: error.status })
 		);
 	}
 
@@ -354,6 +354,16 @@ export const getUsers = async (
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Destructure the query parameters (req.query) into
 	// q (search term), emailVerified (filter by email verification status),
 	// deleted(include deleted countries), active (filter by active status),
@@ -370,7 +380,7 @@ export const getUsers = async (
 	const isFilterByActiveAllowed = "active" in req.query;
 
 	// List of fields to search for the query term
-	const querySearchFields = ["name", "email"];
+	const querySearchFields: string[] = ["name", "email"];
 
 	// List of sort options
 	const sort: { name: string; value: object }[] = [
@@ -402,7 +412,7 @@ export const getUsers = async (
 				// If the query includes a emailVerified flag, include deleted users
 				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// Exclude the current user
-				_id: { $ne: req.user?._id || "" },
+				_id: { $ne: req.user._id || "" },
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -489,9 +499,15 @@ export const getCurrentAuthenticatedUser = async (
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Attempt to retrieve the user associated with the current authentication token,
 	// and if there was an error or no user was found, return the error and end the request
-	const [userError, user] = await to(User.findOne({ _id: req.user?._id }));
+	const [userError, user] = await to(User.findOne({ _id: req.user._id }));
 	if (userError || !user) return next(userError);
 
 	// Return the retrieved user in the response
@@ -702,6 +718,16 @@ export const deleteSingleUser = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -726,7 +752,7 @@ export const deleteSingleUser = async (
 
 	// Attempt to soft-delete the found user, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteUserError] = await to(User.deleteById(user._id, req.user?._id).session(session));
+	const [deleteUserError] = await to(User.deleteById(user._id, req.user._id).session(session));
 	if (deleteUserError) {
 		handleTransactionError(session);
 		return next(deleteUserError);

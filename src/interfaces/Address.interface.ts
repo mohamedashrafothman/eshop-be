@@ -8,7 +8,7 @@ export default interface Address {
 	country: string;
 	state: string;
 	city?: string;
-	zip?: string | null;
+	zip?: string;
 	default: boolean;
 	user: string;
 }

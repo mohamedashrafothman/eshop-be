@@ -35,7 +35,7 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		street: { type: String, trim: true, required: [true, "Street is required!"] },
 		building: { type: Number, required: [true, "Building is required!"] },
-		floor: { type: Number },
+		floor: { type: Number, min: [1, "Floor can't be less than 1!"] },
 		apartment: { type: String },
 		area: { type: String, trim: true, required: [true, "Area is required!"] },
 		zip: { type: String },

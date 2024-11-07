@@ -182,7 +182,7 @@ export const postNewAddress = async (
 	// Rollback the transaction and pass the error to the next middleware
 	if (
 		req.isUnauthenticated() ||
-		!req?.user ||
+		!req.user ||
 		([vars.auth.roles.user].includes(req.user.role) &&
 			req.body.user !== req.user._id?.toString())
 	) {
@@ -328,7 +328,7 @@ export const getAddresses = async (
 	const isFilterByDeletedAllowed = "deleted" in req.query;
 
 	// List of fields to search for the query term
-	const querySearchFields = ["name", "street"];
+	const querySearchFields: string[] = ["name", "street"];
 
 	// List of sort options
 	const sort: { name: string; value: object }[] = [
@@ -402,6 +402,12 @@ export const getSingleAddress = async (
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Retrieve the address ID from the request parameters
 	const { address: addressIdentifier } = req.params || {};
 
@@ -410,7 +416,7 @@ export const getSingleAddress = async (
 	const [addressError, address] = await to(
 		Address.findOne({
 			_id: addressIdentifier,
-			...(req.user?.role === vars.auth.roles.user && { user: req.user._id }),
+			...(req.user.role === vars.auth.roles.user && { user: req.user._id }),
 		})
 	);
 	if (addressError || !address) return next(addressError);
@@ -513,11 +519,11 @@ export const updateSingleAddress = async (
 		return next(addressError);
 	}
 
-	// Check if the user is authorized to update the address
+	// Check if user logged in
 	if (
 		req.isUnauthenticated() ||
-		!req?.user ||
-		(req.user?.role === vars.auth.roles.user &&
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
 			address.user?._id?.toString() !== req.user._id?.toString())
 	) {
 		handleTransactionError(session);
@@ -532,7 +538,7 @@ export const updateSingleAddress = async (
 		// Retrieve the addresses of the user
 		[addressesError, addresses] = await to(
 			Address.find({
-				user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
+				user: [vars.auth.roles.user].includes(req.user.role) ? req.user._id : address.user,
 				_id: { $ne: addressIdentifier },
 			}).session(session)
 		);
@@ -594,7 +600,9 @@ export const updateSingleAddress = async (
 			const [updateManyError] = await to(
 				Address.updateMany(
 					{
-						user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
+						user: [vars.auth.roles.user].includes(req.user.role)
+							? req.user._id
+							: address.user,
 						_id: { $ne: addressIdentifier },
 					},
 					{ $set: { default: false } }
@@ -638,7 +646,7 @@ export const updateSingleAddress = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleAddress = async (
-	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>, {}>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -661,8 +669,10 @@ export const deleteSingleAddress = async (
 
 	// Check if the user has permission to delete the address
 	if (
-		req.user?.role === vars.auth.roles.user &&
-		address.user?.toString() !== req.user?._id?.toString()
+		req.isUnauthenticated() ||
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
+			address.user.toString() !== req.user._id?.toString())
 	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -693,7 +703,7 @@ export const deleteSingleAddress = async (
 	// Attempt to delete the address, and if there is an error during the deletion,
 	// pass the error to the next middleware
 	const [deleteAddressError] = await to(
-		Address.deleteById(address._id, req.user?._id).session(session)
+		Address.deleteById(address._id, req.user._id).session(session)
 	);
 	if (deleteAddressError) {
 		handleTransactionError(session);

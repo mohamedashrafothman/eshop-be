@@ -1,6 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
+import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
@@ -490,6 +491,16 @@ export const deleteSinglePaymentMethod = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Extract the payment method identifier from request parameters
 	const { method: paymentMethodIdentifier } = req.params || {};
 
@@ -503,7 +514,7 @@ export const deleteSinglePaymentMethod = async (
 	// Attempt to soft-delete the found payment method, and if there is an error during the deletion,
 	// pass the error to the next middleware
 	const [deletePaymentMethodError] = await to(
-		PaymentMethod.deleteById(paymentMethod._id, req.user?._id)
+		PaymentMethod.deleteById(paymentMethod._id, req.user._id)
 	);
 	if (deletePaymentMethodError) return next(deletePaymentMethodError);
 

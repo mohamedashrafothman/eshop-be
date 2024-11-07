@@ -1,12 +1,14 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
+import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
 import ICountry from "../interfaces/Country.interface";
 import Country, { ICountryDocument } from "../models/Country";
 import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
+import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -309,6 +311,16 @@ export const deleteSingleCountry = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Extract the country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
@@ -326,7 +338,7 @@ export const deleteSingleCountry = async (
 
 	// Attempt to soft-delete the found country, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteCountryError] = await to(Country.deleteById(country._id, req.user?._id));
+	const [deleteCountryError] = await to(Country.deleteById(country._id, req.user._id));
 	if (deleteCountryError) return next(deleteCountryError);
 
 	// Flash success message and respond with success status

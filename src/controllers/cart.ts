@@ -1,7 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, query, ValidationChain } from "express-validator";
-import createError, { HttpError } from "http-errors";
+import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession } from "mongoose";
 import Address from "../models/Address";
@@ -17,6 +17,7 @@ import {
 	FormatResponseObjectType,
 	handleTransactionError,
 } from "../utils/helpers";
+import { _checkProductStock } from "./products";
 
 /**
  * Validates the input fields based on the method provided.
@@ -31,7 +32,7 @@ export const validator = (
 					.trim()
 					.escape()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid product id!")
 					.notEmpty()
 					.withMessage("You must supply a product id!"),
 				body("quantity")
@@ -82,42 +83,6 @@ export const validator = (
 };
 
 /**
- * @summary Checks the product stock availability.
- * @description Validates if the product has sufficient stock to fulfill the requested quantity.
- * It ensures that the product has a defined quantity, is not out of stock,
- * and has enough items available in the stock for the given quantity.
- *
- * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
- * @param {Number} [quantity=0] - The requested quantity to check against the product's stock.
- *
- * @returns {HttpError|null} - Returns an error if the product has no stock quantity, is out of stock, or the requested quantity exceeds the available stock. Returns `null` if there are no issues.
- * @throws {Error} 500 - Returns an error if the product object does not contain a valid quantity field.
- * @throws {Error} 400 - Returns an error if the product is out of stock or does not have enough stock to fulfill the request.
- */
-const _checkProductStock = (
-	product: Partial<IProductDocument>,
-	quantity: number = 0
-): HttpError | null => {
-	// Check if product has quantity
-	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
-		return createError(httpStatus.INTERNAL_SERVER_ERROR, "passed product has no quantity");
-
-	// Check if product is out of stock
-	if (product.quantity === 0)
-		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
-
-	// Check if there's enough product quantity in the stock
-	if (product.quantity - quantity < 0)
-		return createError(
-			httpStatus.BAD_REQUEST,
-			"There're no enough product quantity in the stock"
-		);
-
-	// No error
-	return null;
-};
-
-/**
  * @summary Adds a product to the logged-in user's cart.
  * @description Handles the addition of a product to the user's cart.
  * The method checks if the user is authenticated, verifies the existence of the product,
@@ -146,7 +111,7 @@ export const addToCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -253,6 +218,13 @@ export const addToCart = async (
 			})
 		);
 		return;
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Create variable to hold the cart items array.
@@ -375,7 +347,7 @@ export const getSingleCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -425,7 +397,7 @@ export const removeItemFromCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -443,6 +415,13 @@ export const removeItemFromCart = async (
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Check if the cart item included in the cart items to be removed
@@ -575,7 +554,7 @@ export const updateCartItem = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -606,6 +585,13 @@ export const updateCartItem = async (
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Get product data from the cart item
@@ -695,7 +681,7 @@ export const emptyCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -710,6 +696,13 @@ export const emptyCart = async (
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Get the cart items from the cart
@@ -757,7 +750,7 @@ export const getShippingMethods = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -831,7 +824,7 @@ export const postShippingMethod = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -850,6 +843,12 @@ export const postShippingMethod = async (
 	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
 	if (cartError || !cart) return next(cartError);
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	// Merge the old cart data with the new cart shipping methods
 	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
@@ -893,7 +892,7 @@ export const getPaymentMethods = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -941,7 +940,7 @@ export const postPaymentMethod = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -960,6 +959,12 @@ export const postPaymentMethod = async (
 	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
 	if (cartError || !cart) return next(cartError);
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	// Merge the old cart data with the new cart payment methods
 	const newCart = Object.assign(cart, { paymentMethod: paymentMethod._id });
