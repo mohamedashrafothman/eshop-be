@@ -6,12 +6,12 @@ const env = dotenv.config({ path: path.join(__dirname, "../../../.env") });
 dotenvExpand.expand(env);
 
 // constants
-const ORDER_STATUS_PENDING = "pending";
-const ORDER_STATUS_PROCESSING = "processing";
-const ORDER_STATUS_SHIPPED = "shipped";
-const ORDER_STATUS_COMPLETED = "completed";
-const ORDER_STATUS_CANCELLED = "cancelled";
-const ORDER_STATUS_REFUNDED = "refunded";
+const ORDER_STATUS_PENDING = "PENDING";
+const ORDER_STATUS_PROCESSING = "PROCESSING";
+const ORDER_STATUS_SHIPPED = "SHIPPED";
+const ORDER_STATUS_COMPLETED = "COMPLETED";
+const ORDER_STATUS_CANCELLED = "CANCELLED";
+const ORDER_STATUS_REFUNDED = "REFUNDED";
 
 type VarsTypes = {
 	isProduction: boolean;

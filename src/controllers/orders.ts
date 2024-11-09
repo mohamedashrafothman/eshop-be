@@ -3,22 +3,32 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
+import { ICityDocument } from "models/City";
+import { ICountryDocument } from "models/Country";
+import { IStateDocument } from "models/State";
+import { ITaxDocument } from "models/Tax";
+import { IZoneDocument } from "models/Zone";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import IOrderItem from "../interfaces/OrderItem.interface";
+import IProduct from "../interfaces/Product.interface";
 import Address from "../models/Address";
 import Cart from "../models/Cart";
 import { ICartItemDocument } from "../models/CartItem";
+import Email from "../models/Email";
 import Order, { IOrderDocument } from "../models/Order";
 import OrderItem from "../models/OrderItem";
 import PaymentMethod from "../models/PaymentMethod";
 import Product, { IProductDocument } from "../models/Product";
 import ShippingMethod from "../models/ShippingMethod";
+import emailService from "../services/email";
 import {
 	formatResponseObject,
 	type FormatResponseObjectType,
+	getShortUniqueId,
 	handleTransactionError,
 } from "../utils/helpers";
 import vars from "../utils/vars";
+import { _checkProductPriceChange } from "./cart";
 import { _checkProductStock } from "./products";
 
 /**
@@ -57,6 +67,30 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 	}
 };
 
+/**
+ * Generates a unique short id for an order, while ensuring it doesn't already exist.
+ * @param {ClientSession | null} session - The mongoose client session.
+ * @returns {Promise<[Error | null | undefined, string]>} - A promise that resolves with an array containing the error
+ * (if any) and the generated unique short id.
+ */
+export const _generateOrderUniqueShortId = async (session: ClientSession | null) => {
+	let orderShortId: string | null = null;
+	let isUniqueShortId: boolean = false;
+
+	while (!isUniqueShortId) {
+		orderShortId = await getShortUniqueId();
+
+		const [existsOrderError, existsOrder] = await to(
+			Order.findOne({ shortId: orderShortId }).session(session)
+		);
+		if (existsOrderError) return [existsOrderError, null];
+
+		isUniqueShortId = !existsOrder;
+	}
+
+	return [null, orderShortId];
+};
+
 export const postNewOrder = async (
 	req: Request<
 		{},
@@ -82,18 +116,24 @@ export const postNewOrder = async (
 	 *      to avoid over-selling (e.g., if someone else places an order at the same time) [DONE].
 	 *      and If any item fails the validation (e.g., out of stock), the whole order process
 	 *      should stop, and an error message should be returned [DONE].
-	 * 04 - Apply discount, taxes and shipping charges while calculating the total price.
-	 * 05 - Generate order short id.
+	 * 04 - Apply discount, taxes and shipping charges while calculating the total price [DONE].
+	 * 05 - Generate order short id [DONE].
 	 * 06 - Save order data while using mongodb transaction to avoid partial order creation. This
 	 * 	    is crucial to ensure that if any error occurs, the order process will fully rollback
 	 * 	    and the cart will remain unaffected, with store an order status field with an initial
 	 * 	    status like “Pending” or “Processing” to allow for easy updates as the order
-	 * 	    progresses.
-	 * 07 - Decrease order items stock quantity after the order is placed.
+	 * 	    progresses [DONE].
+	 * 07 - Decrease order items stock quantity after the order is placed [DONE].
 	 * 08 - Send Order Confirmation Email to the customer including order id, order summary,
 	 * 	    shipping information, payment information, customer support info, and order status.
 	 * 09 - Return success message.
 	 */
+
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user || ![vars.auth.roles.user].includes(req.user.role)) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
@@ -104,6 +144,7 @@ export const postNewOrder = async (
 	const [cartError, cart] = await to(
 		Cart.findOneAndUpdate({ user: req.user }, { $set: { locked: true } }, { new: true })
 			.populate("items.product")
+			.populate("taxes")
 			.session(session)
 	);
 	if (cartError || !cart || cart.items.length === 0) {
@@ -117,8 +158,6 @@ export const postNewOrder = async (
 					error && { ...(error || {}), status: error.status })
 		);
 	}
-
-	console.log("cart: ", cart);
 
 	// Destructure the request body to get paymentMethod, address, and shippingMethod data
 	const { paymentMethod, address, shippingMethod } = req.body;
@@ -136,7 +175,11 @@ export const postNewOrder = async (
 	// Check if address exists, and if there is an error or no address is found,
 	// pass the error to the next middleware
 	const [existsAddressError, existsAddress] = await to(
-		Address.findOne({ _id: address }).session(session)
+		Address.findOne({ _id: address })
+			.populate("country")
+			.populate("state")
+			.populate("city")
+			.session(session)
 	);
 	if (existsAddressError || !existsAddress) {
 		handleTransactionError(session);
@@ -153,22 +196,23 @@ export const postNewOrder = async (
 		return next(existsShippingMethodError);
 	}
 
-	let orderItems: Pick<
+	let orderItemsHolder: Pick<
 		IOrderItem,
 		"product" | "name" | "category" | "color" | "size" | "quantity"
 	>[] = [];
 
 	// Loop through each cart item to check availability and price consistency
-	cart.items.forEach(async (item) => {
+	for (const item of cart.items) {
 		const cartSingleItem = item as ICartItemDocument;
-		const product = cartSingleItem.product as unknown as Omit<
-			IProductDocument,
-			"colors" | "sizes" | "_id"
-		> & {
-			_id: string;
-			color: { name: string; value: string };
-			size: (typeof vars.products.sizes)[number];
-		};
+		const product = cartSingleItem.product as IProductDocument;
+		const productId = (product?._id || product)?.toString();
+		const productName = product.name;
+		const cartItemColor: IProduct["colors"][number] | undefined = product.colors.find((color) =>
+			[color.name, color.value].includes(cartSingleItem.color)
+		);
+		const cartItemSize: IProduct["sizes"][number] = cartSingleItem.size;
+		const cartItemQuantity: number = cartSingleItem.quantity;
+		const cartItemCategory: string = (product.category?._id || product.category)?.toString();
 
 		// Check if the product is out of stock
 		const noStockError = _checkProductStock(product?.toJSON(), cartSingleItem.quantity);
@@ -178,32 +222,28 @@ export const postNewOrder = async (
 		}
 
 		// Check if the product price has been updated since it was added to the cart.
-		const productPrice: number = product.price.sale || product.price.normal;
-		if (productPrice !== cartSingleItem.price) {
+		const productPriceError = _checkProductPriceChange(product?.toJSON(), cartSingleItem.price);
+		if (productPriceError) {
 			handleTransactionError(session);
-			const error = createError(
-				httpStatus.BAD_REQUEST,
-				`Product '${product.name}' price has been updated since it was added to the cart!`
-			);
-			return next({ ...(error || {}), status: error.status });
+			return next({ ...(productPriceError || {}), status: productPriceError.status });
 		}
 
 		// Add product to order items
-		orderItems = [
-			...(orderItems || []),
+		orderItemsHolder = [
+			...(orderItemsHolder || []),
 			{
-				product: product._id,
-				name: product.name,
-				category: (product.category?._id || product.category)?.toString(),
-				color: product.color,
-				size: product.size,
-				quantity: cartSingleItem.quantity,
+				product: productId,
+				name: productName,
+				category: cartItemCategory,
+				color: cartItemColor,
+				size: cartItemSize,
+				quantity: cartItemQuantity,
 			},
 		];
 
 		// Update the product quantity
 		const [updateProductError] = await to(
-			Product.findOneAndUpdate(
+			Product.updateOne(
 				{ _id: product._id, quantity: { $gte: cartSingleItem.quantity } },
 				{ $inc: { quantity: -cartSingleItem.quantity } },
 				{ session }
@@ -213,16 +253,139 @@ export const postNewOrder = async (
 			handleTransactionError(session);
 			return next(updateProductError);
 		}
-	});
+	}
 
 	// Create order items
-	const [createdOrderItemsError, createdOrderItems] = await to(
-		OrderItem.create(orderItems, { session })
-	);
-	if (createdOrderItemsError) {
+	const [orderItemsError, orderItems] = await to(OrderItem.create(orderItemsHolder, { session }));
+	if (orderItemsError) {
 		handleTransactionError(session);
-		return next(createdOrderItemsError);
+		return next(orderItemsError);
 	}
+
+	// Create order short id, and if there is an error,
+	// pass the error to the next middleware
+	const [existsOrderError, uniqueShortId] = await _generateOrderUniqueShortId(session);
+	if (existsOrderError) {
+		handleTransactionError(session);
+		return next(existsOrderError);
+	}
+
+	// Create order, and if there is an error,
+	// pass the error to the next middleware
+	const [newOrderError, newOrder] = await to(
+		Order.create(
+			[
+				{
+					shortId: uniqueShortId,
+					items: orderItems.map((item) => item._id),
+					user: req.user,
+					taxes: (cart.taxes as ITaxDocument[]).map(
+						({ _id, slug: _slug, applicableCategories, ...restOfTax }) => ({
+							...(restOfTax || {}),
+							applicableCategories: applicableCategories?.map((category) =>
+								(category?._id || category)?.toString()
+							),
+						})
+					),
+					shippingMethod: {
+						name: existsShippingMethod.name,
+						rate: existsShippingMethod.rate,
+						zone: (existsShippingMethod.zone as IZoneDocument).name,
+						deliveryTime: existsShippingMethod.deliveryTime,
+					},
+					address: {
+						name: existsAddress.name,
+						country: {
+							name: (existsAddress.country as ICountryDocument).name,
+							code: (existsAddress.country as ICountryDocument).code,
+						},
+						state: {
+							name: (existsAddress.state as IStateDocument).name,
+							code: (existsAddress.state as IStateDocument).code,
+						},
+						...((existsAddress?.city as ICityDocument)?.name
+							? { city: { name: (existsAddress?.city as ICityDocument).name } }
+							: {}),
+						street: existsAddress.street,
+						building: existsAddress.building,
+						floor: existsAddress.floor,
+						apartment: existsAddress.apartment,
+						area: existsAddress.area,
+						zip: existsAddress.zip,
+					},
+					paymentMethod: {
+						name: existsPaymentMethod.method,
+						description: existsPaymentMethod.description,
+					},
+				},
+			],
+			{ session }
+		)
+	);
+	if (newOrderError) {
+		handleTransactionError(session);
+		return next(newOrderError);
+	}
+
+	// Get order data with populated fields, and if there is an error,
+	// pass the error to the next middleware
+	const [orderError, order] = await to(
+		Order.findOne({ _id: newOrder[0]._id })
+			.populate({ path: "user" })
+			.populate({ path: "items", populate: { path: "product" } })
+			.populate({ path: "taxes" })
+			.populate({ path: "shippingMethod" })
+			.session(session)
+	);
+	if (orderError || !order) {
+		handleTransactionError(session);
+		return next(orderError);
+	}
+
+	// Attempt to delete the cart from the database, and if there was an error,
+	// return the error and end the request
+	const [deleteCartError] = await to(Cart.deleteOne({ _id: cart._id }).session(session));
+	if (deleteCartError) {
+		handleTransactionError(session);
+		return next(deleteCartError);
+	}
+
+	// Send order confirmation email
+	const [sendEmailError, sendEmail] = await emailService.send({
+		to: req.user,
+		from: vars.email.sender,
+		filename: "order-confirmation",
+		subject: `[${vars.app.name}] Order Confirmation - #${order.shortId}.`,
+		actionUrl: `${vars.app.frontEndUrl}/orders/${order.shortId}/track`,
+		siteName: vars.app.name,
+		order,
+	});
+	if (sendEmailError) {
+		handleTransactionError(session);
+		return next(sendEmailError);
+	}
+
+	const [newEmailError] = await to(Email.create([sendEmail], { session }));
+	if (newEmailError) {
+		handleTransactionError(session);
+		return next(newEmailError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	req.flash(
+		"success",
+		"Your order has been placed successfully! We've sent you an email with the order details. Thank you for shopping with us!"
+	);
+	res.status(httpStatus.CREATED).json(
+		formatResponseObject({
+			status: httpStatus.CREATED,
+			entities: { data: order },
+			flashes: req.flash(),
+		})
+	);
 };
 
 /**

@@ -1,0 +1,39 @@
+extends ./layout.pug
+block content
+	h2.mb0 Order Confirmation
+	p Hello #{order.user.name}, thank you for your purchase! Your order has been confirmed with the following details.
+	h3.mb0 Order Summary
+	p.mb0 Order Number: ##{order.shortId}
+	p.mb0 Order Date: #{order.createdAt}
+	table.btn.btn-primary(border='0', cellpadding='0', cellspacing='0')
+		tr
+			th(align='left') Item
+			th(align='left') Quantity
+			th(align='left') Price
+			th(align='left') Tax
+			th(align='left') Total
+		each item in order.items
+			- var itemTaxes = order.taxes.filter((tax) => tax.applicableToAllProducts || tax.applicableCategories.includes(item.product.category?._id || item.product.category));
+			tr
+				td=`${item.name} - ${item.color.name} - ${item.size}`
+				td=item.quantity
+				td $#{item.price}
+				td
+					each tax in itemTaxes
+						div=`${tax.name}: ${tax.isPercentage ? `${tax.rate}%` : `$${tax.rate}`}`
+				td $#{(item.price + itemTaxes.reduce((sum, tax) => sum + (tax.isPercentage ? (item.total * tax.rate) / 100 : tax.rate), 0))}
+		tr
+			td(colspan='2') Shipping Method (#{order.shippingMethod.name})
+			td $#{order.shippingMethod.rate}
+		tr
+			td(colspan='2') Subtotal
+			td $#{order.subtotal}
+		tr
+			td(colspan='2') Total Amount
+			td $#{order.total}
+	br
+	p We are currently preparing your items and will notify you when they are shipped. For any questions about your order, please contact us at support@example.com.
+	br
+	+button({ url: actionUrl, text: 'Track Your Order' })
+	br
+	p Thank you for shopping with #{siteName}!

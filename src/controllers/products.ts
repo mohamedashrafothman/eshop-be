@@ -251,19 +251,16 @@ export const _checkProductStock = (
 	quantity: number = 0
 ): HttpError | null => {
 	// Check if product has quantity
-	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
+	if (typeof product.quantity !== "number" || !("quantity" in product))
 		return createError(httpStatus.INTERNAL_SERVER_ERROR, "Product has no quantity");
 
 	// Check if product is out of stock
-	if (product.quantity === 0)
-		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
+	if (product.quantity <= 0)
+		return createError(httpStatus.BAD_REQUEST, "Product is out of stock.");
 
 	// Check if there's enough product quantity in the stock
-	if (product.quantity - quantity < 0)
-		return createError(
-			httpStatus.BAD_REQUEST,
-			"There're no enough product quantity in the stock"
-		);
+	if (product.quantity < quantity)
+		return createError(httpStatus.BAD_REQUEST, "Requested quantity exceeds available stock.");
 
 	// No error
 	return null;

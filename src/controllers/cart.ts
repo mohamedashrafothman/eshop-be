@@ -1,7 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, query, ValidationChain } from "express-validator";
-import createError from "http-errors";
+import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession } from "mongoose";
 import Address from "../models/Address";
@@ -80,6 +80,30 @@ export const validator = (
 		default:
 			return [];
 	}
+};
+
+/**
+ * @summary Checks if the product price has changed since the item was added to the cart.
+ * @param {IProductDocument} product - Current product data from the database.
+ * @param {number} cartItemPrice - Price of the item when it was added to the cart.
+ * @returns {HttpError|null} - Returns an error if the price has changed; otherwise, null.
+ */
+export const _checkProductPriceChange = (
+	product: Partial<IProductDocument>,
+	cartItemPrice: number = 0
+): HttpError | null => {
+	// Get the current product price
+	const currentProductPrice: number = product.price?.sale || product.price?.normal || 0;
+
+	// Check if the product price has changed
+	if (currentProductPrice !== cartItemPrice)
+		return createError(
+			httpStatus.BAD_REQUEST,
+			`Product '${product.name}' price has been updated since it was added to the cart!`
+		);
+
+	// No error
+	return null;
 };
 
 /**

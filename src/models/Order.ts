@@ -1,8 +1,12 @@
 import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
-import IOrder from "../interfaces/Order.interface";
+import IOrder, {
+	OrderShippingMethod as IOrderShippingMethod,
+	OrderTax as IOrderTax,
+} from "../interfaces/Order.interface";
 import vars from "../utils/vars";
 import { IOrderItemDocument } from "./OrderItem";
+import { IProductDocument } from "./Product";
 import { IUserDocument } from "./User";
 
 // adding schema methods here
@@ -106,11 +110,17 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 					required: [true, "Address state code is required!"],
 				},
 			},
-			city: { name: { type: String, index: true }, code: { type: String, index: true } },
+			city: { name: { type: String, index: true } },
 			zip: { type: String },
 		},
 		paymentMethod: {
 			name: { type: String, required: [true, "Payment method name is required!"] },
+			description: {
+				type: String,
+				trim: true,
+				maxlength: [1000, "Description can't be greater than 1000 characters!"],
+				required: [true, "Payment method description is required!"],
+			},
 			gateway: Object,
 		},
 		subtotal: { type: Number, default: 0 },
@@ -131,35 +141,33 @@ OrderSchema.pre("save", async function (next) {
 
 	// Populate items to get total value from each order item product
 	await this.populate("items");
+	await this.populate("items.product");
 
 	// Calculate subtotal and taxes based on order items and applicable taxes
-	const orderTaxes = this.taxes as IOrder["taxes"];
+	const orderTaxes = this.taxes as IOrderTax[];
 	const orderItems = this.items as IOrderItemDocument[];
-	const orderShippingMethod = this.shippingMethod;
-
+	const orderShippingMethod = this.shippingMethod as IOrderShippingMethod;
+	let taxesTotal: number = 0;
+	let orderItemsTotal: number = 0;
 	const shippingMethodTotal: number = orderShippingMethod.rate || 0;
 
-	// Calculate total for order items and taxes using reduce
-	const { orderItemsTotal, taxesTotal } = orderItems.reduce(
-		(acc, orderItem) => {
-			const orderItemTotal = orderItem.total || 0;
-			acc.orderItemsTotal += orderItemTotal;
+	orderItems.forEach((orderItem) => {
+		const orderItemProduct = orderItem.product as IProductDocument;
+		const orderItemTotal = orderItem?.total || 0;
 
-			orderTaxes.forEach((tax) => {
-				if (
-					tax.applicableToAllProducts ||
-					tax.applicableCategories?.includes(orderItem.category?.toString())
-				) {
-					acc.taxesTotal += tax.isPercentage
-						? (orderItemTotal * tax.rate) / 100
-						: tax.rate;
-				}
-			});
+		orderTaxes.forEach((tax) => {
+			const taxApplicableCategoriesIds = tax.applicableCategories;
+			const orderItemProductId = orderItemProduct.category?._id || orderItemProduct.category;
 
-			return acc;
-		},
-		{ orderItemsTotal: 0, taxesTotal: 0 } // Initial accumulator object
-	);
+			if (
+				tax.applicableToAllProducts ||
+				taxApplicableCategoriesIds?.includes(orderItemProductId?.toString())
+			)
+				taxesTotal += tax.isPercentage ? (orderItemTotal * tax.rate) / 100 : tax.rate;
+		});
+
+		orderItemsTotal += orderItem.total;
+	});
 
 	this.subtotal = orderItemsTotal;
 	this.total = orderItemsTotal + taxesTotal + shippingMethodTotal;

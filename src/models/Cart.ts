@@ -46,7 +46,10 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 			{
 				type: Schema.Types.ObjectId,
 				ref: "Tax",
-				autopopulate: { maxDepth: 1, select: "name rate isPercentage" },
+				autopopulate: {
+					maxDepth: 1,
+					select: "name rate isPercentage applicableCategories applicableToAllProducts",
+				},
 			},
 		],
 		shippingMethod: {
@@ -73,7 +76,7 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 
 // schema hooks
 CartSchema.pre("save", async function (next) {
-	// Check if items, taxes, or shippingMethod is modified
+	// check if items is modified
 	if (
 		!this.isModified("items") &&
 		!this.isModified("taxes") &&
@@ -81,48 +84,41 @@ CartSchema.pre("save", async function (next) {
 	)
 		return next();
 
-	// Populate items, taxes, and shippingMethod to get total values
+	// populate items to get total value from each cart item product.
 	await this.populate("items");
+	await this.populate("items.product");
 	await this.populate("taxes");
 	await this.populate("shippingMethod");
 
-	// Calculate subtotal and taxes based on cart items and applicable taxes
+	// calculate subtotal and taxes based on cart items, and applicable taxes
 	const cartTaxes = this.taxes as ITaxDocument[];
 	const cartItems = this.items as ICartItemDocument[];
 	const cartShippingMethod = this.shippingMethod as IShippingMethodDocument;
-
+	let taxesTotal: number = 0;
+	let cartItemsTotal: number = 0;
 	const shippingMethodTotal: number = cartShippingMethod.rate || 0;
 
-	// Calculate total for cart items and taxes using reduce
-	const { cartItemsTotal, taxesTotal } = cartItems.reduce(
-		(acc, cartItem) => {
-			const cartItemTotal = cartItem.total || 0;
-			const cartItemProduct = cartItem.product as IProductDocument;
+	cartItems.forEach((cartItem) => {
+		const cartItemProduct = cartItem.product as IProductDocument;
+		const cartItemTotal = cartItem?.total || 0;
 
-			acc.cartItemsTotal += cartItemTotal;
+		cartTaxes.forEach((tax) => {
+			const taxApplicableCategoriesIds = tax.applicableCategories?.map((category) =>
+				(category?._id || category)?.toString()
+			);
+			const cartItemProductId = (
+				cartItemProduct?.category?._id || cartItemProduct.category
+			)?.toString();
 
-			cartTaxes.forEach((tax) => {
-				const taxApplicableCategoriesIds = tax.applicableCategories?.map((category) =>
-					(category?._id || category)?.toString()
-				);
-				const cartItemProductId = (
-					cartItemProduct?.category?._id || cartItemProduct.category
-				)?.toString();
+			if (
+				tax.applicableToAllProducts ||
+				taxApplicableCategoriesIds?.includes(cartItemProductId)
+			)
+				taxesTotal += tax.isPercentage ? (cartItemTotal * tax.rate) / 100 : tax.rate;
+		});
 
-				if (
-					tax.applicableToAllProducts ||
-					taxApplicableCategoriesIds?.includes(cartItemProductId)
-				) {
-					acc.taxesTotal += tax.isPercentage
-						? (cartItemTotal * tax.rate) / 100
-						: tax.rate;
-				}
-			});
-
-			return acc;
-		},
-		{ cartItemsTotal: 0, taxesTotal: 0 } // Initial accumulator object
-	);
+		cartItemsTotal += cartItem.total;
+	});
 
 	this.subtotal = cartItemsTotal;
 	this.total = cartItemsTotal + taxesTotal + shippingMethodTotal;

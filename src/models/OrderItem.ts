@@ -44,7 +44,6 @@ const OrderItemSchema: Schema<IOrderItemDocument, object, IOrderItemDocument> = 
 			type: String,
 			enum: vars.products.sizes,
 			index: true,
-			required: [true, "Size is required!"],
 		},
 		quantity: {
 			type: Number,
