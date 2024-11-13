@@ -70,7 +70,7 @@ CartItemSchema.pre("save", async function (next) {
 	if (!this.isModified("price") && !this.isModified("quantity")) return next();
 
 	// populate product to get it's prices.
-	await this.populate("product");
+	await this.populate({ path: "product" });
 
 	// extract price and quantity from document
 	const price =

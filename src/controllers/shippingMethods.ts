@@ -212,7 +212,13 @@ export const getShippingMethods = async (
 	const { q, deleted, zone } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean =
+		"deleted" in req.query &&
+		Boolean(
+			req.user &&
+				req.user.role &&
+				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+		);
 
 	// Check if the query includes a zone
 	const isFilterByZoneAllowed: boolean = "zone" in req.query;

@@ -13,6 +13,7 @@ type EmailParamsType = {
 	actionUrl?: string;
 	siteName?: string;
 	order?: object;
+	date?: string;
 } & Omit<IEmail, "to" | "createdAt" | "updateAt">;
 
 type EmailTransporterParamsType = {

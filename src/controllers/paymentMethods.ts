@@ -258,7 +258,13 @@ export const getPaymentMethods = async (
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
-	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
+	const isFilterByDeletedAllowed: boolean =
+		"deleted" in req.query &&
+		Boolean(
+			req.user &&
+				req.user.role &&
+				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+		);
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["method", "description"];

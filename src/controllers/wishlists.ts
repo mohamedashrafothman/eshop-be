@@ -57,7 +57,7 @@ export const getSingleWishlist = async (
 	// Attempt to retrieve a wishlist from the database for logged in user,
 	// and if there was an error, return the error and end the request
 	const [wishlistError, wishlist] = await to(
-		Wishlist.findOne({ user: req.user._id }).populate("products")
+		Wishlist.findOne({ user: req.user._id }).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 
@@ -120,7 +120,7 @@ export const addToWishlist = async (
 			{ user: req.user._id },
 			{ $addToSet: { products: existsProduct._id } },
 			{ upsert: true, new: true }
-		).populate("products")
+		).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 
@@ -179,7 +179,7 @@ export const removeFromWishlist = async (
 			{ user: req.user._id },
 			{ $pull: { products: productIdentifier } },
 			{ new: true }
-		).populate("products")
+		).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 

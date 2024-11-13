@@ -30,12 +30,7 @@ router
 
 router
 	.route("/shipping-methods")
-	.all(allowMethods(["get", "post"]))
-	.get(
-		cartController.validator("get-shipping"),
-		unprocessableEntityValidator,
-		cartController.getShippingMethods
-	)
+	.all(allowMethods(["post"]))
 	.post(
 		cartController.validator("set-shipping"),
 		unprocessableEntityValidator,
@@ -44,8 +39,7 @@ router
 
 router
 	.route("/payment-methods")
-	.all(allowMethods(["get", "post"]))
-	.get(cartController.getPaymentMethods)
+	.all(allowMethods(["post"]))
 	.post(
 		cartController.validator("set-payment"),
 		unprocessableEntityValidator,

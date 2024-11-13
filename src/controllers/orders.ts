@@ -8,10 +8,12 @@ import { ICountryDocument } from "models/Country";
 import { IStateDocument } from "models/State";
 import { ITaxDocument } from "models/Tax";
 import { IZoneDocument } from "models/Zone";
+import moment from "moment";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
+import IOrder from "../interfaces/Order.interface";
 import IOrderItem from "../interfaces/OrderItem.interface";
 import IProduct from "../interfaces/Product.interface";
-import Address from "../models/Address";
+import Address, { IAddressDocument } from "../models/Address";
 import Cart from "../models/Cart";
 import { ICartItemDocument } from "../models/CartItem";
 import Email from "../models/Email";
@@ -19,7 +21,7 @@ import Order, { IOrderDocument } from "../models/Order";
 import OrderItem from "../models/OrderItem";
 import PaymentMethod from "../models/PaymentMethod";
 import Product, { IProductDocument } from "../models/Product";
-import ShippingMethod from "../models/ShippingMethod";
+import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import emailService from "../services/email";
 import {
 	formatResponseObject,
@@ -34,7 +36,7 @@ import { _checkProductStock } from "./products";
 /**
  * Validates the input fields based on the method provided.
  */
-export const validator = (method: "create" | "update"): ValidationChain[] => {
+export const validator = (method: "create" | "update" | "item/update"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -59,9 +61,59 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Invalid shipping method id!")
 					.notEmpty()
 					.withMessage("You must supply a shipping method id!"),
+				body("note")
+					.trim()
+					.escape()
+					.optional()
+					.notEmpty()
+					.withMessage("You must supply a note!")
+					.isLength({ max: 1000 })
+					.withMessage("Note must be at most 1000 characters long!"),
 			];
 		case "update":
-			return [];
+			return [
+				body("status")
+					.trim()
+					.escape()
+					.optional()
+					.notEmpty()
+					.withMessage("You must supply a status!")
+					.isString()
+					.withMessage("Status must be a string!")
+					.isIn(Object.values(vars.order.status))
+					.withMessage("Invalid status value."),
+				body("address")
+					.trim()
+					.escape()
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid address id!")
+					.notEmpty()
+					.withMessage("You must supply a address id!"),
+				body("shippingMethod")
+					.trim()
+					.escape()
+					.optional()
+					.isMongoId()
+					.withMessage("Invalid shipping method id!")
+					.notEmpty()
+					.withMessage("You must supply a shipping method id!"),
+				body("note")
+					.trim()
+					.escape()
+					.optional()
+					.isLength({ max: 1000 })
+					.withMessage("Note must be at most 1000 characters long!"),
+			];
+		case "item/update":
+			return [
+				body("quantity")
+					.isNumeric()
+					.withMessage("You must supply a quantity!")
+					.isInt({ min: 1 })
+					.withMessage("quantity must be an integer greater than or equal 1!")
+					.toInt(),
+			];
 		default:
 			return [];
 	}
@@ -73,7 +125,9 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @returns {Promise<[Error | null | undefined, string]>} - A promise that resolves with an array containing the error
  * (if any) and the generated unique short id.
  */
-export const _generateOrderUniqueShortId = async (session: ClientSession | null) => {
+export const _generateOrderUniqueShortId = async (
+	session: ClientSession | null
+): Promise<[Error | undefined, string | null]> => {
 	let orderShortId: string | null = null;
 	let isUniqueShortId: boolean = false;
 
@@ -88,48 +142,67 @@ export const _generateOrderUniqueShortId = async (session: ClientSession | null)
 		isUniqueShortId = !existsOrder;
 	}
 
-	return [null, orderShortId];
+	return [undefined, orderShortId];
 };
 
+export const _isValidShippingZone = (
+	shippingMethod?: IShippingMethodDocument | null,
+	address?: IAddressDocument | null
+): boolean => {
+	if (!shippingMethod || !address) return false;
+
+	const shippingMethodZone = shippingMethod.zone as IZoneDocument;
+	const zoneCountriesIds: string[] = shippingMethodZone.countries.map((country) =>
+		(country?._id || country)?.toString()
+	);
+	const zoneStatesIds: string[] = shippingMethodZone.states.map((state) =>
+		(state?._id || state)?.toString()
+	);
+	const zoneCitiesIds: string[] = shippingMethodZone.cities.map((city) =>
+		(city?._id || city)?.toString()
+	);
+	return Boolean(
+		!zoneCountriesIds.includes((address.country?._id || address.country)?.toString()) ||
+			!zoneStatesIds.includes((address.state?._id || address.state)?.toString()) ||
+			(address?.city &&
+				!zoneCitiesIds.includes((address.city?._id || address.city)?.toString()))
+	);
+};
+
+/**
+ * @summary Creates a new order.
+ * @description This function retrieves a payment method, an address, and a shipping method from the request body,
+ * and then creates a new order document in the database. If the user is not authenticated, it returns a 401 error.
+ * If the payment method, address, or shipping method are not found, or if there is an issue during the database operations,
+ * it returns the respective error. It also checks if the cart is locked, and if the product is out of stock or if the price has
+ * changed since it was added to the cart. If so, it returns the respective error.
+ *
+ * @param {Request} req - Express request object containing the payment method, address, and shipping method data in the body.
+ * @param {Object} req.body - The request body containing the payment method, address, and shipping method data.
+ * @param {string} req.body.paymentMethod - The ID of the payment method to be used for the order.
+ * @param {string} req.body.address - The ID of the address to be used for the order.
+ * @param {string} req.body.shippingMethod - The ID of the shipping method to be used for the order.
+ * @param {string} [req.body.note] - The note to be added to the order (optional).
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 201 - Success response with the created order data.
+ * @property {IOrderDocument} res.body.data - The created order object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} - Returns an error if the payment method, address, or shipping method are not found,
+ * or if there is an issue during the database operations.
+ * @throws {Error} - Returns an error if the product is out of stock or if the price has changed since it was added to the cart.
+ */
 export const postNewOrder = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>,
-		{ paymentMethod: string; address: string; shippingMethod: string }
+		{ paymentMethod: string; address: string; shippingMethod: string; note?: string }
 	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	/**
-	 * TODO:
-	 * 01 - Receive order request with payment method id, address id, shipping methods id,
-	 * 	    and ensure they are existed in the database before proceed [DONE].
-	 * 02 - Retrieve user cart and cart items [DONE], and validate the cart exists and not empty [DONE],
-	 *      check if the cart items are still available (stock levels) and ensure no items
-	 *      have been updated since they were added to the cart (e.g., price changed or item
-	 *      deleted by an admin) [DONE]. and consider locking the cart by adding "locked" flag to
-	 *      the cart to prevent it from being modified during the order creation [DONE], and add
-	 *      extra step in all cart update method to check if it's locked retrieved error message to
-	 * 	    the user [DONE].
-	 * 03 - Place cart items into order items table [DONE], validate quantities [DONE], calculate
-	 *      items total [DONE], and validate it's availability and lock it's quantity for this order
-	 *      to avoid over-selling (e.g., if someone else places an order at the same time) [DONE].
-	 *      and If any item fails the validation (e.g., out of stock), the whole order process
-	 *      should stop, and an error message should be returned [DONE].
-	 * 04 - Apply discount, taxes and shipping charges while calculating the total price [DONE].
-	 * 05 - Generate order short id [DONE].
-	 * 06 - Save order data while using mongodb transaction to avoid partial order creation. This
-	 * 	    is crucial to ensure that if any error occurs, the order process will fully rollback
-	 * 	    and the cart will remain unaffected, with store an order status field with an initial
-	 * 	    status like “Pending” or “Processing” to allow for easy updates as the order
-	 * 	    progresses [DONE].
-	 * 07 - Decrease order items stock quantity after the order is placed [DONE].
-	 * 08 - Send Order Confirmation Email to the customer including order id, order summary,
-	 * 	    shipping information, payment information, customer support info, and order status.
-	 * 09 - Return success message.
-	 */
-
-	// Check if user logged in
+	// Check if user logged in and has the correct role
 	if (req.isUnauthenticated() || !req.user || ![vars.auth.roles.user].includes(req.user.role)) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
@@ -143,8 +216,8 @@ export const postNewOrder = async (
 	// pass the error to the next middleware
 	const [cartError, cart] = await to(
 		Cart.findOneAndUpdate({ user: req.user }, { $set: { locked: true } }, { new: true })
-			.populate("items.product")
-			.populate("taxes")
+			.populate({ path: "items", populate: { path: "product" } })
+			.populate({ path: "taxes" })
 			.session(session)
 	);
 	if (cartError || !cart || cart.items.length === 0) {
@@ -160,7 +233,7 @@ export const postNewOrder = async (
 	}
 
 	// Destructure the request body to get paymentMethod, address, and shippingMethod data
-	const { paymentMethod, address, shippingMethod } = req.body;
+	const { paymentMethod, address, shippingMethod, note } = req.body;
 
 	// Check if payment method exists, and if there is an error or no payment method is found,
 	// pass the error to the next middleware
@@ -176,9 +249,9 @@ export const postNewOrder = async (
 	// pass the error to the next middleware
 	const [existsAddressError, existsAddress] = await to(
 		Address.findOne({ _id: address })
-			.populate("country")
-			.populate("state")
-			.populate("city")
+			.populate({ path: "country" })
+			.populate({ path: "state" })
+			.populate({ path: "city" })
 			.session(session)
 	);
 	if (existsAddressError || !existsAddress) {
@@ -317,6 +390,7 @@ export const postNewOrder = async (
 						name: existsPaymentMethod.method,
 						description: existsPaymentMethod.description,
 					},
+					...(note && { note }),
 				},
 			],
 			{ session }
@@ -359,6 +433,7 @@ export const postNewOrder = async (
 		actionUrl: `${vars.app.frontEndUrl}/orders/${order.shortId}/track`,
 		siteName: vars.app.name,
 		order,
+		date: moment(order.createdAt).format("DD/MM/YYYY"),
 	});
 	if (sendEmailError) {
 		handleTransactionError(session);
@@ -555,11 +630,205 @@ export const getSingleOrder = async (
 	);
 };
 
+/**
+ * @summary Updates a single order by its ID.
+ * @description This function updates the details of an order, including its status, address,
+ * and shipping method. It ensures that the user is authenticated and has the necessary permissions
+ * to perform the update. The function validates the status transition, verifies the existence of
+ * the provided address and shipping method in the database, and ensures the address matches the
+ * shipping method's zone. The updated order is then saved to the database and returned in the response.
+ * If an error occurs at any point, the error is returned and the transaction is handled accordingly.
+ *
+ * @param {Object} req - Express request object containing the order ID in the parameters,
+ * and the updated order details in the request body.
+ * @param {String} req.params.order - The ID of the order to update.
+ * @param {Object} req.body - The request body containing the updated order details.
+ * @param {String} req.body.status - The new status of the order.
+ * @param {String} req.body.address - The new address id of the order.
+ * @param {String} req.body.shippingMethod - The new shipping method id of the order.
+ * @param {String} req.body.note - The new note for the order.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the updated order data.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated or lacks permission.
+ * @throws {Error} 400 - Returns an error if the status transition is invalid or if the address
+ * and shipping method do not match.
+ * @throws {Error} 404 - Returns an error if the order, address, or shipping method is not found.
+ * @throws {Error} 500 - Returns an error if any other issue occurs during the update process.
+ */
 export const updateSingleOrder = async (
-	req: Request,
-	res: Response,
+	req: Request<
+		{ order: string },
+		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
+		{ status?: IOrder["status"]; address?: string; shippingMethod?: string; note?: string }
+	>,
+	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+	/** TODO:
+	 *   1. Check if user logged in and has admin permission [DONE].
+	 *   2. Retrieve the order ID from the request parameters [DONE].
+	 *   3. Attempt to retrieve a order from the database with the given ID,
+	 *      and if there was an error or no order was found, return the error and end the request [DONE].
+	 * 	 4. check if the status presented in body and it's transition is valid and return an error if it is not [DONE].
+	 *   5. check if the address presented in body and check if it's found in the database before update
+	 *      and return an error if it is not [DONE].
+	 *   6. check if the shipping method presented in body and check if it's found in the database before update
+	 * 	  	and return an error if it is not [DONE].
+	 * 	 7. check the address matches the shipping method's zone and return an error if it is not [DONE].
+	 *   8. Update the order with the new status [DONE], with status tracking array update if the status presented in
+	 * 		the request with status, time and user, and send the user an email.
+	 *   9. Return the updated order in the response [DONE].
+	 *   10. If an error occurs during the update process, return the error and end the request [DONE].
+	 */
+
+	// Check if user logged in and has the correct role
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.admin, vars.auth.roles.superAdmin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Start a transaction to ensure data integrity
+	const session: ClientSession = await mongoose.startSession();
+	session.startTransaction();
+
+	// Retrieve the order ID from the request parameters
+	const { order: orderIdentifier } = req.params;
+
+	// Extract the status, address, and shipping method from the request body
+	const { status, address, shippingMethod, note } = req.body;
+
+	// Attempt to retrieve a order from the database with the given ID,
+	// and if there was an error or no order was found, return the error and end the request
+	const [orderError, order] = await to(
+		Order.findOne({ _id: orderIdentifier })
+			.populate({ path: "items", populate: { path: "product" } })
+			.session(session)
+	);
+	if (orderError || !order) {
+		handleTransactionError(session);
+		return next(orderError);
+	}
+
+	// Check if the status presented in body and it's transition is valid and return an error if it is not
+	if (status) {
+		const allowedStatuses = order.getAllowedNextStatuses();
+
+		if (!allowedStatuses.includes(status)) {
+			const error = createError(httpStatus.BAD_REQUEST, "Invalid status transition");
+			handleTransactionError(session);
+			return next({ ...(error || {}), status: error.status });
+		}
+	}
+
+	// Check if address exists, and if there is an error or no address is found,
+	// pass the error to the next middleware
+	let existsAddress: IAddressDocument | undefined | null;
+	let existsAddressError: Error | null = null;
+	if (address) {
+		[existsAddressError, existsAddress] = await to(
+			Address.findOne({ _id: address })
+				.populate({ path: "country" })
+				.populate({ path: "state" })
+				.populate({ path: "city" })
+				.session(session)
+		);
+		if (existsAddressError || !existsAddress) {
+			handleTransactionError(session);
+			return next(existsAddressError);
+		}
+	}
+
+	// Check if shipping method exists, and if there is an error or no shipping method is found,
+	// pass the error to the next middleware
+	let existsShippingMethod: IShippingMethodDocument | undefined | null;
+	let existsShippingMethodError: Error | null = null;
+	if (shippingMethod) {
+		[existsShippingMethodError, existsShippingMethod] = await to(
+			ShippingMethod.findOne({ _id: shippingMethod })
+				.populate({ path: "zone", populate: ["country", "state", "city"] })
+				.session(session)
+		);
+		if (existsShippingMethodError || !existsShippingMethod) {
+			handleTransactionError(session);
+			return next(existsShippingMethodError);
+		}
+	}
+
+	// Check if the address matches the shipping method's zone and return an error if it is not
+	if (_isValidShippingZone(existsShippingMethod, existsAddress)) {
+		const error = createError(
+			httpStatus.BAD_REQUEST,
+			"Address and shipping method don't match"
+		);
+		handleTransactionError(session);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Merge the old order data with the new data
+	const newOrder = Object.assign(order, {
+		...(existsAddress && {
+			address: {
+				name: existsAddress.name,
+				country: {
+					name: (existsAddress.country as ICountryDocument).name,
+					code: (existsAddress.country as ICountryDocument).code,
+				},
+				state: {
+					name: (existsAddress.state as IStateDocument).name,
+					code: (existsAddress.state as IStateDocument).code,
+				},
+				...((existsAddress?.city as ICityDocument)?.name
+					? { city: { name: (existsAddress?.city as ICityDocument).name } }
+					: {}),
+				street: existsAddress.street,
+				building: existsAddress.building,
+				floor: existsAddress.floor,
+				apartment: existsAddress.apartment,
+				area: existsAddress.area,
+				zip: existsAddress.zip,
+			},
+		}),
+		...(existsShippingMethod && {
+			shippingMethod: {
+				name: existsShippingMethod.name,
+				rate: existsShippingMethod.rate,
+				zone: (existsShippingMethod.zone as IZoneDocument).name,
+				deliveryTime: existsShippingMethod.deliveryTime,
+			},
+		}),
+		...(status && { status }),
+		...(note && { note }),
+	});
+
+	// Save the updated order to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const [saveOrderError, updatedOrder] = await to(newOrder.save({ session }));
+	if (saveOrderError) {
+		handleTransactionError(session);
+		return next(saveOrderError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	// Set a flash message to indicate that the order was updated successfully,
+	// and return the updated order in the response
+	req.flash("success", "Order updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedOrder },
+			flashes: req.flash(),
+		})
+	);
+};
 
 /**
  * @summary Deletes a single order by its ID.
@@ -650,3 +919,13 @@ export const restoreSingleOrder = async (
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
 	);
 };
+
+export const updateOrderItem = async (
+	req: Request<
+		{ orderItem: string },
+		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
+		{ quantity: number }
+	>,
+	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {};

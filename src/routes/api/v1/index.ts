@@ -51,18 +51,8 @@ router.use(
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 	zonesRouter
 );
-router.use(
-	"/shipping-methods",
-	authController.passportJWTAuthenticate,
-	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-	shippingMethodsRouter
-);
-router.use(
-	"/payment-methods",
-	authController.passportJWTAuthenticate,
-	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-	paymentMethodsRouter
-);
+router.use("/shipping-methods", authController.passportJWTAuthenticate, shippingMethodsRouter);
+router.use("/payment-methods", authController.passportJWTAuthenticate, paymentMethodsRouter);
 router.use(
 	"/cart",
 	authController.passportJWTAuthenticate,

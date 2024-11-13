@@ -8,8 +8,10 @@ import IAddress from "../interfaces/Address.interface";
 import Address, { IAddressDocument } from "../models/Address";
 import City from "../models/City";
 import Country from "../models/Country";
+import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import State from "../models/State";
 import User from "../models/User";
+import Zone from "../models/Zone";
 import {
 	formatResponseObject,
 	handleTransactionError,
@@ -736,5 +738,80 @@ export const deleteSingleAddress = async (
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
+	);
+};
+
+/**
+ * @summary Retrieves available shipping methods for a specific address.
+ * @description This function fetches a list of shipping methods associated with a zone
+ * corresponding to the given address ID. It first ensures the user is authenticated,
+ * then checks if the address belongs to the logged-in user, and subsequently finds
+ * the zone linked to the address's location. If successful, it returns a list of
+ * shipping methods available for that zone.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.address - The address ID to retrieve shipping methods for.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with a list of shipping methods.
+ *   * @property {Array} entities.data - List of shipping method objects.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the address or zone is not found.
+ * @throws {Error} 500 - Returns an error if there is a failure in retrieving shipping methods.
+ */
+export const getSingleAddressShippingMethods = async (
+	req: Request<
+		{ address: string },
+		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>
+	>,
+	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Extract the address identifier from request parameters
+	const { address: addressIdentifier } = req.params || {};
+
+	// Attempt to retrieve an address from the database for logged in user,
+	// and if there was an error, return the error and end the request
+	const [addressError, address] = await to(
+		Address.findOne({ _id: addressIdentifier, user: req.user._id })
+	);
+	if (addressError || !address)
+		return next(addressError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve a zone from the database for the address,
+	// and if there was an error, return the error and end the request
+	const [zoneError, zone] = await to(
+		Zone.findOne({
+			...(address.country && {
+				countries: { $in: [address.country?._id || address.country] },
+			}),
+			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
+			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
+		})
+	);
+	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve shipping methods from the database for the zone,
+	// and if there was an error, return the error and end the request
+	const [shippingMethodsError, shippingMethods] = await to(
+		ShippingMethod.find({ zone: zone._id })
+	);
+	if (shippingMethodsError) return next(shippingMethodsError);
+
+	// Return the shipping methods data in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: shippingMethods },
+			flashes: req.flash(),
+		})
 	);
 };

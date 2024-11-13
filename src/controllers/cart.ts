@@ -1,17 +1,15 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body, query, ValidationChain } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession } from "mongoose";
-import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
-import PaymentMethod, { IPaymentMethodDocument } from "../models/PaymentMethod";
+import PaymentMethod from "../models/PaymentMethod";
 import Product, { IProductDocument } from "../models/Product";
-import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
+import ShippingMethod from "../models/ShippingMethod";
 import Tax from "../models/Tax";
-import Zone from "../models/Zone";
 import {
 	formatResponseObject,
 	FormatResponseObjectType,
@@ -23,7 +21,7 @@ import { _checkProductStock } from "./products";
  * Validates the input fields based on the method provided.
  */
 export const validator = (
-	method: "create" | "update" | "get-shipping" | "set-shipping" | "set-payment"
+	method: "create" | "update" | "set-shipping" | "set-payment"
 ): ValidationChain[] => {
 	switch (method) {
 		case "create":
@@ -52,14 +50,6 @@ export const validator = (
 					.isInt({ min: 1 })
 					.withMessage("quantity must be an integer greater than or equal 1!")
 					.toInt(),
-			];
-		case "get-shipping":
-			return [
-				query("address")
-					.isMongoId()
-					.withMessage("Invalid address id!")
-					.notEmpty()
-					.withMessage("You must supply an address id as a query param!"),
 			];
 		case "set-shipping":
 			return [
@@ -215,7 +205,7 @@ export const addToCart = async (
 				[
 					{
 						user: req.user._id,
-						items: [cartItem[0]._id],
+						items: cartItem?.map((item) => item?._id || item),
 						taxes: taxes?.map((tax) => tax?._id || tax),
 					},
 				],
@@ -596,7 +586,7 @@ export const updateCartItem = async (
 	// Attempt to retrieve a cart item from the database,
 	// and if there was an error, return the error and end the request
 	const [cartItemError, cartItem] = await to(
-		CartItem.findOne({ _id: cartItemIdentifier }).populate("product").session(session)
+		CartItem.findOne({ _id: cartItemIdentifier }).populate({ path: "product" }).session(session)
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
@@ -763,63 +753,6 @@ export const emptyCart = async (
 	);
 };
 
-export const getShippingMethods = async (
-	req: Request<
-		{},
-		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>,
-		{},
-		{ address: string }
-	>,
-	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
-	next: NextFunction
-): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
-	// Retrieve the address id from the request query params
-	const { address: addressIdentifier } = req.query;
-
-	// Attempt to retrieve an address from the database for logged in user,
-	// and if there was an error, return the error and end the request
-	const [addressError, address] = await to(
-		Address.findOne({ _id: addressIdentifier, user: req.user._id })
-	);
-	if (addressError || !address)
-		return next(addressError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve a zone from the database for the address,
-	// and if there was an error, return the error and end the request
-	const [zoneError, zone] = await to(
-		Zone.findOne({
-			...(address.country && {
-				countries: { $in: [address.country?._id || address.country] },
-			}),
-			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
-			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
-		})
-	);
-	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve shipping methods from the database for the zone,
-	// and if there was an error, return the error and end the request
-	const [shippingMethodsError, shippingMethods] = await to(
-		ShippingMethod.find({ zone: zone._id })
-	);
-	if (shippingMethodsError) return next(shippingMethodsError);
-
-	// Return the shipping methods data in the response
-	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: shippingMethods },
-			flashes: req.flash(),
-		})
-	);
-};
-
 /**
  * @summary Updates the shipping method of the user's cart.
  * @description This function retrieves a shipping method and a cart for the currently logged-in user,
@@ -889,48 +822,6 @@ export const postShippingMethod = async (
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: updatedCart },
-			flashes: req.flash(),
-		})
-	);
-};
-
-/**
- * @summary Retrieves a list of all payment methods.
- * @description This function checks if the user is authenticated and then
- * retrieves all available payment methods from the database. If the user is
- * not authenticated, it returns a 401 error. If there is an error during the
- * database retrieval, it passes the error to the next middleware.
- *
- * @param {Request} req - Express request object.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a list of payment methods.
- * @property {Object} res.body.data - The list of payment methods.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} - Returns an error if there is an issue during the database operations.
- */
-export const getPaymentMethods = async (
-	req: Request<{}, FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>, {}>,
-	res: Response<FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>>,
-	next: NextFunction
-): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
-	// Attempt to retrieve payment methods from the database for the zone,
-	// and if there was an error, return the error and end the request
-	const [paymentMethodsError, paymentMethods] = await to(PaymentMethod.find({}));
-	if (paymentMethodsError) return next(paymentMethodsError);
-
-	// Return the payment methods data in the response
-	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: paymentMethods },
 			flashes: req.flash(),
 		})
 	);

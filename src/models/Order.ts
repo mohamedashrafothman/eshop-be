@@ -18,6 +18,7 @@ export interface IOrderDocument
 	updatedAt: Date;
 	user: Types.ObjectId | IUserDocument;
 	items: (Types.ObjectId | IOrderItemDocument)[];
+	getAllowedNextStatuses: () => (typeof vars.order.status)[keyof typeof vars.order.status][];
 }
 
 // adding statics methods here
@@ -104,11 +105,7 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 					index: true,
 					required: [true, "Address state name is required!"],
 				},
-				code: {
-					type: String,
-					index: true,
-					required: [true, "Address state code is required!"],
-				},
+				code: { type: String, index: true },
 			},
 			city: { name: { type: String, index: true } },
 			zip: { type: String },
@@ -125,9 +122,27 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 		},
 		subtotal: { type: Number, default: 0 },
 		total: { type: Number, default: 0 },
+		note: {
+			type: String,
+			trim: true,
+			maxlength: [1000, "Note can't be greater than 1000 characters!"],
+		},
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
+
+OrderSchema.methods.getAllowedNextStatuses = function () {
+	// Define allowed statuses for each order status
+	const allowedStatuses = {
+		[vars.order.status.pending]: [vars.order.status.processing, vars.order.status.cancelled],
+		[vars.order.status.processing]: [vars.order.status.shipped],
+		[vars.order.status.shipped]: [vars.order.status.completed, vars.order.status.refunded],
+		[vars.order.status.refunded]: [],
+		[vars.order.status.cancelled]: [],
+		[vars.order.status.completed]: [],
+	};
+	return allowedStatuses[this.status];
+};
 
 // schema hooks
 OrderSchema.pre("save", async function (next) {
@@ -140,34 +155,48 @@ OrderSchema.pre("save", async function (next) {
 		return next();
 
 	// Populate items to get total value from each order item product
-	await this.populate("items");
-	await this.populate("items.product");
+	await this.populate({ path: "items" });
+	await this.populate({ path: "items", populate: { path: "product" } });
 
 	// Calculate subtotal and taxes based on order items and applicable taxes
 	const orderTaxes = this.taxes as IOrderTax[];
 	const orderItems = this.items as IOrderItemDocument[];
 	const orderShippingMethod = this.shippingMethod as IOrderShippingMethod;
-	let taxesTotal: number = 0;
-	let orderItemsTotal: number = 0;
 	const shippingMethodTotal: number = orderShippingMethod.rate || 0;
 
-	orderItems.forEach((orderItem) => {
-		const orderItemProduct = orderItem.product as IProductDocument;
-		const orderItemTotal = orderItem?.total || 0;
+	// Calculate order items total and taxes total
+	const { orderItemsTotal, taxesTotal } = orderItems.reduce(
+		(acc, orderItem) => {
+			const orderItemProduct = orderItem.product as IProductDocument;
+			const orderItemTotal = orderItem?.total || 0;
+			// Accumulate order items total
+			acc.orderItemsTotal += orderItemTotal;
 
-		orderTaxes.forEach((tax) => {
-			const taxApplicableCategoriesIds = tax.applicableCategories;
-			const orderItemProductId = orderItemProduct.category?._id || orderItemProduct.category;
+			// Calculate taxes for this order item
+			const itemTaxesTotal = orderTaxes.reduce((taxAcc, tax) => {
+				const taxApplicableCategoriesIds = tax.applicableCategories;
+				const orderItemProductId =
+					orderItemProduct.category?._id || orderItemProduct.category;
 
-			if (
-				tax.applicableToAllProducts ||
-				taxApplicableCategoriesIds?.includes(orderItemProductId?.toString())
-			)
-				taxesTotal += tax.isPercentage ? (orderItemTotal * tax.rate) / 100 : tax.rate;
-		});
+				// Check if the tax is applicable to this order item
+				if (
+					tax.applicableToAllProducts ||
+					taxApplicableCategoriesIds?.includes(orderItemProductId?.toString())
+				)
+					return (
+						taxAcc + (tax.isPercentage ? (orderItemTotal * tax.rate) / 100 : tax.rate)
+					);
 
-		orderItemsTotal += orderItem.total;
-	});
+				return taxAcc;
+			}, 0);
+
+			// Accumulate total taxes for all items
+			acc.taxesTotal += itemTaxesTotal;
+
+			return acc;
+		},
+		{ orderItemsTotal: 0, taxesTotal: 0 }
+	);
 
 	this.subtotal = orderItemsTotal;
 	this.total = orderItemsTotal + taxesTotal + shippingMethodTotal;

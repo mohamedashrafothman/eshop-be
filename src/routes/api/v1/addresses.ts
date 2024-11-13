@@ -34,5 +34,10 @@ router
 	)
 	.delete(addressesController.deleteSingleAddress);
 
+router
+	.route("/:address/shipping-methods")
+	.all(allowMethods(["get"]))
+	.get(addressesController.getSingleAddressShippingMethods);
+
 // Exporting router
 export default router;

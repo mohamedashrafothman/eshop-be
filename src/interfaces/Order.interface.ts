@@ -24,7 +24,7 @@ export interface OrderAddress {
 	apartment?: string;
 	area: string;
 	country: { name: string; code: string };
-	state: { name: string; code: string };
+	state: { name: string; code?: string };
 	city?: { name: string };
 	zip?: string;
 }

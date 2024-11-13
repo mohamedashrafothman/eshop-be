@@ -21,6 +21,18 @@ router
 	);
 
 router
+	.route("/items/:orderItem")
+	.all(
+		allowMethods(["patch", "delete"]),
+		permission.check([[vars.auth.roles.admin], [vars.auth.roles.superAdmin]])
+	)
+	.patch(
+		ordersController.validator("item/update"),
+		unprocessableEntityValidator,
+		ordersController.updateOrderItem
+	);
+
+router
 	.route("/:order")
 	.all(allowMethods(["get", "patch", "delete"]))
 	.get(ordersController.getSingleOrder)
