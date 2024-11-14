@@ -595,7 +595,9 @@ export const updateCartItem = async (
 
 	// Attempt to retrieve a cart from the database for logged in user,
 	// and if there was an error, return the error and end the request
-	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
+	const [cartError, cart] = await to(
+		Cart.findOne({ user: req.user._id }).populate({ path: "items" }).session(session)
+	);
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
@@ -613,11 +615,9 @@ export const updateCartItem = async (
 	// Merge the old cart item data with the new cart item quantity
 	const newCartItem = Object.assign(cartItem, { quantity });
 	// Get the cart items from the cart
-	let cartItems = [
-		...(cart.items?.map((item) => (item?._id || item)?.toString()) || []),
-	] as string[];
+	let cartItems = [...(cart.items?.map((item) => item?._id?.toString()) || [])] as string[];
 	// Find the index of the cart item in the cart items array
-	const itemIndex = cartItems.indexOf(cartItem?._id?.toString() || cartItem?._id || "");
+	const itemIndex = cartItems.indexOf(cartItem._id.toString());
 
 	// Check if the product stock is sufficient, and if there was an error,
 	// return the error and end the request

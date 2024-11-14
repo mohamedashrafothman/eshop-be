@@ -145,6 +145,19 @@ export const _generateOrderUniqueShortId = async (
 	return [undefined, orderShortId];
 };
 
+/**
+ * @summary Validates if the shipping method's zone is applicable to the given address.
+ * @description This function checks whether the specified shipping method's zone includes
+ * the address's country, state, and optionally city. It returns true if the zone does not cover
+ * the address's location, otherwise false.
+ *
+ * @param {IShippingMethodDocument | null} [shippingMethod] - The shipping method to validate.
+ * @param {IAddressDocument | null} [address] - The address to validate against the shipping method's zone.
+ *
+ * @returns {boolean} - Returns false if either the shipping method or address is null,
+ * or if the shipping method's zone matches the country, state, or city of the address;
+ * otherwise, returns true.
+ */
 export const _isValidShippingZone = (
 	shippingMethod?: IShippingMethodDocument | null,
 	address?: IAddressDocument | null
@@ -571,6 +584,7 @@ export const getOrders = async (
 				...("limit" in req.query && { limit: req.query.limit }),
 				...("offset" in req.query && { offset: req.query.offset }),
 				...("pagination" in req.query && { pagination: req.query.pagination }),
+				populate: { path: "items" },
 			}
 		)
 	);
@@ -953,12 +967,134 @@ export const restoreSingleOrder = async (
 	);
 };
 
+/**
+ * @summary Updates a single order item's quantity by its ID.
+ * @description Retrieves an order item by its ID, checks if the user is authenticated,
+ * checks if the product stock is sufficient, and updates the order item and order accordingly.
+ * If the user is not authenticated, it returns a 401 error. If the order item or product are not found,
+ * or if there is an issue during the database operations, it returns the respective error.
+ * If the product stock is insufficient or invalid data is provided, it returns the respective error.
+ *
+ * @param {Request} req - Express request object containing the order item ID in the parameters,
+ * and the updated order item quantity in the request body.
+ * @param {String} req.params.orderItem - The ID of the order item to update.
+ * @param {String} req.params.order - The ID of the order that the order item belongs to.
+ * @param {Number} req.body.quantity - The updated quantity for the order item.
+ * @param {Response} res - Express response object.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the updated order data.
+ * @property {Object} res.body.data - The updated order object.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the order item or product are not found.
+ * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
+ * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ */
 export const updateOrderItem = async (
 	req: Request<
-		{ orderItem: string },
+		{ order: string; orderItem: string },
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
 		{ quantity: number }
 	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
-): Promise<void> => {};
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Start a transaction to ensure data integrity
+	const session: ClientSession = await mongoose.startSession();
+	session.startTransaction();
+
+	// Retrieve the order item ID or slug from the request parameters
+	const { orderItem: orderItemIdentifier, order: orderIdentifier } = req.params;
+
+	// Retrieve the quantity from the request body
+	const { quantity } = req.body;
+
+	// Attempt to retrieve a order item from the database,
+	// and if there was an error, return the error and end the request
+	const [orderItemError, orderItem] = await to(
+		OrderItem.findOne({ _id: orderItemIdentifier })
+			.populate({ path: "product" })
+			.session(session)
+	);
+	if (orderItemError || !orderItem) {
+		handleTransactionError(session);
+		return next(orderItemError);
+	}
+
+	// Attempt to retrieve a order from the database using order identifier,
+	// and if there was an error, return the error and end the request
+	const [orderError, order] = await to(
+		Order.findOne({ _id: orderIdentifier }).populate({ path: "items" }).session(session)
+	);
+	if (orderError || !order) {
+		handleTransactionError(session);
+		return next(orderError);
+	}
+
+	// Get product data from the order item
+	const product = orderItem.product as IProductDocument;
+	// Merge the old order item data with the new order item quantity
+	const newOrderItem = Object.assign(orderItem, { quantity });
+	// Get the order items from the order
+	let orderItems = [...(order.items?.map((item) => item?._id?.toString()) || [])] as string[];
+	// Find the index of the order item in the order items array
+	const itemIndex = orderItems.indexOf(orderItem._id.toString());
+
+	// Check if the product stock is sufficient, and if there was an error,
+	// return the error and end the request
+	const noStockError = _checkProductStock(product?.toJSON(), newOrderItem.quantity);
+	if (noStockError) {
+		handleTransactionError(session);
+		return next({ ...(noStockError || {}), status: noStockError.status });
+	}
+
+	// Save the updated order item to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const [saveOrderItemError] = await to(newOrderItem.save({ session }));
+	if (saveOrderItemError) {
+		handleTransactionError(session);
+		return next(saveOrderItemError);
+	}
+
+	if (itemIndex <= -1) {
+		handleTransactionError(session);
+		return next();
+	}
+
+	// Merge the old order items data with the new order item id
+	orderItems = [
+		...(orderItems.slice(0, itemIndex) || []),
+		orderItem._id,
+		...(orderItems.slice(itemIndex + 1) || []),
+	] as string[];
+	const newOrder = Object.assign(order, { items: orderItems }) as IOrderDocument;
+
+	// Save the updated order to the database, and if there is an error during saving,
+	// pass the error to the next middleware
+	const [saveOrderError, updatedOrder] = await to(newOrder.save({ session }));
+	if (saveOrderError) {
+		handleTransactionError(session);
+		return next(saveOrderError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	// Set a flash message to indicate that the order was updated successfully,
+	// and return the updated order in the response
+	req.flash("success", "Order updated successfully.");
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: updatedOrder },
+			flashes: req.flash(),
+		})
+	);
+};
