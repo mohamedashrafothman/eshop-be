@@ -9,6 +9,7 @@ import cartRouter from "./cart";
 import categoriesRouter from "./categories";
 import citiesRouter from "./cities";
 import countriesRouter from "./countries";
+import ordersRouter from "./orders";
 import paymentMethodsRouter from "./paymentMethods";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
@@ -50,24 +51,15 @@ router.use(
 	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 	zonesRouter
 );
-router.use(
-	"/shipping-methods",
-	authController.passportJWTAuthenticate,
-	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-	shippingMethodsRouter
-);
-router.use(
-	"/payment-methods",
-	authController.passportJWTAuthenticate,
-	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-	paymentMethodsRouter
-);
+router.use("/shipping-methods", authController.passportJWTAuthenticate, shippingMethodsRouter);
+router.use("/payment-methods", authController.passportJWTAuthenticate, paymentMethodsRouter);
 router.use(
 	"/cart",
 	authController.passportJWTAuthenticate,
 	permission.check(vars.auth.roles.user),
 	cartRouter
 );
+router.use("/orders", authController.passportJWTAuthenticate, ordersRouter);
 router.use("/reviews", reviewsRouter);
 
 // Exporting router

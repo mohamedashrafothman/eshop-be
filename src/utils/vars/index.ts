@@ -5,6 +5,14 @@ import path from "path";
 const env = dotenv.config({ path: path.join(__dirname, "../../../.env") });
 dotenvExpand.expand(env);
 
+// constants
+const ORDER_STATUS_PENDING = "PENDING";
+const ORDER_STATUS_PROCESSING = "PROCESSING";
+const ORDER_STATUS_SHIPPED = "SHIPPED";
+const ORDER_STATUS_COMPLETED = "COMPLETED";
+const ORDER_STATUS_CANCELLED = "CANCELLED";
+const ORDER_STATUS_REFUNDED = "REFUNDED";
+
 type VarsTypes = {
 	isProduction: boolean;
 	app: {
@@ -107,6 +115,16 @@ type VarsTypes = {
 		imagesMaxLength: number;
 	};
 	paymentMethods: { cashOnDelivery: { name: "cash_on_delivery" }; paymob: { name: "paymob" } };
+	order: {
+		status: {
+			pending: typeof ORDER_STATUS_PENDING;
+			processing: typeof ORDER_STATUS_PROCESSING;
+			shipped: typeof ORDER_STATUS_SHIPPED;
+			completed: typeof ORDER_STATUS_COMPLETED;
+			cancelled: typeof ORDER_STATUS_CANCELLED;
+			refunded: typeof ORDER_STATUS_REFUNDED;
+		};
+	};
 };
 
 const vars: VarsTypes = {
@@ -222,6 +240,16 @@ const vars: VarsTypes = {
 		imagesMaxLength: 10,
 	},
 	paymentMethods: { cashOnDelivery: { name: "cash_on_delivery" }, paymob: { name: "paymob" } },
+	order: {
+		status: {
+			pending: ORDER_STATUS_PENDING,
+			processing: ORDER_STATUS_PROCESSING,
+			shipped: ORDER_STATUS_SHIPPED,
+			completed: ORDER_STATUS_COMPLETED,
+			cancelled: ORDER_STATUS_CANCELLED,
+			refunded: ORDER_STATUS_REFUNDED,
+		},
+	},
 };
 
 export default vars;

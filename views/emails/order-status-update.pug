@@ -1,0 +1,47 @@
+extends ./layout.pug
+block content
+	h2.mb0 Order Status update
+	p
+		| Hello #{order.user.name}, We wanted to let you know that your order ##{order.shortId} has been updated to
+		strong  #{status}.
+	h3.mb0 Order Summary
+	p.mb0 Order Number: ##{order.shortId}
+	p.mb0 Order Date: #{date}
+	table.btn.btn-primary(border='0', cellpadding='0', cellspacing='0')
+		tr
+			th(align='left') Item
+			th(align='left') Quantity
+			th(align='left') Price
+			th(align='left') Tax
+			th(align='left') Total
+		each item in order.items
+			- var itemTaxes = order.taxes.filter((tax) => tax.applicableToAllProducts || tax.applicableCategories.includes(item.product.category?._id || item.product.category));
+			tr
+				td=`${item.name} - ${item.color.name} - ${item.size}`
+				td=item.quantity
+				td $#{item.price}
+				td
+					each tax in itemTaxes
+						div=`${tax.name}: ${tax.isPercentage ? `${tax.rate}%` : `$${tax.rate}`}`
+				td $#{(item.price + itemTaxes.reduce((sum, tax) => sum + (tax.isPercentage ? (item.total * tax.rate) / 100 : tax.rate), 0))}
+		tr
+			td(colspan='2') Shipping Method (#{order.shippingMethod.name})
+			td $#{order.shippingMethod.rate}
+		tr
+			td(colspan='2') Subtotal
+			td $#{order.subtotal}
+		tr
+			td(colspan='2') Total Amount
+			td $#{order.total}
+	br
+	h3.mb0 What's Next?
+	if status == "PROCESSING"
+		p Your order is being prepared. We'll notify you as soon as it ships!
+	if status == "SHIPPED"
+		p Your order is on its way! You can expect delivery soon.
+	if status == "COMPLETED"
+		p Your order has been delivered! We hope you enjoy your purchase. Feel free to share your feedback or review on our website.
+	br
+	+button({ url: actionUrl, text: 'Track Your Order' })
+	br
+	p Thank you for shopping with #{siteName}!

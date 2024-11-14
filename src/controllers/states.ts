@@ -1,6 +1,7 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
+import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
@@ -8,6 +9,7 @@ import IState from "../interfaces/State.interface";
 import Country from "../models/Country";
 import State, { IStateDocument } from "../models/State";
 import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
+import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -349,6 +351,16 @@ export const deleteSingleState = async (
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (
+		req.isUnauthenticated() ||
+		!req.user ||
+		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+	) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Extract the state identifier from request parameters
 	const { state: stateIdentifier } = req.params || {};
 
@@ -366,7 +378,7 @@ export const deleteSingleState = async (
 
 	// Attempt to soft-delete the found state, and if there is an error during the deletion,
 	// pass the error to the next middleware
-	const [deleteStateError] = await to(State.deleteById(state._id, req.user?._id));
+	const [deleteStateError] = await to(State.deleteById(state._id, req.user._id));
 	if (deleteStateError) return next(deleteStateError);
 
 	// Flash success message and respond with success status

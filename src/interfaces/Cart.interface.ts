@@ -7,4 +7,5 @@ export default interface Cart {
 	address: string;
 	subtotal: number;
 	total: number;
+	locked: boolean;
 }

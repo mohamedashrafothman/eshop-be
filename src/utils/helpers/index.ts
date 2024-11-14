@@ -57,3 +57,13 @@ export const rateLimitKeyGenerator = (req: Request): string => {
 	// Hash the key to create a unique identifier
 	return crypto.createHash("sha256").update(key).digest("hex");
 };
+
+/**
+ * Generates a unique short id with a given length.
+ * @param {number} [number=6] The length of the generated id
+ * @returns {Promise<string>} A promise that resolves with a unique short id
+ */
+export const getShortUniqueId = async (number: number = 6) => {
+	const nanoId = await import("nanoid");
+	return nanoId.customAlphabet("0123456789", number)();
+};

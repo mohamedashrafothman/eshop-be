@@ -8,8 +8,10 @@ import IAddress from "../interfaces/Address.interface";
 import Address, { IAddressDocument } from "../models/Address";
 import City from "../models/City";
 import Country from "../models/Country";
+import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import State from "../models/State";
 import User from "../models/User";
+import Zone from "../models/Zone";
 import {
 	formatResponseObject,
 	handleTransactionError,
@@ -182,7 +184,7 @@ export const postNewAddress = async (
 	// Rollback the transaction and pass the error to the next middleware
 	if (
 		req.isUnauthenticated() ||
-		!req?.user ||
+		!req.user ||
 		([vars.auth.roles.user].includes(req.user.role) &&
 			req.body.user !== req.user._id?.toString())
 	) {
@@ -328,7 +330,7 @@ export const getAddresses = async (
 	const isFilterByDeletedAllowed = "deleted" in req.query;
 
 	// List of fields to search for the query term
-	const querySearchFields = ["name", "street"];
+	const querySearchFields: string[] = ["name", "street"];
 
 	// List of sort options
 	const sort: { name: string; value: object }[] = [
@@ -402,6 +404,12 @@ export const getSingleAddress = async (
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Retrieve the address ID from the request parameters
 	const { address: addressIdentifier } = req.params || {};
 
@@ -410,7 +418,7 @@ export const getSingleAddress = async (
 	const [addressError, address] = await to(
 		Address.findOne({
 			_id: addressIdentifier,
-			...(req.user?.role === vars.auth.roles.user && { user: req.user._id }),
+			...(req.user.role === vars.auth.roles.user && { user: req.user._id }),
 		})
 	);
 	if (addressError || !address) return next(addressError);
@@ -513,11 +521,11 @@ export const updateSingleAddress = async (
 		return next(addressError);
 	}
 
-	// Check if the user is authorized to update the address
+	// Check if user logged in
 	if (
 		req.isUnauthenticated() ||
-		!req?.user ||
-		(req.user?.role === vars.auth.roles.user &&
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
 			address.user?._id?.toString() !== req.user._id?.toString())
 	) {
 		handleTransactionError(session);
@@ -532,7 +540,7 @@ export const updateSingleAddress = async (
 		// Retrieve the addresses of the user
 		[addressesError, addresses] = await to(
 			Address.find({
-				user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
+				user: [vars.auth.roles.user].includes(req.user.role) ? req.user._id : address.user,
 				_id: { $ne: addressIdentifier },
 			}).session(session)
 		);
@@ -594,7 +602,9 @@ export const updateSingleAddress = async (
 			const [updateManyError] = await to(
 				Address.updateMany(
 					{
-						user: req.user?.role === vars.auth.roles.user ? req.user._id : address.user,
+						user: [vars.auth.roles.user].includes(req.user.role)
+							? req.user._id
+							: address.user,
 						_id: { $ne: addressIdentifier },
 					},
 					{ $set: { default: false } }
@@ -638,7 +648,7 @@ export const updateSingleAddress = async (
  * @throws {Error} 500 - If an error occurs during the deletion process.
  */
 export const deleteSingleAddress = async (
-	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>, {}>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -661,8 +671,10 @@ export const deleteSingleAddress = async (
 
 	// Check if the user has permission to delete the address
 	if (
-		req.user?.role === vars.auth.roles.user &&
-		address.user?.toString() !== req.user?._id?.toString()
+		req.isUnauthenticated() ||
+		!req.user ||
+		([vars.auth.roles.user].includes(req.user.role) &&
+			address.user.toString() !== req.user._id?.toString())
 	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -693,7 +705,7 @@ export const deleteSingleAddress = async (
 	// Attempt to delete the address, and if there is an error during the deletion,
 	// pass the error to the next middleware
 	const [deleteAddressError] = await to(
-		Address.deleteById(address._id, req.user?._id).session(session)
+		Address.deleteById(address._id, req.user._id).session(session)
 	);
 	if (deleteAddressError) {
 		handleTransactionError(session);
@@ -726,5 +738,80 @@ export const deleteSingleAddress = async (
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
+	);
+};
+
+/**
+ * @summary Retrieves available shipping methods for a specific address.
+ * @description This function fetches a list of shipping methods associated with a zone
+ * corresponding to the given address ID. It first ensures the user is authenticated,
+ * then checks if the address belongs to the logged-in user, and subsequently finds
+ * the zone linked to the address's location. If successful, it returns a list of
+ * shipping methods available for that zone.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - URL parameters for the request.
+ * @param {String} req.params.address - The address ID to retrieve shipping methods for.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with a list of shipping methods.
+ *   * @property {Array} entities.data - List of shipping method objects.
+ * @throws {Error} 401 - Returns an error if the user is not authenticated.
+ * @throws {Error} 404 - Returns an error if the address or zone is not found.
+ * @throws {Error} 500 - Returns an error if there is a failure in retrieving shipping methods.
+ */
+export const getSingleAddressShippingMethods = async (
+	req: Request<
+		{ address: string },
+		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>
+	>,
+	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Extract the address identifier from request parameters
+	const { address: addressIdentifier } = req.params || {};
+
+	// Attempt to retrieve an address from the database for logged in user,
+	// and if there was an error, return the error and end the request
+	const [addressError, address] = await to(
+		Address.findOne({ _id: addressIdentifier, user: req.user._id })
+	);
+	if (addressError || !address)
+		return next(addressError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve a zone from the database for the address,
+	// and if there was an error, return the error and end the request
+	const [zoneError, zone] = await to(
+		Zone.findOne({
+			...(address.country && {
+				countries: { $in: [address.country?._id || address.country] },
+			}),
+			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
+			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
+		})
+	);
+	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve shipping methods from the database for the zone,
+	// and if there was an error, return the error and end the request
+	const [shippingMethodsError, shippingMethods] = await to(
+		ShippingMethod.find({ zone: zone._id })
+	);
+	if (shippingMethodsError) return next(shippingMethodsError);
+
+	// Return the shipping methods data in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: shippingMethods },
+			flashes: req.flash(),
+		})
 	);
 };

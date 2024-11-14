@@ -1,14 +1,15 @@
 import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
+import isHexColor from "validator/lib/isHexColor";
 import isInt from "validator/lib/isInt";
-import ICartItem from "../interfaces/CartItem.interface";
+import IOrderItem from "../interfaces/OrderItem.interface";
 import vars from "../utils/vars";
 import { IProductDocument } from "./Product";
 
 // adding schema methods here
-export interface ICartItemDocument
+export interface IOrderItemDocument
 	extends SoftDeleteInterface,
-		Omit<ICartItem, "product">,
+		Omit<IOrderItem, "product">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
@@ -16,25 +17,33 @@ export interface ICartItemDocument
 }
 
 // adding statics methods here
-export type ICartItemModel = Model<ICartItemDocument>;
+export type IOrderItemModel = Model<IOrderItemDocument>;
 
 // schema definition
-const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new Schema(
+const OrderItemSchema: Schema<IOrderItemDocument, object, IOrderItemDocument> = new Schema(
 	{
-		product: {
-			type: Schema.Types.ObjectId,
-			ref: "Product",
-			autopopulate: {
-				maxDepth: 2,
-				select: "name slug thumbnail colors sizes price quantity category",
+		product: { type: Schema.Types.ObjectId, ref: "Product" },
+		name: {
+			type: String,
+			trim: true,
+			index: true,
+			maxlength: [100, "Name can't be greater than 100 characters!"],
+			required: [true, "Name is required!"],
+		},
+		category: { type: String, index: true, required: [true, "Category is required!"] },
+		color: {
+			name: { type: String, index: true, required: [true, "Color name is required!"] },
+			value: {
+				type: String,
+				index: true,
+				required: [true, "Color value is required!"],
+				validate: [isHexColor, "Invalid color value!"],
 			},
 		},
-		color: { type: String, index: true, required: [true, "Color name is required!"] },
 		size: {
 			type: String,
 			enum: vars.products.sizes,
 			index: true,
-			required: [true, "Size is required!"],
 		},
 		quantity: {
 			type: Number,
@@ -43,7 +52,7 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 			default: 1,
 			index: true,
 			validate: [
-				(value: ICartItem["quantity"]) => isInt(String(value)),
+				(value: IOrderItem["quantity"]) => isInt(String(value)),
 				"Quantity must be an integer number!",
 			],
 			required: [true, "Quantity is required!"],
@@ -65,7 +74,7 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 );
 
 // schema hooks
-CartItemSchema.pre("save", async function (next) {
+OrderItemSchema.pre("save", async function (next) {
 	// check if price or quantity is modified
 	if (!this.isModified("price") && !this.isModified("quantity")) return next();
 
@@ -86,9 +95,9 @@ CartItemSchema.pre("save", async function (next) {
 });
 
 // modal definition
-const CartItemModal = model<
-	ICartItemDocument,
-	PaginateModel<ICartItemDocument> & SoftDeleteModel<ICartItemDocument> & ICartItemModel
->("CartItem", CartItemSchema);
+const OrderItemModal = model<
+	IOrderItemDocument,
+	PaginateModel<IOrderItemDocument> & SoftDeleteModel<IOrderItemDocument> & IOrderItemModel
+>("OrderItem", OrderItemSchema);
 
-export default CartItemModal;
+export default OrderItemModal;

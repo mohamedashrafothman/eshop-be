@@ -1,28 +1,27 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body, query, ValidationChain } from "express-validator";
+import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession } from "mongoose";
-import Address from "../models/Address";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
-import PaymentMethod, { IPaymentMethodDocument } from "../models/PaymentMethod";
+import PaymentMethod from "../models/PaymentMethod";
 import Product, { IProductDocument } from "../models/Product";
-import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
+import ShippingMethod from "../models/ShippingMethod";
 import Tax from "../models/Tax";
-import Zone from "../models/Zone";
 import {
 	formatResponseObject,
 	FormatResponseObjectType,
 	handleTransactionError,
 } from "../utils/helpers";
+import { _checkProductStock } from "./products";
 
 /**
  * Validates the input fields based on the method provided.
  */
 export const validator = (
-	method: "create" | "update" | "get-shipping" | "set-shipping" | "set-payment"
+	method: "create" | "update" | "set-shipping" | "set-payment"
 ): ValidationChain[] => {
 	switch (method) {
 		case "create":
@@ -31,7 +30,7 @@ export const validator = (
 					.trim()
 					.escape()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid product id!")
 					.notEmpty()
 					.withMessage("You must supply a product id!"),
 				body("quantity")
@@ -51,14 +50,6 @@ export const validator = (
 					.isInt({ min: 1 })
 					.withMessage("quantity must be an integer greater than or equal 1!")
 					.toInt(),
-			];
-		case "get-shipping":
-			return [
-				query("address")
-					.isMongoId()
-					.withMessage("Invalid address id!")
-					.notEmpty()
-					.withMessage("You must supply an address id as a query param!"),
 			];
 		case "set-shipping":
 			return [
@@ -82,35 +73,23 @@ export const validator = (
 };
 
 /**
- * @summary Checks the product stock availability.
- * @description Validates if the product has sufficient stock to fulfill the requested quantity.
- * It ensures that the product has a defined quantity, is not out of stock,
- * and has enough items available in the stock for the given quantity.
- *
- * @param {Partial<IProductDocument>} product - The product object containing the stock quantity.
- * @param {Number} [quantity=0] - The requested quantity to check against the product's stock.
- *
- * @returns {HttpError|null} - Returns an error if the product has no stock quantity, is out of stock, or the requested quantity exceeds the available stock. Returns `null` if there are no issues.
- * @throws {Error} 500 - Returns an error if the product object does not contain a valid quantity field.
- * @throws {Error} 400 - Returns an error if the product is out of stock or does not have enough stock to fulfill the request.
+ * @summary Checks if the product price has changed since the item was added to the cart.
+ * @param {IProductDocument} product - Current product data from the database.
+ * @param {number} cartItemPrice - Price of the item when it was added to the cart.
+ * @returns {HttpError|null} - Returns an error if the price has changed; otherwise, null.
  */
-const _checkProductStock = (
+export const _checkProductPriceChange = (
 	product: Partial<IProductDocument>,
-	quantity: number = 0
+	cartItemPrice: number = 0
 ): HttpError | null => {
-	// Check if product has quantity
-	if (typeof product.quantity !== "number" || !Object.keys(product).includes("quantity"))
-		return createError(httpStatus.INTERNAL_SERVER_ERROR, "passed product has no quantity");
+	// Get the current product price
+	const currentProductPrice: number = product.price?.sale || product.price?.normal || 0;
 
-	// Check if product is out of stock
-	if (product.quantity === 0)
-		return createError(httpStatus.BAD_REQUEST, "Product is out of stock");
-
-	// Check if there's enough product quantity in the stock
-	if (product.quantity - quantity < 0)
+	// Check if the product price has changed
+	if (currentProductPrice !== cartItemPrice)
 		return createError(
 			httpStatus.BAD_REQUEST,
-			"There're no enough product quantity in the stock"
+			`Product '${product.name}' price has been updated since it was added to the cart!`
 		);
 
 	// No error
@@ -146,7 +125,7 @@ export const addToCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -226,7 +205,7 @@ export const addToCart = async (
 				[
 					{
 						user: req.user._id,
-						items: [cartItem[0]._id],
+						items: cartItem?.map((item) => item?._id || item),
 						taxes: taxes?.map((tax) => tax?._id || tax),
 					},
 				],
@@ -253,6 +232,13 @@ export const addToCart = async (
 			})
 		);
 		return;
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Create variable to hold the cart items array.
@@ -375,7 +361,7 @@ export const getSingleCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -425,7 +411,7 @@ export const removeItemFromCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -443,6 +429,13 @@ export const removeItemFromCart = async (
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Check if the cart item included in the cart items to be removed
@@ -575,7 +568,7 @@ export const updateCartItem = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -593,7 +586,7 @@ export const updateCartItem = async (
 	// Attempt to retrieve a cart item from the database,
 	// and if there was an error, return the error and end the request
 	const [cartItemError, cartItem] = await to(
-		CartItem.findOne({ _id: cartItemIdentifier }).populate("product").session(session)
+		CartItem.findOne({ _id: cartItemIdentifier }).populate({ path: "product" }).session(session)
 	);
 	if (cartItemError || !cartItem) {
 		handleTransactionError(session);
@@ -602,10 +595,19 @@ export const updateCartItem = async (
 
 	// Attempt to retrieve a cart from the database for logged in user,
 	// and if there was an error, return the error and end the request
-	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }).session(session));
+	const [cartError, cart] = await to(
+		Cart.findOne({ user: req.user._id }).populate({ path: "items" }).session(session)
+	);
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Get product data from the cart item
@@ -613,11 +615,9 @@ export const updateCartItem = async (
 	// Merge the old cart item data with the new cart item quantity
 	const newCartItem = Object.assign(cartItem, { quantity });
 	// Get the cart items from the cart
-	let cartItems = [
-		...(cart.items?.map((item) => (item?._id || item)?.toString()) || []),
-	] as string[];
+	let cartItems = [...(cart.items?.map((item) => item?._id?.toString()) || [])] as string[];
 	// Find the index of the cart item in the cart items array
-	const itemIndex = cartItems.indexOf(cartItem?._id?.toString() || cartItem?._id || "");
+	const itemIndex = cartItems.indexOf(cartItem._id.toString());
 
 	// Check if the product stock is sufficient, and if there was an error,
 	// return the error and end the request
@@ -695,7 +695,7 @@ export const emptyCart = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -710,6 +710,13 @@ export const emptyCart = async (
 	if (cartError || !cart) {
 		handleTransactionError(session);
 		return next(cartError);
+	}
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		handleTransactionError(session);
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Get the cart items from the cart
@@ -746,63 +753,6 @@ export const emptyCart = async (
 	);
 };
 
-export const getShippingMethods = async (
-	req: Request<
-		{},
-		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>,
-		{},
-		{ address: string }
-	>,
-	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
-	next: NextFunction
-): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
-	// Retrieve the address id from the request query params
-	const { address: addressIdentifier } = req.query;
-
-	// Attempt to retrieve an address from the database for logged in user,
-	// and if there was an error, return the error and end the request
-	const [addressError, address] = await to(
-		Address.findOne({ _id: addressIdentifier, user: req.user._id })
-	);
-	if (addressError || !address)
-		return next(addressError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve a zone from the database for the address,
-	// and if there was an error, return the error and end the request
-	const [zoneError, zone] = await to(
-		Zone.findOne({
-			...(address.country && {
-				countries: { $in: [address.country?._id || address.country] },
-			}),
-			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
-			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
-		})
-	);
-	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve shipping methods from the database for the zone,
-	// and if there was an error, return the error and end the request
-	const [shippingMethodsError, shippingMethods] = await to(
-		ShippingMethod.find({ zone: zone._id })
-	);
-	if (shippingMethodsError) return next(shippingMethodsError);
-
-	// Return the shipping methods data in the response
-	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: shippingMethods },
-			flashes: req.flash(),
-		})
-	);
-};
-
 /**
  * @summary Updates the shipping method of the user's cart.
  * @description This function retrieves a shipping method and a cart for the currently logged-in user,
@@ -831,7 +781,7 @@ export const postShippingMethod = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -851,6 +801,12 @@ export const postShippingMethod = async (
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
 	if (cartError || !cart) return next(cartError);
 
+	// Check if cart is locked.
+	if (cart.locked) {
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
+	}
+
 	// Merge the old cart data with the new cart shipping methods
 	const newCart = Object.assign(cart, { shippingMethod: shippingMethod._id });
 
@@ -866,48 +822,6 @@ export const postShippingMethod = async (
 		formatResponseObject({
 			status: httpStatus.OK,
 			entities: { data: updatedCart },
-			flashes: req.flash(),
-		})
-	);
-};
-
-/**
- * @summary Retrieves a list of all payment methods.
- * @description This function checks if the user is authenticated and then
- * retrieves all available payment methods from the database. If the user is
- * not authenticated, it returns a 401 error. If there is an error during the
- * database retrieval, it passes the error to the next middleware.
- *
- * @param {Request} req - Express request object.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a list of payment methods.
- * @property {Object} res.body.data - The list of payment methods.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} - Returns an error if there is an issue during the database operations.
- */
-export const getPaymentMethods = async (
-	req: Request<{}, FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>, {}>,
-	res: Response<FormatResponseObjectType<IPaymentMethodDocument[], HttpStatus["OK"]>>,
-	next: NextFunction
-): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
-	// Attempt to retrieve payment methods from the database for the zone,
-	// and if there was an error, return the error and end the request
-	const [paymentMethodsError, paymentMethods] = await to(PaymentMethod.find({}));
-	if (paymentMethodsError) return next(paymentMethodsError);
-
-	// Return the payment methods data in the response
-	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: paymentMethods },
 			flashes: req.flash(),
 		})
 	);
@@ -941,7 +855,7 @@ export const postPaymentMethod = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -960,6 +874,12 @@ export const postPaymentMethod = async (
 	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
 	if (cartError || !cart) return next(cartError);
+
+	// Check if cart is locked.
+	if (cart.locked) {
+		const error = createError(httpStatus.BAD_REQUEST, "Cart is locked!");
+		return next({ ...(error || {}), status: error.status });
+	}
 
 	// Merge the old cart data with the new cart payment methods
 	const newCart = Object.assign(cart, { paymentMethod: paymentMethod._id });

@@ -49,7 +49,7 @@ export const getSingleWishlist = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -57,7 +57,7 @@ export const getSingleWishlist = async (
 	// Attempt to retrieve a wishlist from the database for logged in user,
 	// and if there was an error, return the error and end the request
 	const [wishlistError, wishlist] = await to(
-		Wishlist.findOne({ user: req.user._id }).populate("products")
+		Wishlist.findOne({ user: req.user._id }).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 
@@ -100,7 +100,7 @@ export const addToWishlist = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -120,7 +120,7 @@ export const addToWishlist = async (
 			{ user: req.user._id },
 			{ $addToSet: { products: existsProduct._id } },
 			{ upsert: true, new: true }
-		).populate("products")
+		).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 
@@ -164,7 +164,7 @@ export const removeFromWishlist = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}
@@ -179,7 +179,7 @@ export const removeFromWishlist = async (
 			{ user: req.user._id },
 			{ $pull: { products: productIdentifier } },
 			{ new: true }
-		).populate("products")
+		).populate({ path: "products" })
 	);
 	if (wishlistError) return next(wishlistError);
 
@@ -215,7 +215,7 @@ export const emptyWishlist = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
-	if (req.isUnauthenticated() || !req?.user) {
+	if (req.isUnauthenticated() || !req.user) {
 		const error = createError(httpStatus.UNAUTHORIZED);
 		return next({ ...(error || {}), status: error.status });
 	}

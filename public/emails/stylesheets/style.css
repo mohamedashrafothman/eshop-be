@@ -204,6 +204,14 @@ a {
 	text-align: left;
 }
 
+.align-top {
+	vertical-align: top;
+}
+
+.align-bottom {
+	vertical-align: bottom;
+}
+
 .clear {
 	clear: both;
 }

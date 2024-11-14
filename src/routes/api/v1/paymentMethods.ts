@@ -1,7 +1,9 @@
 import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as paymentMethodsController from "../../../controllers/paymentMethods";
+import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
+import vars from "../../../utils/vars";
 
 // Defining express router
 const router = Router();
@@ -12,6 +14,7 @@ router
 	.all(allowMethods(["get", "post"]))
 	.get(paymentMethodsController.getPaymentMethods)
 	.post(
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
 		paymentMethodsController.uploadPaymentMethodIcon,
 		paymentMethodsController.validator("create"),
 		unprocessableEntityValidator,
@@ -20,7 +23,10 @@ router
 
 router
 	.route("/:method")
-	.all(allowMethods(["get", "patch", "delete"]))
+	.all(
+		allowMethods(["get", "patch", "delete"]),
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+	)
 	.get(paymentMethodsController.getSinglePaymentMethod)
 	.patch(
 		paymentMethodsController.uploadPaymentMethodIcon,
@@ -32,7 +38,10 @@ router
 
 router
 	.route("/:method/restore")
-	.all(allowMethods(["patch"]))
+	.all(
+		allowMethods(["patch"]),
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+	)
 	.patch(paymentMethodsController.restoreSinglePaymentMethod);
 
 // Exporting router
