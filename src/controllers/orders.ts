@@ -351,6 +351,7 @@ export const postNewOrder = async (
 				{
 					shortId: uniqueShortId,
 					items: orderItems.map((item) => item._id),
+					status: vars.order.status.pending,
 					user: req.user,
 					taxes: (cart.taxes as ITaxDocument[]).map(
 						({ _id, slug: _slug, applicableCategories, ...restOfTax }) => ({
@@ -390,6 +391,13 @@ export const postNewOrder = async (
 						name: existsPaymentMethod.method,
 						description: existsPaymentMethod.description,
 					},
+					history: [
+						{
+							status: vars.order.status.pending,
+							date: new Date(),
+							updatedBy: req.user,
+						},
+					],
 					...(note && { note }),
 				},
 			],
@@ -718,7 +726,6 @@ export const updateSingleOrder = async (
 	// Check if the status presented in body and it's transition is valid and return an error if it is not
 	if (status) {
 		const allowedStatuses = order.getAllowedNextStatuses();
-
 		if (!allowedStatuses.includes(status)) {
 			const error = createError(httpStatus.BAD_REQUEST, "Invalid status transition");
 			handleTransactionError(session);
@@ -802,7 +809,10 @@ export const updateSingleOrder = async (
 				deliveryTime: existsShippingMethod.deliveryTime,
 			},
 		}),
-		...(status && { status }),
+		...(status && {
+			status,
+			history: [...(order?.history || []), { status, date: new Date(), updatedBy: req.user }],
+		}),
 		...(note && { note }),
 	});
 
@@ -812,6 +822,29 @@ export const updateSingleOrder = async (
 	if (saveOrderError) {
 		handleTransactionError(session);
 		return next(saveOrderError);
+	}
+
+	if (status) {
+		// Send order status update email
+		const [sendEmailError, sendEmail] = await emailService.send({
+			to: req.user,
+			from: vars.email.sender,
+			filename: "order-status-update",
+			subject: `[${vars.app.name}] Your Order ${order.shortId} Status Update - Now ${status?.toLowerCase()}.`,
+			siteName: vars.app.name,
+			order,
+			status,
+		});
+		if (sendEmailError) {
+			handleTransactionError(session);
+			return next(sendEmailError);
+		}
+
+		const [newEmailError] = await to(Email.create([sendEmail], { session }));
+		if (newEmailError) {
+			handleTransactionError(session);
+			return next(newEmailError);
+		}
 	}
 
 	// Commit the transaction

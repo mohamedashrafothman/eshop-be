@@ -12,12 +12,17 @@ import { IUserDocument } from "./User";
 // adding schema methods here
 export interface IOrderDocument
 	extends SoftDeleteInterface,
-		Omit<IOrder, "user" | "items">,
+		Omit<IOrder, "user" | "items" | "history">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	user: Types.ObjectId | IUserDocument;
 	items: (Types.ObjectId | IOrderItemDocument)[];
+	history: {
+		status: (typeof vars.order.status)[keyof typeof vars.order.status];
+		date: Date;
+		updatedBy: Types.ObjectId | IUserDocument;
+	}[];
 	getAllowedNextStatuses: () => (typeof vars.order.status)[keyof typeof vars.order.status][];
 }
 
@@ -36,7 +41,6 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 		status: {
 			type: String,
 			enum: Object.values(vars.order.status),
-			default: vars.order.status.pending,
 			index: true,
 			required: [true, "Status is required!"],
 		},
@@ -120,6 +124,22 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 			},
 			gateway: Object,
 		},
+		history: [
+			{
+				_id: false,
+				status: {
+					type: String,
+					enum: Object.values(vars.order.status),
+					required: [true, "Status is required!"],
+				},
+				date: { type: Date, required: [true, "Date is required!"] },
+				updatedBy: {
+					type: Types.ObjectId,
+					ref: "User",
+					required: [true, "User is required!"],
+				},
+			},
+		],
 		subtotal: { type: Number, default: 0 },
 		total: { type: Number, default: 0 },
 		note: {

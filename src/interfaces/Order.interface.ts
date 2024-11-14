@@ -35,6 +35,12 @@ export interface OrderPaymentMethod {
 	gateway?: Record<string, any>;
 }
 
+export interface History {
+	status: (typeof vars.order.status)[keyof typeof vars.order.status];
+	date: Date;
+	updatedBy: string;
+}
+
 export default interface Order {
 	shortId: string;
 	status: (typeof vars.order.status)[keyof typeof vars.order.status];
@@ -44,6 +50,7 @@ export default interface Order {
 	shippingMethod: OrderShippingMethod;
 	address: OrderAddress;
 	paymentMethod: OrderPaymentMethod;
+	history: History[];
 	subtotal: number;
 	total: number;
 	note: string;

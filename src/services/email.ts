@@ -14,6 +14,7 @@ type EmailParamsType = {
 	siteName?: string;
 	order?: object;
 	date?: string;
+	status?: string;
 } & Omit<IEmail, "to" | "createdAt" | "updateAt">;
 
 type EmailTransporterParamsType = {
