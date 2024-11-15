@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
+import { PaginateOptions } from "mongoose";
 import Product, { IProductDocument } from "../models/Product";
 import Wishlist from "../models/Wishlist";
 import { formatResponseObject, FormatResponseObjectType } from "../utils/helpers";
@@ -44,8 +45,12 @@ export const validator = (method: "add"): ValidationChain[] => {
  * @throws {Error} 500 - Returns an error if the wishlist retrieval fails.
  */
 export const getSingleWishlist = async (
-	req: Request<{}, FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>, {}>,
-	res: Response<FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>>,
+	req: Request<
+		{},
+		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
+		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination">
+	>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
@@ -54,19 +59,98 @@ export const getSingleWishlist = async (
 		return next({ ...(error || {}), status: error.status });
 	}
 
-	// Attempt to retrieve a wishlist from the database for logged in user,
+	// List of sort options
+	const sort: { name: string; value: object }[] = [
+		{ name: "Name A-Z", value: { name: 1 } },
+		{ name: "Name Z-A", value: { name: -1 } },
+		{ name: "Price Ascending", value: { price: 1 } },
+		{ name: "Price Descending", value: { price: -1 } },
+		{ name: "Created Date Ascending", value: { createdAt: 1 } },
+		{ name: "Created Date Descending", value: { createdAt: -1 } },
+	];
+
+	// Create an aggregation pipeline to retrieve the wishlist products
+	const aggregation = Wishlist.aggregate()
+		.match({ user: req.user._id })
+		.unwind("$products")
+		.lookup({
+			from: "products",
+			localField: "products",
+			foreignField: "_id",
+			as: "productDetails",
+		})
+		.unwind("$productDetails")
+		.lookup({
+			from: "attachments",
+			localField: "productDetails.images",
+			foreignField: "_id",
+			as: "productDetails.images",
+		})
+		.unwind({ path: "$productDetails.images", preserveNullAndEmptyArrays: true })
+		.lookup({
+			from: "attachments",
+			localField: "productDetails.thumbnail",
+			foreignField: "_id",
+			as: "productDetails.thumbnail",
+		})
+		.unwind({ path: "$productDetails.thumbnail", preserveNullAndEmptyArrays: true })
+		.lookup({
+			from: "brands",
+			localField: "productDetails.brand",
+			foreignField: "_id",
+			as: "productDetails.brand",
+		})
+		.unwind({ path: "$productDetails.brand", preserveNullAndEmptyArrays: true })
+		.lookup({
+			from: "categories",
+			localField: "productDetails.category",
+			foreignField: "_id",
+			as: "productDetails.category",
+		})
+		.unwind({ path: "$productDetails.category", preserveNullAndEmptyArrays: true })
+		.lookup({
+			from: "users",
+			localField: "productDetails.user",
+			foreignField: "_id",
+			as: "productDetails.user",
+		})
+		.unwind({ path: "$productDetails.user", preserveNullAndEmptyArrays: true })
+		.replaceRoot("$productDetails");
+
+	// Attempt to retrieve the wishlist products using the given query and pagination options,
 	// and if there was an error, return the error and end the request
-	const [wishlistError, wishlist] = await to(
-		Wishlist.findOne({ user: req.user._id }).populate({ path: "products" })
+	const [paginatedWishlistProductsError, paginatedWishlistProducts] = await to(
+		Wishlist.aggregatePaginate(
+			aggregation,
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && {
+					sort: req.query.sort,
+					...("price" in (req.query.sort as object) && {
+						sort: {
+							"price.sale": (req.query.sort as { price: any }).price,
+							"price.normal": (req.query.sort as { price: any }).price,
+						},
+					}),
+				}),
+				...("page" in req.query && { page: Number(req.query.page) }),
+				...("limit" in req.query && { limit: Number(req.query.limit) }),
+				...("offset" in req.query && { offset: Number(req.query.offset) }),
+				...("pagination" in req.query && { pagination: Boolean(req.query.pagination) }),
+			}
+		)
 	);
-	if (wishlistError) return next(wishlistError);
+	if (paginatedWishlistProductsError) return next(paginatedWishlistProductsError);
 
-	// Destructure the wishlist products
-	const products = [...(wishlist?.products || [])] as IProductDocument[];
+	// Destructure the paginated wishlist products into the list of products (docs) and pagination metadata
+	const { docs, ...pagination } = paginatedWishlistProducts;
 
-	// Return the retrieved wishlist in the response
+	// Return the list of wishlist products, pagination metadata, and sort options in the response
 	res.status(httpStatus.OK).json(
-		formatResponseObject({ status: httpStatus.OK, entities: { data: products || [] } })
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: [...(docs || [])], meta: { pagination, sort } },
+		})
 	);
 };
 
@@ -91,12 +175,8 @@ export const getSingleWishlist = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
 export const addToWishlist = async (
-	req: Request<
-		{},
-		FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>,
-		{ product: string }
-	>,
-	res: Response<FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>>,
+	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, { product: string }>,
+	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
@@ -115,21 +195,18 @@ export const addToWishlist = async (
 
 	// Attempt to find the user's wishlist, or create one if it doesn't exist,
 	// and if there is an error, pass the error to the next middleware
-	const [wishlistError, wishlist] = await to(
+	const [wishlistError] = await to(
 		Wishlist.findOneAndUpdate(
 			{ user: req.user._id },
 			{ $addToSet: { products: existsProduct._id } },
-			{ upsert: true, new: true }
-		).populate({ path: "products" })
+			{ upsert: true }
+		)
 	);
 	if (wishlistError) return next(wishlistError);
 
-	// Destructure the wishlist products
-	const products = [...(wishlist?.products || [])] as IProductDocument[];
-
 	// Return the retrieved wishlist in the response
 	res.status(httpStatus.OK).json(
-		formatResponseObject({ status: httpStatus.OK, entities: { data: products || [] } })
+		formatResponseObject({ status: httpStatus.OK, entities: { data: {} } })
 	);
 };
 
@@ -155,12 +232,8 @@ export const addToWishlist = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
  */
 export const removeFromWishlist = async (
-	req: Request<
-		{ product: string },
-		FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>,
-		{}
-	>,
-	res: Response<FormatResponseObjectType<IProductDocument[], HttpStatus["OK"]>>,
+	req: Request<{ product: string }, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
+	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
@@ -174,21 +247,17 @@ export const removeFromWishlist = async (
 
 	// Attempt to retrieve a wishlist from the database for logged in user,
 	// and if there was an error, return the error and end the request
-	const [wishlistError, wishlist] = await to(
+	const [wishlistError] = await to(
 		Wishlist.findOneAndUpdate(
 			{ user: req.user._id },
-			{ $pull: { products: productIdentifier } },
-			{ new: true }
-		).populate({ path: "products" })
+			{ $pull: { products: productIdentifier } }
+		)
 	);
 	if (wishlistError) return next(wishlistError);
 
-	// Destructure the wishlist products
-	const products = [...(wishlist?.products || [])] as IProductDocument[];
-
 	// Return the retrieved wishlist in the response
 	res.status(httpStatus.OK).json(
-		formatResponseObject({ status: httpStatus.OK, entities: { data: products || [] } })
+		formatResponseObject({ status: httpStatus.OK, entities: { data: {} } })
 	);
 };
 
@@ -210,8 +279,8 @@ export const removeFromWishlist = async (
  * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
  */
 export const emptyWishlist = async (
-	req: Request<{}, FormatResponseObjectType<[], HttpStatus["OK"]>>,
-	res: Response<FormatResponseObjectType<[], HttpStatus["OK"]>>,
+	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
@@ -227,6 +296,6 @@ export const emptyWishlist = async (
 
 	// Return the retrieved wishlist in the response
 	res.status(httpStatus.OK).json(
-		formatResponseObject({ status: httpStatus.OK, entities: { data: [] } })
+		formatResponseObject({ status: httpStatus.OK, entities: { data: {} } })
 	);
 };

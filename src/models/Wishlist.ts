@@ -1,4 +1,12 @@
-import { Document, Model, PaginateModel, Schema, Types, model } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	PaginateModel,
+	Schema,
+	Types,
+	model,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IWishlist from "../interfaces/Wishlist.interface";
 import { IProductDocument } from "./Product";
@@ -35,7 +43,10 @@ const WishlistSchema: Schema<IWishlistDocument, object, IWishlistDocument> = new
 // modal definition
 const WishlistModal = model<
 	IWishlistDocument,
-	PaginateModel<IWishlistDocument> & SoftDeleteModel<IWishlistDocument> & IWishlistModel
+	AggregatePaginateModel<IWishlistDocument> &
+		PaginateModel<IWishlistDocument> &
+		SoftDeleteModel<IWishlistDocument> &
+		IWishlistModel
 >("Wishlist", WishlistSchema);
 
 export default WishlistModal;

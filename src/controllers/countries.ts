@@ -166,10 +166,10 @@ export const getCountries = async (
 			// Use the query parameters for pagination and sorting
 			{
 				...("sort" in req.query && { sort: req.query.sort }),
-				...("page" in req.query && { page: req.query.page }),
-				...("limit" in req.query && { limit: req.query.limit }),
-				...("offset" in req.query && { offset: req.query.offset }),
-				...("pagination" in req.query && { pagination: req.query.pagination }),
+				...("page" in req.query && { page: Number(req.query.page) }),
+				...("limit" in req.query && { limit: Number(req.query.limit) }),
+				...("offset" in req.query && { offset: Number(req.query.offset) }),
+				...("pagination" in req.query && { pagination: Boolean(req.query.pagination) }),
 			}
 		)
 	);
