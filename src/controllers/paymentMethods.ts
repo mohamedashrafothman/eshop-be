@@ -15,6 +15,7 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	type SortItemType,
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
@@ -270,7 +271,7 @@ export const getPaymentMethods = async (
 	const querySearchFields: string[] = ["method", "description"];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"method" | "createdAt">[] = [
 		{ name: "Method A-Z", value: { method: 1 } },
 		{ name: "Method Z-A", value: { method: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },

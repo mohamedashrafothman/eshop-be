@@ -8,7 +8,11 @@ import isMongoId from "validator/lib/isMongoId";
 import IShippingMethod from "../interfaces/ShippingMethod.interface";
 import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import Zone from "../models/Zone";
-import { type FormatResponseObjectType, formatResponseObject } from "../utils/helpers";
+import {
+	type FormatResponseObjectType,
+	type SortItemType,
+	formatResponseObject,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 /**
@@ -227,7 +231,7 @@ export const getShippingMethods = async (
 	const querySearchFields: string[] = ["name", "description"];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"name" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },

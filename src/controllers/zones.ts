@@ -10,7 +10,11 @@ import City from "../models/City";
 import Country from "../models/Country";
 import State from "../models/State";
 import Zone, { IZoneDocument } from "../models/Zone";
-import { type FormatResponseObjectType, formatResponseObject } from "../utils/helpers";
+import {
+	formatResponseObject,
+	type FormatResponseObjectType,
+	type SortItemType,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 /**
@@ -254,7 +258,7 @@ export const getZones = async (
 	const querySearchFields: string[] = ["name", "description"];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"name" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },

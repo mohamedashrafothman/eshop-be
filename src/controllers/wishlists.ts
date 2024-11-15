@@ -6,7 +6,11 @@ import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import Product, { IProductDocument } from "../models/Product";
 import Wishlist from "../models/Wishlist";
-import { formatResponseObject, FormatResponseObjectType } from "../utils/helpers";
+import {
+	formatResponseObject,
+	FormatResponseObjectType,
+	type SortItemType,
+} from "../utils/helpers";
 
 /**
  * Validates the input fields based on the method provided.
@@ -60,7 +64,7 @@ export const getSingleWishlist = async (
 	}
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"name" | "price" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Price Ascending", value: { price: 1 } },

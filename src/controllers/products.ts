@@ -19,6 +19,7 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	type SortItemType,
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
@@ -512,7 +513,7 @@ export const getProducts = async (
 	const querySearchFields: string[] = ["name", "description"];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"name" | "price" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Price Ascending", value: { price: 1 } },

@@ -8,7 +8,11 @@ import isMongoId from "validator/lib/isMongoId";
 import IState from "../interfaces/State.interface";
 import Country from "../models/Country";
 import State, { IStateDocument } from "../models/State";
-import { formatResponseObject, type FormatResponseObjectType } from "../utils/helpers";
+import {
+	formatResponseObject,
+	type FormatResponseObjectType,
+	type SortItemType,
+} from "../utils/helpers";
 import vars from "../utils/vars";
 
 /**
@@ -168,7 +172,7 @@ export const getStates = async (
 	const querySearchFields: string[] = ["name", "code"];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"name" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
 		{ name: "Name Z-A", value: { name: -1 } },
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },

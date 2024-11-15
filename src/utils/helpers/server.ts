@@ -1,25 +1,60 @@
 import { Request } from "express";
 import { ValidationError } from "express-validator";
+import httpStatus from "http-status";
 import _ from "lodash";
 import { ClientSession, Error, PaginateResult } from "mongoose";
 import vars from "../vars";
 
-export type FormatResponseObjectType<T, S> = {
-	success?: boolean;
-	status: S;
-	entities?:
-		| { data: T; meta?: never }
-		| {
-				data: T[];
-				meta: {
-					pagination: Omit<PaginateResult<T>, "docs" | "meta">;
-					sort: { name: string; value: object }[];
-				};
-		  };
-	flashes?: { [key: string]: string[] };
-	error?: Error;
-	message?: string;
+// constants
+const SUCCESS_STATUS_CODE = [
+	httpStatus.CREATED, // 201 - Created
+	httpStatus.OK, // 200 - OK
+	httpStatus.ACCEPTED, // 202 - Accepted
+	httpStatus.NO_CONTENT, // 204 - No Content
+];
+const ERROR_STATUS_CODE = [
+	httpStatus.BAD_REQUEST, // 400 - Bad Request
+	httpStatus.UNAUTHORIZED, // 401 - Unauthorized
+	httpStatus.FORBIDDEN, // 403 - Forbidden
+	httpStatus.NOT_FOUND, // 404 - Not Found
+	httpStatus.METHOD_NOT_ALLOWED, // 405 - Method Not Allowed
+	httpStatus.NOT_ACCEPTABLE, // 406 - Not Acceptable
+	httpStatus.CONFLICT, // 409 - Conflict
+	httpStatus.UNPROCESSABLE_ENTITY, // 422 - Unprocessable Entity
+	httpStatus.TOO_MANY_REQUESTS, // 429 - Too Many Requests
+	httpStatus.INTERNAL_SERVER_ERROR, // 500 - Internal Server Error
+];
+
+// types
+type SuccessStatusCodeType = (typeof SUCCESS_STATUS_CODE)[number];
+type ErrorStatusCodeType = (typeof ERROR_STATUS_CODE)[number];
+export type SortItemType<T extends string = string> = {
+	name: string;
+	value: { [K in T]?: 1 | -1 } & { [K in Exclude<T, keyof any>]?: never };
 };
+type MetaDataType<T> = {
+	pagination: Omit<PaginateResult<T>, "docs" | "meta">;
+	sort: SortItemType[];
+};
+type SingleEntityDataType<T> = { data: T; meta?: never };
+type MultipleEntityDataType<T> = { data: T[]; meta: MetaDataType<T> };
+type FormatResponseSuccessObjectType<T, S> = {
+	success: true;
+	status: S | SuccessStatusCodeType;
+	entities: SingleEntityDataType<T> | MultipleEntityDataType<T>;
+	redirectURL?: string;
+	error?: never;
+};
+type FormatResponseErrorObjectType<S> = {
+	success: false;
+	status: S | ErrorStatusCodeType;
+	entities?: never;
+	error: Error;
+};
+export type FormatResponseObjectType<T, S> = {
+	flashes?: { [key: string]: string[] };
+	message?: string;
+} & (FormatResponseSuccessObjectType<T, S> | FormatResponseErrorObjectType<S>);
 
 /**
  * normalize a port into a number, string, or false.
@@ -60,21 +95,53 @@ export const isAPIHeaders = (req: Request) =>
 /**
  * format response object
  */
-export const formatResponseObject = <T = object | undefined, S = number>({
-	success = true,
+export const formatResponseObject = <
+	T = object | undefined,
+	S = SuccessStatusCodeType | ErrorStatusCodeType,
+>({
+	success: successParam,
 	status,
-	entities,
 	flashes,
+	entities,
 	error,
 	message,
-}: FormatResponseObjectType<T, S>): FormatResponseObjectType<T, S> => ({
-	success,
-	status,
-	entities,
-	flashes,
-	error,
-	message,
-});
+}: Omit<FormatResponseObjectType<T, S>, "success"> &
+	(
+		| {
+				success?: true;
+				status: SuccessStatusCodeType;
+		  }
+		| {
+				success?: false;
+				status: ErrorStatusCodeType;
+		  }
+	)): FormatResponseObjectType<T, S> => {
+	const isSuccessStatus = SUCCESS_STATUS_CODE.includes(status as SuccessStatusCodeType);
+	const isErrorStatus = ERROR_STATUS_CODE.includes(status as ErrorStatusCodeType);
+	const success = successParam ?? isSuccessStatus;
+
+	if (!isSuccessStatus && !isErrorStatus)
+		throw new Error(
+			`Invalid status code: ${status}. Must be one of ${SUCCESS_STATUS_CODE} or ${ERROR_STATUS_CODE}`
+		);
+
+	if (success && isSuccessStatus)
+		return {
+			success: true,
+			...(message && { message }),
+			...(flashes && { flashes }),
+			status: status as SuccessStatusCodeType,
+			entities: entities || { data: {} as T },
+		};
+
+	return {
+		success: false,
+		...(message && { message }),
+		...(flashes && { flashes }),
+		status: status as ErrorStatusCodeType,
+		error: error || new Error("Unknown error"),
+	};
+};
 
 /**
  * format validation error messages

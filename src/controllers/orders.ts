@@ -28,6 +28,7 @@ import {
 	type FormatResponseObjectType,
 	getShortUniqueId,
 	handleTransactionError,
+	type SortItemType,
 } from "../utils/helpers";
 import vars from "../utils/vars";
 import { _checkProductPriceChange } from "./cart";
@@ -556,7 +557,7 @@ export const getOrders = async (
 	];
 
 	// List of sort options
-	const sort: { name: string; value: object }[] = [
+	const sort: SortItemType<"createdAt">[] = [
 		{ name: "Created Date Ascending", value: { createdAt: 1 } },
 		{ name: "Created Date Descending", value: { createdAt: -1 } },
 	];
