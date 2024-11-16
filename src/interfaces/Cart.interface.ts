@@ -4,6 +4,7 @@ export default interface Cart {
 	taxes: string[];
 	shippingMethod: string;
 	paymentMethod: string;
+	coupon?: string;
 	address: string;
 	subtotal: number;
 	total: number;

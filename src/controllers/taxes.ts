@@ -25,6 +25,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("name")
 					.trim()
 					.escape()
+					.isString()
+					.withMessage("Name must be a string!")
 					.notEmpty()
 					.withMessage("You must supply a name!")
 					.isLength({ max: 100 })
@@ -33,14 +35,32 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.trim()
 					.escape()
 					.optional()
+					.isString()
+					.withMessage("Description must be a string!")
 					.notEmpty()
 					.withMessage("You must supply a description!")
 					.isLength({ max: 1000 }),
 				body("rate")
-					.isFloat({ min: 0 })
-					.withMessage("Rate must be greater than or equal to 0!")
+					.isNumeric()
+					.withMessage("Rate must be a number!")
+					.custom((value, { req }) => {
+						if (req.body.isPercentage) {
+							if (value < 0 || value > 100) {
+								throw new Error(
+									"Rate must be between 0 and 100 when isPercentage is true."
+								);
+							}
+						} else if (value < 0) {
+							throw new Error("Rate must be a positive number.");
+						}
+						return true;
+					})
 					.notEmpty()
 					.withMessage("Rate is required!"),
+				body("isPercentage")
+					.optional()
+					.isBoolean()
+					.withMessage("isPercentage must be a boolean value."),
 			];
 		case "update":
 			return [
@@ -48,6 +68,8 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.trim()
 					.escape()
 					.optional()
+					.isString()
+					.withMessage("Name must be a string!")
 					.notEmpty()
 					.withMessage("You must supply a name!")
 					.isLength({ max: 100 })
@@ -56,15 +78,33 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.trim()
 					.escape()
 					.optional()
+					.isString()
+					.withMessage("Description must be a string!")
 					.notEmpty()
 					.withMessage("You must supply a description!")
 					.isLength({ max: 1000 }),
 				body("rate")
 					.optional()
-					.isFloat({ min: 0 })
-					.withMessage("Rate must be greater than or equal to 0!")
+					.isNumeric()
+					.withMessage("Rate must be a number!")
+					.custom((value, { req }) => {
+						if (req.body.isPercentage) {
+							if (value < 0 || value > 100) {
+								throw new Error(
+									"Rate must be between 0 and 100 when isPercentage is true."
+								);
+							}
+						} else if (value < 0) {
+							throw new Error("Rate must be a positive number.");
+						}
+						return true;
+					})
 					.notEmpty()
 					.withMessage("Rate is required!"),
+				body("isPercentage")
+					.optional()
+					.isBoolean()
+					.withMessage("isPercentage must be a boolean value."),
 			];
 		default:
 			return [];
@@ -86,13 +126,28 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
  */
 export const postNewTax = async (
-	req: Request<{}, FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>, ITax>,
+	req: Request<
+		{},
+		FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>,
+		Pick<ITax, "name" | "description" | "rate" | "isPercentage">
+	>,
 	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	// Destructure the name, description, and rate from the request body
+	const { name, description, rate, isPercentage } = req.body;
+	const isPercentageFoundInRequestBody = "isPercentage" in req.body;
+
 	// Create a new tax from the request body data, and if there was an error,
 	// return the error and end the request
-	const [taxError, tax] = await to(Tax.create([req.body]));
+	const [taxError, tax] = await to(
+		Tax.create({
+			name,
+			rate,
+			...(description && { description }),
+			...(isPercentageFoundInRequestBody && { isPercentage }),
+		})
+	);
 	if (taxError) return next(taxError);
 
 	// Set a flash message to indicate that the tax was created successfully,
@@ -101,7 +156,7 @@ export const postNewTax = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: tax[0] },
+			entities: { data: tax },
 			flashes: req.flash(),
 		})
 	);
@@ -135,10 +190,12 @@ export const getTaxes = async (
 		{},
 		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -258,7 +315,7 @@ export const updateSingleTax = async (
 	req: Request<
 		{ tax: string },
 		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
-		Partial<Omit<ITax, "logo">> & { logo?: Express.Multer.File }
+		Partial<Pick<ITax, "name" | "description" | "rate" | "isPercentage">>
 	>,
 	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -286,13 +343,12 @@ export const updateSingleTax = async (
 	}
 
 	// Merge the request body data into the existing tax object
-	tax = Object.assign(tax, req.body);
-
-	// If the tax is not found, pass control to the next middleware
-	if (!tax) {
-		handleTransactionError(session);
-		return next();
-	}
+	tax = Object.assign(tax, {
+		...(req.body?.name && { name: req.body.name }),
+		...(req.body?.description && { description: req.body.description }),
+		...(req.body?.rate && { rate: req.body.rate }),
+		...("isPercentage" in req.body && { isPercentage: req.body.isPercentage }),
+	});
 
 	// Save the updated tax object to the database, and if there is an error during saving,
 	// pass the error to the next middleware

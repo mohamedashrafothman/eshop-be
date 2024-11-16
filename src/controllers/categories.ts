@@ -153,7 +153,7 @@ export const postNewCategory = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<ICategoryDocument, HttpStatus["CREATED"]>,
-		Omit<ICategory, "icon"> & { icon?: Express.Multer.File }
+		Pick<ICategory, "name" | "description" | "parent"> & { icon?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<ICategoryDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -193,10 +193,11 @@ export const postNewCategory = async (
 		Category.create(
 			[
 				{
-					...(req.body || {}),
-					...(createdAttachment?.length && createdAttachment[0]?._id
-						? { icon: createdAttachment[0]._id }
-						: {}),
+					name: req.body.name,
+					description: req.body.description,
+					...(req.body.parent ? { parent: req.body.parent } : {}),
+					...(createdAttachment?.length &&
+						createdAttachment[0]?._id && { icon: createdAttachment[0]._id }),
 				},
 			],
 			{ session }
@@ -268,10 +269,12 @@ export const getCategories = async (
 		{},
 		FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -409,7 +412,7 @@ export const updateSingleCategory = async (
 	req: Request<
 		{ category: string },
 		FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>,
-		Partial<Omit<ICategory, "icon">> & { icon?: Express.Multer.File }
+		Partial<Pick<ICategory, "name" | "description" | "parent">> & { icon?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -484,10 +487,24 @@ export const updateSingleCategory = async (
 		}
 	}
 
+	// Check if parent exists.
+	if (req.body?.parent) {
+		// Find the category associated with the parent
+		const [parentCategoryError, parentCategory] = await to(
+			Category.findOne({ _id: req.body.parent }).session(session)
+		);
+		if (parentCategoryError || !parentCategory) {
+			handleTransactionError(session);
+			return next(parentCategoryError);
+		}
+	}
+
 	// Merge the request body data into the existing category object
 	category = Object.assign(category, {
-		...(req?.body || {}),
-		...(createdAttachment?.[0]?._id ? { icon: createdAttachment[0]._id } : {}),
+		...(req.body?.name && { name: req.body.name }),
+		...(req.body?.description && { description: req.body.description }),
+		...(req.body?.parent && { parent: req.body.parent }),
+		...(createdAttachment && createdAttachment?.[0]?._id && { icon: createdAttachment[0]._id }),
 	});
 
 	// Save the updated category object to the database, and if there is an error during saving,

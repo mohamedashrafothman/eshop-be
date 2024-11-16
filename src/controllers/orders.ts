@@ -211,7 +211,7 @@ export const postNewOrder = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>,
-		{ paymentMethod: string; address: string; shippingMethod: string; note?: string }
+		Pick<IOrder, "paymentMethod" | "address" | "shippingMethod" | "note">
 	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -514,10 +514,12 @@ export const getOrders = async (
 		{},
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -684,28 +686,11 @@ export const updateSingleOrder = async (
 	req: Request<
 		{ order: string },
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
-		{ status?: IOrder["status"]; address?: string; shippingMethod?: string; note?: string }
+		Partial<Pick<IOrder, "status" | "address" | "shippingMethod" | "note">>
 	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	/** TODO:
-	 *   1. Check if user logged in and has admin permission [DONE].
-	 *   2. Retrieve the order ID from the request parameters [DONE].
-	 *   3. Attempt to retrieve a order from the database with the given ID,
-	 *      and if there was an error or no order was found, return the error and end the request [DONE].
-	 * 	 4. check if the status presented in body and it's transition is valid and return an error if it is not [DONE].
-	 *   5. check if the address presented in body and check if it's found in the database before update
-	 *      and return an error if it is not [DONE].
-	 *   6. check if the shipping method presented in body and check if it's found in the database before update
-	 * 	  	and return an error if it is not [DONE].
-	 * 	 7. check the address matches the shipping method's zone and return an error if it is not [DONE].
-	 *   8. Update the order with the new status [DONE], with status tracking array update if the status presented in
-	 * 		the request with status, time and user, and send the user an email.
-	 *   9. Return the updated order in the response [DONE].
-	 *   10. If an error occurs during the update process, return the error and end the request [DONE].
-	 */
-
 	// Check if user logged in and has the correct role
 	if (
 		req.isUnauthenticated() ||

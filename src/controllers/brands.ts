@@ -141,7 +141,7 @@ export const postNewBrand = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IBrandDocument, HttpStatus["CREATED"]>,
-		Omit<IBrand, "logo"> & { logo?: Express.Multer.File }
+		Pick<IBrand, "name" | "description"> & { logo?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<IBrandDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -181,10 +181,10 @@ export const postNewBrand = async (
 		Brand.create(
 			[
 				{
-					...(req.body || {}),
-					...(createdAttachment?.length && createdAttachment[0]?._id
-						? { logo: createdAttachment[0]._id }
-						: {}),
+					name: req.body.name,
+					...(req.body.description ? { description: req.body.description } : {}),
+					...(createdAttachment?.length &&
+						createdAttachment[0]?._id && { logo: createdAttachment[0]._id }),
 				},
 			],
 			{ session }
@@ -239,10 +239,12 @@ export const getBrands = async (
 		{},
 		FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -372,7 +374,7 @@ export const updateSingleBrand = async (
 	req: Request<
 		{ brand: string },
 		FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>,
-		Partial<Omit<IBrand, "logo">> & { logo?: Express.Multer.File }
+		Partial<Pick<IBrand, "name" | "description">> & { logo?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -448,10 +450,9 @@ export const updateSingleBrand = async (
 
 	// Merge the request body data into the existing brand object
 	brand = Object.assign(brand, {
-		...(req?.body || {}),
-		...(createdAttachment && createdAttachment?.[0]?._id
-			? { logo: createdAttachment[0]._id }
-			: {}),
+		...(req.body.name && { name: req.body.name }),
+		...(req.body.description && { description: req.body.description }),
+		...(createdAttachment && createdAttachment?.[0]?._id && { logo: createdAttachment[0]._id }),
 	});
 
 	// If the brand is not found, pass control to the next middleware

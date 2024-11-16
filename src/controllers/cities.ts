@@ -93,7 +93,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created city object.
  */
 export const postNewCity = async (
-	req: Request<{}, FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>, ICity>,
+	req: Request<
+		{},
+		FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>,
+		Pick<ICity, "name" | "country" | "state">
+	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -110,7 +114,7 @@ export const postNewCity = async (
 	// Attempt to create the new city
 	// If there is an error creating the city, pass the error to the next middleware
 	const [createdCityError, createdCity] = await to(
-		City.create({ name: req.body.name, country: country._id, state: state._id })
+		City.create({ name: req.body.name, country: req.body.country, state: req.body.state })
 	);
 	if (createdCityError) return next(createdCityError);
 
@@ -155,12 +159,14 @@ export const getCities = async (
 		{},
 		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-			country?: string;
-			state?: string;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+				country?: string;
+				state?: string;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -297,7 +303,7 @@ export const updateSingleCity = async (
 	req: Request<
 		{ city: string },
 		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
-		Partial<ICityDocument>
+		Partial<Pick<ICity, "name" | "country" | "state">>
 	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction

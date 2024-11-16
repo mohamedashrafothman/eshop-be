@@ -3,6 +3,7 @@ import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICart from "../interfaces/Cart.interface";
 import { IAddressDocument } from "./Address";
 import { ICartItemDocument } from "./CartItem";
+import { ICouponDocument } from "./Coupon";
 import { IPaymentMethodDocument } from "./PaymentMethod";
 import { IProductDocument } from "./Product";
 import { IShippingMethodDocument } from "./ShippingMethod";
@@ -12,7 +13,10 @@ import { IUserDocument } from "./User";
 // adding schema methods here
 export interface ICartDocument
 	extends SoftDeleteInterface,
-		Omit<ICart, "user" | "items" | "taxes" | "shippingMethod" | "address" | "paymentMethod">,
+		Omit<
+			ICart,
+			"user" | "items" | "taxes" | "shippingMethod" | "address" | "paymentMethod" | "coupon"
+		>,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
@@ -21,6 +25,7 @@ export interface ICartDocument
 	taxes: (Types.ObjectId | ITaxDocument)[];
 	shippingMethod: Types.ObjectId | IShippingMethodDocument;
 	paymentMethod: Types.ObjectId | IPaymentMethodDocument;
+	coupon: Types.ObjectId | ICouponDocument;
 	address: Types.ObjectId | IAddressDocument;
 }
 
@@ -62,6 +67,11 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 			ref: "PaymentMethod",
 			autopopulate: { maxDepth: 1 },
 		},
+		coupon: {
+			type: Schema.Types.ObjectId,
+			ref: "Coupon",
+			autopopulate: { maxDepth: 1 },
+		},
 		address: {
 			type: Schema.Types.ObjectId,
 			ref: "Address",
@@ -76,11 +86,12 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 
 // schema hooks
 CartSchema.pre("save", async function (next) {
-	// Check if items, taxes, or shippingMethod is modified
+	// Check if items, taxes, shippingMethod or coupon is modified
 	if (
 		!this.isModified("items") &&
 		!this.isModified("taxes") &&
-		!this.isModified("shippingMethod")
+		!this.isModified("shippingMethod") &&
+		!this.isModified("coupon")
 	)
 		return next();
 
@@ -88,12 +99,15 @@ CartSchema.pre("save", async function (next) {
 	await this.populate({ path: "items", populate: { path: "product" } });
 	await this.populate({ path: "taxes" });
 	await this.populate({ path: "shippingMethod" });
+	await this.populate({ path: "coupon" });
 
 	// Get the current cart data
 	const cartTaxes = this.taxes as ITaxDocument[];
 	const cartItems = this.items as ICartItemDocument[];
 	const cartShippingMethod = this.shippingMethod as IShippingMethodDocument;
 	const shippingMethodTotal: number = cartShippingMethod?.rate || 0;
+	const cartCoupon = this.coupon as ICouponDocument;
+	const cartCouponTotal: number = cartCoupon?.discount || 0;
 
 	// Calculate cart items total and taxes total using reduce
 	const { cartItemsTotal, taxesTotal } = cartItems.reduce(
@@ -133,8 +147,13 @@ CartSchema.pre("save", async function (next) {
 		{ cartItemsTotal: 0, taxesTotal: 0 }
 	);
 
+	const totalBeforeDiscountCoupon = cartItemsTotal + taxesTotal + shippingMethodTotal;
 	this.subtotal = cartItemsTotal;
-	this.total = cartItemsTotal + taxesTotal + shippingMethodTotal;
+	this.total =
+		totalBeforeDiscountCoupon -
+		(cartCoupon.isPercentage
+			? (totalBeforeDiscountCoupon * cartCouponTotal) / 100
+			: cartCouponTotal);
 
 	next();
 });

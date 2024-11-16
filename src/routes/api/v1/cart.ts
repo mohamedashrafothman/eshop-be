@@ -46,5 +46,15 @@ router
 		cartController.postPaymentMethod
 	);
 
+router
+	.route("/coupons")
+	.all(allowMethods(["post", "delete"]))
+	.post(
+		cartController.validator("set-coupon"),
+		unprocessableEntityValidator,
+		cartController.postCoupon
+	)
+	.delete(cartController.removeCoupon);
+
 // Exporting router
 export default router;

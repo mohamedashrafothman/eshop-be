@@ -290,7 +290,11 @@ export const postNewProduct = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>,
-		Omit<IProduct, "thumbnail" | "images"> & {
+		Pick<
+			IProduct,
+			"name" | "description" | "quantity" | "colors" | "sizes" | "brand" | "category"
+		> & {
+			price: Pick<IProduct["price"], "normal" | "sale">;
 			thumbnail?: Express.Multer.File;
 			images?: Express.Multer.File[];
 		}
@@ -389,7 +393,17 @@ export const postNewProduct = async (
 		Product.create(
 			[
 				{
-					...(req.body || {}),
+					name: req.body.name,
+					description: req.body.description,
+					quantity: req.body.quantity,
+					price: {
+						normal: req.body.price.normal,
+						...(req.body.price?.sale && { sale: req.body.price.sale }),
+					},
+					colors: req.body.colors,
+					sizes: req.body.sizes,
+					brand: req.body.brand,
+					category: req.body.category,
 					...(thumbnail ? { thumbnail } : {}),
 					...(images.length ? { images } : {}),
 					user: req.user._id,
@@ -471,16 +485,18 @@ export const getProducts = async (
 		{},
 		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-			categories?: string[];
-			brands?: string[];
-			sizes?: string[];
-			colors?: string[];
-			minPrice?: number;
-			maxPrice?: number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+				categories?: string[];
+				brands?: string[];
+				sizes?: string[];
+				colors?: string[];
+				minPrice?: number;
+				maxPrice?: number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -672,10 +688,16 @@ export const updateSingleProduct = async (
 	req: Request<
 		{ product: string },
 		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
-		Partial<Omit<IProduct, "thumbnail" | "images">> & {
-			thumbnail?: Express.Multer.File;
-			images?: Express.Multer.File[];
-		}
+		Partial<
+			Pick<
+				IProduct,
+				"name" | "description" | "quantity" | "colors" | "sizes" | "brand" | "category"
+			> & {
+				price: Partial<Pick<IProduct["price"], "normal" | "sale">>;
+				thumbnail?: Express.Multer.File;
+				images?: Express.Multer.File[];
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -871,7 +893,19 @@ export const updateSingleProduct = async (
 
 	// Merge the request body data into the existing product object
 	product = Object.assign(product, {
-		...(req.body || {}),
+		...(req.body?.name && { name: req.body.name }),
+		...(req.body?.description && { description: req.body.description }),
+		...(req.body?.quantity && { quantity: req.body.quantity }),
+		...(req.body?.price && {
+			price: {
+				...(req.body.price?.normal && { normal: req.body.price.normal }),
+				...(req.body.price?.sale && { sale: req.body.price.sale }),
+			},
+		}),
+		...(req.body?.colors && { colors: req.body.colors }),
+		...(req.body?.sizes && { sizes: req.body.sizes }),
+		...(req.body?.brand && { brand: req.body.brand }),
+		...(req.body?.category && { category: req.body.category }),
 		...(createdThumbnail?.[0]?._id ? { thumbnail: createdThumbnail[0]._id } : {}),
 		...(createdImages?.length ? { images: createdImages?.map(({ _id }) => _id) } : {}),
 	});

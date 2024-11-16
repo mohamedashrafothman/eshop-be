@@ -52,7 +52,7 @@ export const getSingleWishlist = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination">
+		Partial<Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination">>
 	>,
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
 	next: NextFunction

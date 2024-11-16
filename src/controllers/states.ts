@@ -92,7 +92,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created state object.
  */
 export const postNewState = async (
-	req: Request<{}, FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>, IState>,
+	req: Request<
+		{},
+		FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>,
+		Pick<IState, "name" | "code" | "country">
+	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -104,7 +108,7 @@ export const postNewState = async (
 	// Attempt to create the new state
 	// If there is an error creating the state, pass the error to the next middleware
 	const [createdStateError, createdState] = await to(
-		State.create({ name: req.body.name, code: req.body.code, country: country._id })
+		State.create({ name: req.body.name, code: req.body.code, country: req.body.country })
 	);
 	if (createdStateError) return next(createdStateError);
 
@@ -149,11 +153,13 @@ export const getStates = async (
 		{},
 		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-			country?: string;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+				country?: string;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -285,7 +291,7 @@ export const updateSingleState = async (
 	req: Request<
 		{ state: string },
 		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
-		Partial<IState>
+		Partial<Pick<IState, "name" | "code" | "country">>
 	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction

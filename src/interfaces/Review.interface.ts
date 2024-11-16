@@ -1,7 +1,7 @@
 export default interface Review {
 	title: string;
 	rating: number;
-	comment: string;
+	comment?: string;
 	product: string;
 	user: string;
 }

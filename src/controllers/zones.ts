@@ -141,7 +141,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @throws {Error} - Returns an error if zone creation fails.
  */
 export const postNewZone = async (
-	req: Request<{}, FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>, IZone>,
+	req: Request<
+		{},
+		FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>,
+		Pick<IZone, "name" | "description" | "countries" | "states" | "cities">
+	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -239,10 +243,12 @@ export const getZones = async (
 		{},
 		FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -358,7 +364,7 @@ export const updateSingleZone = async (
 	req: Request<
 		{ zone: string },
 		FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>,
-		Partial<IZone>
+		Partial<Pick<IZone, "name" | "description" | "countries" | "states" | "cities">>
 	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction

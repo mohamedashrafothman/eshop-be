@@ -20,14 +20,14 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("You must supply a title!")
 					.isLength({ max: 100 })
 					.withMessage("Title must be at most 100 characters long!"),
-				body("description")
+				body("comment")
 					.optional()
 					.trim()
 					.escape()
 					.notEmpty()
-					.withMessage("Description is required!")
+					.withMessage("Comment is required!")
 					.isLength({ max: 1000 })
-					.withMessage("Description must be at most 1000 characters long!"),
+					.withMessage("Comment must be at most 1000 characters long!"),
 				body("rating")
 					.isNumeric()
 					.withMessage("You must supply a rating!")
@@ -52,14 +52,14 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("You must supply a title!")
 					.isLength({ max: 100 })
 					.withMessage("Title must be at most 100 characters long!"),
-				body("description")
+				body("comment")
 					.optional()
 					.trim()
 					.escape()
 					.notEmpty()
-					.withMessage("Description is required!")
+					.withMessage("Comment is required!")
 					.isLength({ max: 1000 })
-					.withMessage("Description must be at most 1000 characters long!"),
+					.withMessage("Comment must be at most 1000 characters long!"),
 				body("rating")
 					.optional()
 					.isNumeric()
@@ -82,7 +82,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 export const postNewReview = async (
-	req: Request<{}, FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>, IReview>,
+	req: Request<
+		{},
+		FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>,
+		Pick<IReview, "title" | "comment" | "rating" | "product">
+	>,
 	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -94,10 +98,12 @@ export const getReviews = async (
 		{},
 		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -117,7 +123,9 @@ export const updateSingleReview = async (
 	req: Request<
 		{ review: string },
 		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
-		Partial<IReview> & { icon?: Express.Multer.File }
+		Partial<Pick<IReview, "title" | "comment" | "rating" | "product">> & {
+			icon?: Express.Multer.File;
+		}
 	>,
 	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
 	next: NextFunction

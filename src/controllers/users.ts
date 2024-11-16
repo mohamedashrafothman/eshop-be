@@ -117,7 +117,6 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Password confirmation can't be blank!")
 					.custom((value, { req }) => value === req.body.password)
 					.withMessage("Your passwords don't match!"),
-				body("logout").optional().toBoolean(),
 			];
 		default:
 			return [];
@@ -157,7 +156,10 @@ export const postNewUser = async (
 			},
 			HttpStatus["CREATED"]
 		>,
-		Omit<IUser, "password">
+		Pick<IUser, "email" | "name" | "password"> & {
+			passwordConfirmation: string;
+			role?: IUser["role"];
+		}
 	>,
 	res: Response<
 		FormatResponseObjectType<
@@ -194,7 +196,18 @@ export const postNewUser = async (
 	// If there is an error creating the user,
 	// Rollback the transaction and pass the error to the next middleware
 	const [createdUserError, createdUser] = await to(
-		User.create([{ ...(req.body || {}), active: true }], { session })
+		User.create(
+			[
+				{
+					email,
+					name: req.body.name,
+					password: req.body.password,
+					active: true,
+					...(req.body?.role && { role: req.body.role }),
+				},
+			],
+			{ session }
+		)
 	);
 	if (createdUserError) {
 		handleTransactionError(session);
@@ -345,12 +358,14 @@ export const getUsers = async (
 		{},
 		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-			emailVerified?: boolean | number;
-			active?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+				emailVerified?: boolean | number;
+				active?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -538,9 +553,8 @@ export const updateSingleUser = async (
 	req: Request<
 		{ user: string },
 		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
-		Partial<Omit<IUser, "password">> & {
+		Partial<Pick<IUser, "email" | "name" | "password">> & {
 			oldPassword?: string;
-			password?: string;
 			passwordConfirmation?: string;
 		}
 	>,
@@ -553,13 +567,6 @@ export const updateSingleUser = async (
 
 	// Retrieve the user ID or slug from the request parameters
 	const { user: userIdentifier } = req.params || {};
-
-	// Retrieve the update data from the request body
-	const {
-		oldPassword: _oldPassword,
-		passwordConfirmation: _passwordConfirmation,
-		...reqBody
-	} = req.body;
 
 	// Create variables to hold the password and email modifications flags.
 	let isPasswordModified: boolean = false;
@@ -580,9 +587,9 @@ export const updateSingleUser = async (
 		return next(userError);
 	}
 
-	if (reqBody?.email && user?.email) isEmailModified = reqBody.email !== user.email || false;
-	if (reqBody?.password) {
-		user.comparePassword(reqBody.password, (comparePasswordError, isMatch) => {
+	if (req.body?.email && user?.email) isEmailModified = req.body.email !== user.email || false;
+	if (req.body?.password) {
+		user.comparePassword(req.body.password, (comparePasswordError, isMatch) => {
 			if (comparePasswordError) {
 				handleTransactionError(session);
 				return next(comparePasswordError);
@@ -593,8 +600,9 @@ export const updateSingleUser = async (
 
 	// Merge the request body data into the existing user object
 	user = Object.assign(user, {
-		...(reqBody || {}),
-		...(isEmailModified ? { emailVerified: false } : {}),
+		...(req.body?.name ? { name: req.body.name } : {}),
+		...(isEmailModified ? { emailVerified: false, email: req.body.email } : {}),
+		...(isPasswordModified ? { password: req.body.password } : {}),
 	});
 
 	// If the user is not found, pass control to the next middleware

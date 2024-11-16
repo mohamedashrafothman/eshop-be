@@ -128,18 +128,18 @@ export const formatResponseObject = <
 	if (success && isSuccessStatus)
 		return {
 			success: true,
-			...(message && { message }),
-			...(flashes && { flashes }),
 			status: status as SuccessStatusCodeType,
 			entities: entities || { data: {} as T },
+			...(flashes && { flashes }),
+			...(message && { message }),
 		};
 
 	return {
 		success: false,
-		...(message && { message }),
-		...(flashes && { flashes }),
 		status: status as ErrorStatusCodeType,
 		error: error || new Error("Unknown error"),
+		...(flashes && { flashes }),
+		...(message && { message }),
 	};
 };
 

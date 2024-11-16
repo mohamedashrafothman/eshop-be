@@ -172,7 +172,24 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
  */
 export const postNewAddress = async (
-	req: Request<{}, FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>, IAddress>,
+	req: Request<
+		{},
+		FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>,
+		Pick<
+			IAddress,
+			| "name"
+			| "street"
+			| "building"
+			| "floor"
+			| "apartment"
+			| "area"
+			| "zip"
+			| "country"
+			| "state"
+			| "city"
+			| "user"
+		>
+	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -246,8 +263,8 @@ export const postNewAddress = async (
 					city: city._id,
 					user: req.body.user,
 					default: Boolean(![...(user?.addresses || [])].length),
-					...(req.body.floor && { floor: req.body.floor }),
-					...(req.body.apartment && { apartment: req.body.apartment }),
+					...(req.body?.floor && { floor: req.body.floor }),
+					...(req.body?.apartment && { apartment: req.body.apartment }),
 					...(req.body?.zip && { zip: req.body.zip }),
 				},
 			],
@@ -315,10 +332,12 @@ export const getAddresses = async (
 		{},
 		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -467,7 +486,23 @@ export const updateSingleAddress = async (
 	req: Request<
 		{ address: string },
 		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
-		Partial<IAddress>
+		Partial<
+			Pick<
+				IAddress,
+				| "name"
+				| "street"
+				| "building"
+				| "floor"
+				| "apartment"
+				| "area"
+				| "zip"
+				| "country"
+				| "state"
+				| "city"
+				| "user"
+				| "default"
+			>
+		>
 	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction

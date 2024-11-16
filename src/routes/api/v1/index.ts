@@ -9,6 +9,7 @@ import cartRouter from "./cart";
 import categoriesRouter from "./categories";
 import citiesRouter from "./cities";
 import countriesRouter from "./countries";
+import couponsRouter from "./coupons";
 import ordersRouter from "./orders";
 import paymentMethodsRouter from "./paymentMethods";
 import productsRouter from "./products";
@@ -53,6 +54,12 @@ router.use(
 );
 router.use("/shipping-methods", authController.passportJWTAuthenticate, shippingMethodsRouter);
 router.use("/payment-methods", authController.passportJWTAuthenticate, paymentMethodsRouter);
+router.use(
+	"/coupons",
+	authController.passportJWTAuthenticate,
+	permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+	couponsRouter
+);
 router.use(
 	"/cart",
 	authController.passportJWTAuthenticate,

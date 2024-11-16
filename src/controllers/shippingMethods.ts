@@ -133,7 +133,9 @@ export const postNewShippingMethod = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["CREATED"]>,
-		IShippingMethod
+		Pick<IShippingMethod, "name" | "description" | "rate" | "zone"> & {
+			deliveryTime: Pick<IShippingMethod["deliveryTime"], "min" | "max">;
+		}
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -156,7 +158,10 @@ export const postNewShippingMethod = async (
 		ShippingMethod.create({
 			name: req.body.name,
 			rate: req.body.rate,
-			deliveryTime: req.body.deliveryTime,
+			deliveryTime: {
+				min: req.body.deliveryTime.min,
+				...(req.body.deliveryTime.max && { max: req.body.deliveryTime.max }),
+			},
 			zone: zone._id,
 			...(req.body?.description && { description: req.body.description }),
 		})
@@ -202,11 +207,13 @@ export const getShippingMethods = async (
 		{},
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-			zone?: string;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+				zone?: string;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -363,7 +370,11 @@ export const updateSingleShippingMethod = async (
 	req: Request<
 		{ method: string },
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
-		Partial<IShippingMethod>
+		Partial<
+			Pick<IShippingMethod, "name" | "description" | "rate" | "zone"> & {
+				deliveryTime: Pick<IShippingMethod["deliveryTime"], "min" | "max">;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -403,7 +414,7 @@ export const updateSingleShippingMethod = async (
 		...(req.body?.description && { description: req.body.description }),
 		...(req.body?.rate && { rate: req.body.rate }),
 		...(req.body?.zone && { zone: req.body.zone }),
-		...("deliveryTime" in req.body && {
+		...(req.body?.deliveryTime && {
 			deliveryTime: {
 				...((req.body.deliveryTime?.min || shippingMethod.deliveryTime.min) && {
 					min: req.body.deliveryTime?.min || shippingMethod.deliveryTime.min,

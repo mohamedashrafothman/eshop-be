@@ -75,7 +75,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @property {Object} entities.data - The created country object.
  */
 export const postNewCountry = async (
-	req: Request<{}, FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>, ICountry>,
+	req: Request<
+		{},
+		FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>,
+		Pick<ICountry, "name" | "code">
+	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -126,10 +130,12 @@ export const getCountries = async (
 		{},
 		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -253,7 +259,7 @@ export const updateSingleCountry = async (
 	req: Request<
 		{ country: string },
 		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
-		Partial<ICountry>
+		Partial<Pick<ICountry, "name" | "code">>
 	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction

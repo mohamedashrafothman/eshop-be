@@ -149,7 +149,7 @@ export const postNewPaymentMethod = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["CREATED"]>,
-		Omit<IPaymentMethod, "icon"> & { icon?: Express.Multer.File }
+		Pick<IPaymentMethod, "method" | "description"> & { icon?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -191,9 +191,8 @@ export const postNewPaymentMethod = async (
 				{
 					method: req.body.method,
 					...(req.body?.description && { description: req.body.description }),
-					...(createdAttachment?.length && createdAttachment[0]?._id
-						? { icon: createdAttachment[0]._id }
-						: {}),
+					...(createdAttachment &&
+						createdAttachment?.[0]?._id && { icon: createdAttachment[0]._id }),
 				},
 			],
 			{ session }
@@ -246,10 +245,12 @@ export const getPaymentMethods = async (
 		{},
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>,
 		{},
-		Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-			q?: string;
-			deleted?: boolean | number;
-		}
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
 	res: Response<FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
@@ -377,7 +378,7 @@ export const updateSinglePaymentMethod = async (
 	req: Request<
 		{ method: string },
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>,
-		Partial<Omit<IPaymentMethod, "icon">> & { icon?: Express.Multer.File }
+		Partial<Pick<IPaymentMethod, "method" | "description">> & { icon?: Express.Multer.File }
 	>,
 	res: Response<FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
