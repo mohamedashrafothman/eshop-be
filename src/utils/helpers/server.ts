@@ -57,7 +57,12 @@ export type FormatResponseObjectType<T, S> = {
 } & (FormatResponseSuccessObjectType<T, S> | FormatResponseErrorObjectType<S>);
 
 /**
- * normalize a port into a number, string, or false.
+ * Normalizes a port into a number, string, or false.
+ *
+ * @param val - The port value to normalize, provided as a string.
+ * @returns The port as a number if it is a valid number greater than or equal to zero,
+ *          the original string if it is not a valid number,
+ *          or false if the port is a negative number.
  */
 export const normalizePort = (val: string): number | string | boolean => {
 	const port = parseInt(val, 10);
@@ -67,7 +72,10 @@ export const normalizePort = (val: string): number | string | boolean => {
 };
 
 /**
- * check if request contains API Acceptable Media Type.
+ * Checks if a request contains API Acceptable Content-Type header.
+ *
+ * @param {Request} req - The Express.js Request object.
+ * @returns {boolean} - Whether the request contains API Acceptable Content-Type header.
  */
 export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean => {
 	const headerOption = req.get("Content-Type");
@@ -77,7 +85,10 @@ export const isAPIAcceptableMediaTypeHeader = (req: Request): boolean => {
 };
 
 /**
- * check if request contains API Acceptable Accept.
+ * Checks if a request contains API Acceptable Accept header.
+ *
+ * @param {Request} req - The Express.js Request object.
+ * @returns {boolean} - Whether the request contains API Acceptable Accept header.
  */
 export const isAPIAcceptableAcceptHeader = (req: Request): boolean => {
 	const headerOption = req.get("Accept");
@@ -87,13 +98,31 @@ export const isAPIAcceptableAcceptHeader = (req: Request): boolean => {
 };
 
 /**
- * check if request contains API Headers.
+ * Checks if a request contains API Acceptable Media Type and Accept headers.
+ *
+ * @param {Request} req - The Express.js Request object.
+ * @returns {boolean} - Whether the request contains API Acceptable headers.
  */
 export const isAPIHeaders = (req: Request) =>
 	isAPIAcceptableMediaTypeHeader(req) && isAPIAcceptableAcceptHeader(req);
 
 /**
- * format response object
+ * Formats a response object based on the provided parameters.
+ *
+ * @template T - The type of the data entity/ies in the response.
+ * @template S - The type of the status code, can be success or error status.
+ *
+ * @param {Object} params - An object containing response details.
+ * @param {boolean} [params.success] - Indicates if the response is successful. Defaults to true if the status is a success status code.
+ * @param {S} params.status - The HTTP status code of the response.
+ * @param {Record<string, string[]>} [params.flashes] - Optional flash messages.
+ * @param {SingleEntityDataType<T> | MultipleEntityDataType<T>} [params.entities] - The data entity/ies of the response.
+ * @param {Error} [params.error] - The error object if the response is an error.
+ * @param {string} [params.message] - An optional message for the response.
+ *
+ * @returns {FormatResponseObjectType<T, S>} - The formatted response object which includes success status, HTTP status code, data entities or error.
+ *
+ * @throws Will throw an error if the status code is neither a success nor an error status code.
  */
 export const formatResponseObject = <
 	T = object | undefined,
@@ -144,7 +173,11 @@ export const formatResponseObject = <
 };
 
 /**
- * format validation error messages
+ * Formats an array of validation errors into a response object.
+ *
+ * @param {ValidationError[]} errors - An array of validation errors.
+ * @returns {Record<string, string[]>[]} An array of objects where each key is a field path,
+ * and the value is an array of error messages associated with that field.
  */
 export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
 	const errorsGroupedByPath = _.groupBy<{
@@ -159,6 +192,14 @@ export const formatValidationErrorMessagesResponse = (errors: ValidationError[])
 	return JSON.parse(JSON.stringify(errorsMapped));
 };
 
+/**
+ * Converts a nested object into a flat object with dot notation keys.
+ *
+ * @param {any} obj - The object to be converted.
+ * @param {string} [prefix=""] - The prefix to be used for the keys in the dot notation format.
+ * @param {Record<string, any>} [result={}] - The resulting object with dot notation keys.
+ * @returns {Record<string, any>} A flat object with keys in dot notation format.
+ */
 export const convertToDotNotation = (
 	obj: any,
 	prefix: string = "",
@@ -181,6 +222,10 @@ export const convertToDotNotation = (
 	return result;
 };
 
+/**
+ * Handles a transaction error by aborting the transaction and ending the session.
+ * @param {ClientSession} session - The mongoose session to handle the transaction error for.
+ */
 export const handleTransactionError = async (session: ClientSession) => {
 	await session.abortTransaction();
 	session.endSession();

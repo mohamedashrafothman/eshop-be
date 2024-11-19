@@ -12,7 +12,6 @@ export interface IReviewDocument
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
-	slug: string;
 	product: Types.ObjectId | IProductDocument;
 	user: Types.ObjectId | IUserDocument;
 }
@@ -23,13 +22,6 @@ export type IReviewModel = Model<IReviewDocument>;
 // schema definition
 const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schema(
 	{
-		title: {
-			type: String,
-			trim: true,
-			maxlength: [100, "Title can't be greater than 100 characters!"],
-			required: [true, "Title is required!"],
-		},
-		slug: { type: String, slug: "title", unique: true, index: true, slugPaddingSize: 6 },
 		comment: {
 			type: String,
 			trim: true,
@@ -51,14 +43,8 @@ const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schem
 			type: Schema.Types.ObjectId,
 			ref: "Product",
 			required: [true, "Product is required!"],
-			autopopulate: { maxDepth: 1, select: "name" },
 		},
-		user: {
-			type: Schema.Types.ObjectId,
-			ref: "User",
-			required: [true, "User is required!"],
-			autopopulate: { maxDepth: 1, select: "name" },
-		},
+		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );

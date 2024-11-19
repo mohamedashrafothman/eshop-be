@@ -2,6 +2,7 @@ import allowMethods from "allow-methods";
 import { Router } from "express";
 import * as authController from "../../../controllers/auth";
 import * as productsController from "../../../controllers/products";
+import * as reviewsController from "../../../controllers/reviews";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
 import vars from "../../../utils/vars";
@@ -49,6 +50,11 @@ router
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]])
 	)
 	.patch(productsController.restoreSingleProduct);
+
+router
+	.route("/:product/reviews")
+	.all(allowMethods(["get"]))
+	.get(reviewsController.getReviewsForProduct);
 
 // Exporting router
 export default router;
