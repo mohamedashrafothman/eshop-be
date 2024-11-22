@@ -1,4 +1,4 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { AggregatePaginateModel, Document, Model, PaginateModel, Schema, model } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICountry from "../interfaces/Country.interface";
 
@@ -40,7 +40,10 @@ const CountrySchema: Schema<ICountryDocument, object, ICountryDocument> = new Sc
 // modal definition
 const CountryModal = model<
 	ICountryDocument,
-	PaginateModel<ICountryDocument> & SoftDeleteModel<ICountryDocument> & ICountryModel
+	PaginateModel<ICountryDocument> &
+		AggregatePaginateModel<ICountryDocument> &
+		SoftDeleteModel<ICountryDocument> &
+		ICountryModel
 >("Country", CountrySchema);
 
 export default CountryModal;

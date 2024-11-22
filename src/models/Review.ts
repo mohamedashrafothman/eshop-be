@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isInt from "validator/lib/isInt";
 import IReview from "../interfaces/Review.interface";
@@ -52,7 +60,10 @@ const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schem
 // modal definition
 const ReviewModal = model<
 	IReviewDocument,
-	PaginateModel<IReviewDocument> & SoftDeleteModel<IReviewDocument> & IReviewModel
+	PaginateModel<IReviewDocument> &
+		AggregatePaginateModel<IReviewDocument> &
+		SoftDeleteModel<IReviewDocument> &
+		IReviewModel
 >("Review", ReviewSchema);
 
 export default ReviewModal;

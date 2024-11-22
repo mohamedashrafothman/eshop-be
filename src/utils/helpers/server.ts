@@ -36,8 +36,8 @@ type MetaDataType<T> = {
 	pagination: Omit<PaginateResult<T>, "docs" | "meta">;
 	sort: SortItemType[];
 };
-type SingleEntityDataType<T> = { data: T; meta?: never };
-type MultipleEntityDataType<T> = { data: T[]; meta: MetaDataType<T> };
+type SingleEntityDataType<T> = { data: T; stats?: never; meta?: never };
+type MultipleEntityDataType<T> = { data: T[]; stats?: unknown; meta: MetaDataType<T> };
 type FormatResponseSuccessObjectType<T, S> = {
 	success: true;
 	status: S | SuccessStatusCodeType;

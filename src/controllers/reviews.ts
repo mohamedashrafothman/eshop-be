@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
+import { ObjectId } from "mongodb";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import IReview from "../interfaces/Review.interface";
 import Order from "../models/Order";
@@ -13,6 +14,7 @@ import {
 	formatResponseObject,
 	FormatResponseObjectType,
 	handleTransactionError,
+	SortItemType,
 } from "../utils/helpers";
 import vars from "../utils/vars";
 
@@ -211,6 +213,30 @@ export const postNewReview = async (
 	);
 };
 
+/**
+ * @summary Retrieves a paginated list of reviews based on filters and search criteria.
+ * @description Fetches reviews from the database using various filters, including search
+ * queries, categories, brands, sizes, colors, and price range. Supports pagination and sorting options.
+ * If the user is an admin or super admin, deleted reviews can also be included in the results.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.query - Query parameters for filtering and sorting.
+ * @param {String} [req.query.sort] - The field to sort by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of reviews to retrieve per page.
+ * @param {String} [req.query.offset] - The number of reviews to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
+ * @param {String} [req.query.q] - Search query to match against review name and description.
+ * @param {Boolean} [req.query.deleted] - Flag to include deleted reviews in the response.
+ * @param {Number} [req.query.minRating] - Minimum rating to filter reviews by.
+ * @param {Number} [req.query.maxRating] - Maximum rating to filter reviews by.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the reviews data.
+ *   * @property {Object} entities.data - The retrieved reviews data.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ */
 export const getReviews = async (
 	req: Request<
 		{},
@@ -218,32 +244,250 @@ export const getReviews = async (
 		{},
 		Partial<
 			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-				q?: string;
 				deleted?: boolean | number;
+				minRating?: number;
+				maxRating?: number;
 			}
 		>
 	>,
 	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// TODO: Implement get reviews functionality.
+	// Destructure the query parameters (req.query) into
+	// deleted (include deleted countries), minRating, maxRating, and query(pagination & sorting options)
+	const { deleted, minRating = 0, maxRating = 0 } = req.query || {};
+
+	// Check if the query includes a deleted flag
+	const isFilterByDeletedAllowed: boolean = "deleted" in req.query;
+
+	// List of sort options
+	const sort: SortItemType<"rating" | "createdAt">[] = [
+		{ name: "Rating A-Z", value: { rating: 1 } },
+		{ name: "Rating Z-A", value: { rating: -1 } },
+		{ name: "Created Date Ascending", value: { createdAt: 1 } },
+		{ name: "Created Date Descending", value: { createdAt: -1 } },
+	];
+
+	// Attempt to retrieve the reviews using the given query and pagination options,
+	// and if there was an error, return the error and end the request
+	const [paginatedReviewsError, paginatedReviews] = await to(
+		Review.paginate<IReviewDocument>(
+			{
+				// If the query includes a deleted flag, include deleted products
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
+				// Filter reviews by price range
+				...(((minRating || maxRating) && {
+					rating: {
+						...(minRating && { $gte: minRating }),
+						...(maxRating && { $lte: maxRating }),
+					},
+				}) ||
+					{}),
+			},
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: Number(req.query.page) }),
+				...("limit" in req.query && { limit: Number(req.query.limit) }),
+				...("offset" in req.query && { offset: Number(req.query.offset) }),
+				...("pagination" in req.query && { pagination: Boolean(req.query.pagination) }),
+				populate: [
+					{ path: "product", select: "-_id name" },
+					{ path: "user", select: "-_id name" },
+				],
+			}
+		)
+	);
+	if (paginatedReviewsError) return next(paginatedReviewsError);
+
+	// Destructure the paginated reviews into the list of reviews (docs) and pagination metadata
+	const { docs, ...pagination } = paginatedReviews;
+
+	// Return the list of reviews, pagination metadata, and sort options in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: [...(docs || [])], meta: { pagination, sort } },
+		})
+	);
 };
 
+/**
+ * @summary Retrieves reviews for a specific product.
+ * @description Fetches reviews for a given product ID from the database, including ratings,
+ * comments, and the name of the user who made the review. Supports pagination, sorting,
+ * and provides statistical data on the reviews.
+ *
+ * @param {Request} req - Express request object containing the product ID in the parameters.
+ * @param {string} req.params.product - The ID of the product to fetch reviews for.
+ * @param {Object} req.query - Query parameters for pagination and sorting.
+ * @param {String} [req.query.sort] - The field to sort reviews by.
+ * @param {Number} [req.query.page] - The page number to retrieve.
+ * @param {Number} [req.query.limit] - The number of reviews to retrieve per page.
+ * @param {String} [req.query.offset] - The number of reviews to skip.
+ * @param {String} [req.query.pagination] - Enable or disable pagination.
+ * @param {Response} res - Express response object.
+ * @param {Function} next - Express next middleware function to handle errors.
+ *
+ * @returns {Object} 200 - Success response with the product reviews data.
+ *   * @property {Object} entities.data - The retrieved review object.
+ *   * @property {Object} entities.stats - The retrieved review statistics.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the review retrieval process.
+ */
 export const getReviewsForProduct = async (
 	req: Request<
 		{ product: string },
-		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
+		FormatResponseObjectType<
+			Pick<IReviewDocument, "rating" | "comment" | "createdAt"> & {
+				user: { name: string };
+			},
+			HttpStatus["OK"]
+		>,
 		{},
-		Partial<
-			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
-				deleted?: boolean | number;
-			}
+		Partial<Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination">>
+	>,
+	res: Response<
+		FormatResponseObjectType<
+			Pick<IReviewDocument, "rating" | "comment" | "createdAt"> & {
+				user: { name: string };
+			},
+			HttpStatus["OK"]
 		>
 	>,
-	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// TODO: Implement get reviews for product functionality.
+	// Extract the product identifier from request parameters
+	const { product: productIdentifier } = req.params || {};
+
+	// List of sort options
+	const sort: SortItemType<"rating" | "createdAt">[] = [
+		{ name: "Rating A-Z", value: { rating: 1 } },
+		{ name: "Rating Z-A", value: { rating: -1 } },
+		{ name: "Created Date Ascending", value: { createdAt: 1 } },
+		{ name: "Created Date Descending", value: { createdAt: -1 } },
+	];
+
+	// Create an aggregation pipeline to retrieve the product reviews statistics
+	const [statsError, stats] = await to(
+		Review.aggregate<{
+			total: number;
+			average: number;
+			rating: { rating: number; count: number }[];
+		}>([
+			{ $match: { product: new ObjectId(productIdentifier) } },
+			{
+				$bucket: {
+					groupBy: "$rating",
+					boundaries: [1, 2, 3, 4, 5, 6],
+					default: "Other",
+					output: { count: { $sum: 1 } },
+				},
+			},
+			{ $sort: { _id: 1 } },
+			{
+				$group: {
+					_id: null,
+					total: { $sum: "$count" },
+					average: { $sum: { $multiply: ["$_id", "$count"] } },
+					ratings: { $push: { rating: "$_id", count: "$count" } },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					total: 1,
+					average: {
+						$cond: {
+							if: { $eq: ["$total", 0] },
+							then: 0,
+							else: { $divide: ["$average", "$total"] },
+						},
+					},
+					ratings: {
+						$map: {
+							input: [1, 2, 3, 4, 5],
+							as: "rating",
+							in: {
+								rating: "$$rating",
+								count: {
+									$reduce: {
+										input: "$ratings",
+										initialValue: 0,
+										in: {
+											$cond: {
+												if: { $eq: ["$$this.rating", "$$rating"] },
+												then: "$$this.count",
+												else: "$$value",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		])
+	);
+	if (statsError) return next(statsError);
+
+	// Attempt to retrieve the product reviews using the given query and pagination options,
+	// and if there was an error, return the error and end the request
+	const [paginatedProductReviewsError, paginatedProductReviews] = await to(
+		Review.aggregatePaginate<
+			Pick<IReviewDocument, "rating" | "comment" | "createdAt"> & {
+				user: { name: string };
+			}
+		>(
+			Review.aggregate([
+				{ $match: { product: new ObjectId(productIdentifier) } },
+				{
+					$lookup: {
+						from: "users",
+						localField: "user",
+						foreignField: "_id",
+						as: "userDetails",
+					},
+				},
+				{ $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+				{ $set: { user: "$userDetails" } },
+				{ $unset: "userDetails" },
+				{ $project: { rating: 1, comment: 1, createdAt: 1, "user.name": 1 } },
+			]),
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && {
+					sort: req.query.sort,
+					...("price" in (req.query.sort as object) && {
+						sort: {
+							"price.sale": (req.query.sort as { price: any }).price,
+							"price.normal": (req.query.sort as { price: any }).price,
+						},
+					}),
+				}),
+				...("page" in req.query && { page: Number(req.query.page) }),
+				...("limit" in req.query && { limit: Number(req.query.limit) }),
+				...("offset" in req.query && { offset: Number(req.query.offset) }),
+				...("pagination" in req.query && { pagination: Boolean(req.query.pagination) }),
+			}
+		)
+	);
+	if (paginatedProductReviewsError) return next(paginatedProductReviewsError);
+
+	// Destructure the paginated product reviews into the list of reviews (docs) and pagination metadata
+	const { docs, ...pagination } = paginatedProductReviews;
+
+	// Return the list of product reviews, statistics, pagination metadata, and sort options in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: {
+				data: [...(docs || [])],
+				stats: { ...(stats?.[0] || {}) },
+				meta: { pagination, sort },
+			},
+		})
+	);
 };
 
 /**

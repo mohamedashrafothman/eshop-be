@@ -1,4 +1,4 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { AggregatePaginateModel, Document, Model, PaginateModel, Schema, model } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isEmail from "validator/lib/isEmail.js";
 import IEmail from "../interfaces/Email.interface";
@@ -41,7 +41,10 @@ const EmailSchema: Schema<IEmailDocument, object, IEmailDocument> = new Schema(
 // modal definition
 const EmailModal = model<
 	IEmailDocument,
-	PaginateModel<IEmailDocument> & SoftDeleteModel<IEmailDocument> & IEmailModel
+	PaginateModel<IEmailDocument> &
+		AggregatePaginateModel<IEmailDocument> &
+		SoftDeleteModel<IEmailDocument> &
+		IEmailModel
 >("Email", EmailSchema);
 
 export default EmailModal;

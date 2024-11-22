@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICategory from "../interfaces/Category.interface";
 import { IAttachmentDocument } from "./Attachment";
@@ -63,7 +71,10 @@ CategorySchema.pre("save", function (next) {
 // modal definition
 const CategoryModal = model<
 	ICategoryDocument,
-	PaginateModel<ICategoryDocument> & SoftDeleteModel<ICategoryDocument> & ICategoryModel
+	PaginateModel<ICategoryDocument> &
+		AggregatePaginateModel<ICategoryDocument> &
+		SoftDeleteModel<ICategoryDocument> &
+		ICategoryModel
 >("Category", CategorySchema);
 
 export default CategoryModal;

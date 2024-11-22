@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isHexColor from "validator/lib/isHexColor";
 import isInt from "validator/lib/isInt";
@@ -97,7 +105,10 @@ OrderItemSchema.pre("save", async function (next) {
 // modal definition
 const OrderItemModal = model<
 	IOrderItemDocument,
-	PaginateModel<IOrderItemDocument> & SoftDeleteModel<IOrderItemDocument> & IOrderItemModel
+	PaginateModel<IOrderItemDocument> &
+		AggregatePaginateModel<IOrderItemDocument> &
+		SoftDeleteModel<IOrderItemDocument> &
+		IOrderItemModel
 >("OrderItem", OrderItemSchema);
 
 export default OrderItemModal;

@@ -1,4 +1,4 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { AggregatePaginateModel, Document, Model, PaginateModel, Schema, model } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IAttachment from "../interfaces/Attachment.interface";
 
@@ -31,7 +31,10 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 // modal definition
 const AttachmentModal = model<
 	IAttachmentDocument,
-	PaginateModel<IAttachmentDocument> & SoftDeleteModel<IAttachmentDocument> & IAttachmentModel
+	PaginateModel<IAttachmentDocument> &
+		AggregatePaginateModel<IAttachmentDocument> &
+		SoftDeleteModel<IAttachmentDocument> &
+		IAttachmentModel
 >("Attachment", AttachmentSchema);
 
 export default AttachmentModal;

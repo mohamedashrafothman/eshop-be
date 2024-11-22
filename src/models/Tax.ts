@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ITax from "../interfaces/Tax.interface";
 import { ICategoryDocument } from "./Category";
@@ -54,7 +62,10 @@ const TaxSchema: Schema<ITaxDocument, object, ITaxDocument> = new Schema(
 // modal definition
 const TaxModal = model<
 	ITaxDocument,
-	PaginateModel<ITaxDocument> & SoftDeleteModel<ITaxDocument> & ITaxModel
+	PaginateModel<ITaxDocument> &
+		AggregatePaginateModel<ITaxDocument> &
+		SoftDeleteModel<ITaxDocument> &
+		ITaxModel
 >("Tax", TaxSchema);
 
 export default TaxModal;

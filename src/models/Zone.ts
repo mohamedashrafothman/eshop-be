@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IZone from "../interfaces/Zone";
 import { ICityDocument } from "./City";
@@ -67,7 +75,10 @@ const ZoneSchema: Schema<IZoneDocument, object, IZoneDocument> = new Schema(
 // modal definition
 const ZoneModal = model<
 	IZoneDocument,
-	PaginateModel<IZoneDocument> & SoftDeleteModel<IZoneDocument> & IZoneModel
+	PaginateModel<IZoneDocument> &
+		AggregatePaginateModel<IZoneDocument> &
+		SoftDeleteModel<IZoneDocument> &
+		IZoneModel
 >("Zone", ZoneSchema);
 
 export default ZoneModal;
