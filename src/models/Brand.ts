@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IBrand from "../interfaces/Brand.interface";
 import { IAttachmentDocument } from "./Attachment";
@@ -65,7 +73,10 @@ BrandSchema.pre("save", function (next) {
 // modal definition
 const BrandModal = model<
 	IBrandDocument,
-	PaginateModel<IBrandDocument> & SoftDeleteModel<IBrandDocument> & IBrandModel
+	PaginateModel<IBrandDocument> &
+		AggregatePaginateModel<IBrandDocument> &
+		SoftDeleteModel<IBrandDocument> &
+		IBrandModel
 >("Brand", BrandSchema);
 
 export default BrandModal;

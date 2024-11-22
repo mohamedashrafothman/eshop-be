@@ -43,8 +43,8 @@ const WishlistSchema: Schema<IWishlistDocument, object, IWishlistDocument> = new
 // modal definition
 const WishlistModal = model<
 	IWishlistDocument,
-	AggregatePaginateModel<IWishlistDocument> &
-		PaginateModel<IWishlistDocument> &
+	PaginateModel<IWishlistDocument> &
+		AggregatePaginateModel<IWishlistDocument> &
 		SoftDeleteModel<IWishlistDocument> &
 		IWishlistModel
 >("Wishlist", WishlistSchema);

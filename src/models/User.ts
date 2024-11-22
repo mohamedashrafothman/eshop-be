@@ -1,7 +1,15 @@
 import to from "await-to-js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isEmail from "validator/lib/isEmail.js";
 import IUser from "../interfaces/User.interface";
@@ -112,7 +120,10 @@ UserSchema.pre("save", async function (next) {
 // modal definition
 const UserModal = model<
 	IUserDocument,
-	PaginateModel<IUserDocument> & SoftDeleteModel<IUserDocument> & IUserModel
+	PaginateModel<IUserDocument> &
+		AggregatePaginateModel<IUserDocument> &
+		SoftDeleteModel<IUserDocument> &
+		IUserModel
 >("User", UserSchema);
 
 export default UserModal;

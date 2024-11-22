@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IPaymentMethod, { PAYMENT_METHODS } from "../interfaces/PaymentMethod.interface";
 import { IAttachmentDocument } from "./Attachment";
@@ -46,6 +54,7 @@ const PaymentMethodSchema: Schema<IPaymentMethodDocument, object, IPaymentMethod
 const PaymentMethodModal = model<
 	IPaymentMethodDocument,
 	PaginateModel<IPaymentMethodDocument> &
+		AggregatePaginateModel<IPaymentMethodDocument> &
 		SoftDeleteModel<IPaymentMethodDocument> &
 		IPaymentMethodModel
 >("PaymentMethod", PaymentMethodSchema);

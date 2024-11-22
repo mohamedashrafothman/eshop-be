@@ -73,59 +73,74 @@ export const getSingleWishlist = async (
 		{ name: "Created Date Descending", value: { createdAt: -1 } },
 	];
 
-	// Create an aggregation pipeline to retrieve the wishlist products
-	const aggregation = Wishlist.aggregate()
-		.match({ user: req.user._id })
-		.unwind("$products")
-		.lookup({
-			from: "products",
-			localField: "products",
-			foreignField: "_id",
-			as: "productDetails",
-		})
-		.unwind("$productDetails")
-		.lookup({
-			from: "attachments",
-			localField: "productDetails.images",
-			foreignField: "_id",
-			as: "productDetails.images",
-		})
-		.unwind({ path: "$productDetails.images", preserveNullAndEmptyArrays: true })
-		.lookup({
-			from: "attachments",
-			localField: "productDetails.thumbnail",
-			foreignField: "_id",
-			as: "productDetails.thumbnail",
-		})
-		.unwind({ path: "$productDetails.thumbnail", preserveNullAndEmptyArrays: true })
-		.lookup({
-			from: "brands",
-			localField: "productDetails.brand",
-			foreignField: "_id",
-			as: "productDetails.brand",
-		})
-		.unwind({ path: "$productDetails.brand", preserveNullAndEmptyArrays: true })
-		.lookup({
-			from: "categories",
-			localField: "productDetails.category",
-			foreignField: "_id",
-			as: "productDetails.category",
-		})
-		.unwind({ path: "$productDetails.category", preserveNullAndEmptyArrays: true })
-		.lookup({
-			from: "users",
-			localField: "productDetails.user",
-			foreignField: "_id",
-			as: "productDetails.user",
-		})
-		.unwind({ path: "$productDetails.user", preserveNullAndEmptyArrays: true })
-		.replaceRoot("$productDetails");
-
 	// Attempt to retrieve the wishlist products using the given query and pagination options,
 	// and if there was an error, return the error and end the request
 	const [paginatedWishlistProductsError, paginatedWishlistProducts] = await to(
-		Wishlist.aggregatePaginate(
-			aggregation,
+		Wishlist.aggregatePaginate<IProductDocument>(
+			Wishlist.aggregate([
+				{ $match: { user: req.user._id } },
+				{ $unwind: "$products" },
+				{
+					$lookup: {
+						from: "products",
+						localField: "products",
+						foreignField: "_id",
+						as: "productDetails",
+					},
+				},
+				{ $unwind: "$productDetails" },
+				{
+					$lookup: {
+						from: "attachments",
+						localField: "productDetails.images",
+						foreignField: "_id",
+						as: "productDetails.images",
+					},
+				},
+				{ $unwind: { path: "$productDetails.images", preserveNullAndEmptyArrays: true } },
+				{
+					$lookup: {
+						from: "attachments",
+						localField: "productDetails.thumbnail",
+						foreignField: "_id",
+						as: "productDetails.thumbnail",
+					},
+				},
+				{
+					$unwind: {
+						path: "$productDetails.thumbnail",
+						preserveNullAndEmptyArrays: true,
+					},
+				},
+				{
+					$lookup: {
+						from: "brands",
+						localField: "productDetails.brand",
+						foreignField: "_id",
+						as: "productDetails.brand",
+					},
+				},
+				{ $unwind: { path: "$productDetails.brand", preserveNullAndEmptyArrays: true } },
+				{
+					$lookup: {
+						from: "categories",
+						localField: "productDetails.category",
+						foreignField: "_id",
+						as: "productDetails.category",
+					},
+				},
+				{ $unwind: { path: "$productDetails.category", preserveNullAndEmptyArrays: true } },
+				{
+					$lookup: {
+						from: "users",
+						localField: "productDetails.user",
+						foreignField: "_id",
+						as: "productDetails.user",
+					},
+				},
+				{ $unwind: { path: "$productDetails.user", preserveNullAndEmptyArrays: true } },
+				{ $replaceRoot: { newRoot: "$productDetails" } },
+			]),
 			// Use the query parameters for pagination and sorting
 			{
 				...("sort" in req.query && {

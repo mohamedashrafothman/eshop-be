@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IState from "../interfaces/State.interface";
 import { ICountryDocument } from "./Country";
@@ -48,7 +56,10 @@ const StateSchema: Schema<IStateDocument, object, IStateDocument> = new Schema(
 // modal definition
 const StateModal = model<
 	IStateDocument,
-	PaginateModel<IStateDocument> & SoftDeleteModel<IStateDocument> & IStateModel
+	PaginateModel<IStateDocument> &
+		AggregatePaginateModel<IStateDocument> &
+		SoftDeleteModel<IStateDocument> &
+		IStateModel
 >("State", StateSchema);
 
 export default StateModal;

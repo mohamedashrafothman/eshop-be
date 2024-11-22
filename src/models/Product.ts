@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import isHexColor from "validator/lib/isHexColor";
 import isInt from "validator/lib/isInt";
@@ -149,7 +157,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 				type: Schema.Types.ObjectId,
 				ref: "Review",
 				default: [],
-				autopopulate: { maxDepth: 1, select: "title slug rating comment" },
+				autopopulate: { maxDepth: 1, select: "rating comment user" },
 			},
 		],
 		averageRating: {
@@ -164,20 +172,37 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );
 
-ProductSchema.pre("save", function (next) {
-	// Check if sale price isn't modified.
-	if (!this.isModified("price.sale") && !this.isModified("price.normal")) return next();
+ProductSchema.pre("save", async function (next) {
+	// Check if prices or reviews isn't modified.
+	if (
+		!this.isModified("price.sale") &&
+		!this.isModified("price.normal") &&
+		!this.isModified("reviews")
+	)
+		return next();
 
-	// extract normal price from document price object.
+	// Populate reviews to get average rating
+	await this.populate({ path: "reviews" });
+
+	// Extract normal price from document price object.
 	const { sale = 0, normal = 0 } = this.price;
 
-	// Check if sale price is less than normal price.
+	// Check if the sale price is less than normal price.
 	const isSaleLessThanNormal = sale && normal && sale < normal;
 
-	// Replace percentage with new calculated value.
+	// Calculate average rating and review count
+	const reviews = this.reviews as IReviewDocument[];
+	const reviewsLength = reviews.length || 0;
+	const reviewsTotalRating = reviews.reduce((acc, review) => acc + review.rating, 0);
+
+	// Replace price percentage with new calculated value.
 	this.price.discount = (isSaleLessThanNormal && normal - sale) || 0;
 	this.price.percentage =
 		(isSaleLessThanNormal && Math.round((this.price.discount / normal) * 100)) || 0;
+
+	// Replace reviews ratings and count with new calculated value.
+	this.reviewCount = reviewsLength;
+	this.averageRating = reviewsTotalRating / reviewsLength || 0;
 
 	next();
 });
@@ -185,7 +210,10 @@ ProductSchema.pre("save", function (next) {
 // modal definition
 const ProductModal = model<
 	IProductDocument,
-	PaginateModel<IProductDocument> & SoftDeleteModel<IProductDocument> & IProductModel
+	PaginateModel<IProductDocument> &
+		AggregatePaginateModel<IProductDocument> &
+		SoftDeleteModel<IProductDocument> &
+		IProductModel
 >("Product", ProductSchema);
 
 export default ProductModal;

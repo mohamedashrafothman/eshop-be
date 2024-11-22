@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IToken from "../interfaces/Token.interface";
 import vars from "../utils/vars";
@@ -44,7 +52,10 @@ const TokenSchema: Schema<ITokenDocument, object, ITokenDocument> = new Schema(
 // modal definition
 const TokenModal = model<
 	ITokenDocument,
-	PaginateModel<ITokenDocument> & SoftDeleteModel<ITokenDocument> & ITokenModel
+	PaginateModel<ITokenDocument> &
+		AggregatePaginateModel<ITokenDocument> &
+		SoftDeleteModel<ITokenDocument> &
+		ITokenModel
 >("Token", TokenSchema);
 
 export default TokenModal;

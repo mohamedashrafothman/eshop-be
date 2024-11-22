@@ -12,14 +12,7 @@ mongoose.connect(vars.db.url, {});
 mongoose.plugin(MongooseDelete, {
 	deletedAt: true,
 	deletedBy: true,
-	overrideMethods: [
-		"findOne",
-		"findOneAndUpdate",
-		"update",
-		"updateOne",
-		"updateMany",
-		"aggregate",
-	],
+	overrideMethods: ["findOne", "findOneAndUpdate", "update", "updateOne", "updateMany"],
 });
 mongoose.plugin(mongoosePagination);
 mongoose.plugin(mongooseAggregatePagination);

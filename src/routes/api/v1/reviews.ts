@@ -34,7 +34,10 @@ router
 		unprocessableEntityValidator,
 		reviewsController.updateSingleReview
 	)
-	.delete(reviewsController.deleteSingleReview);
+	.delete(
+		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		reviewsController.deleteSingleReview
+	);
 
 router
 	.route("/:review/restore")

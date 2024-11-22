@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IOrder, {
 	OrderShippingMethod as IOrderShippingMethod,
@@ -227,7 +235,10 @@ OrderSchema.pre("save", async function (next) {
 // modal definition
 const OrderModal = model<
 	IOrderDocument,
-	PaginateModel<IOrderDocument> & SoftDeleteModel<IOrderDocument> & IOrderModel
+	PaginateModel<IOrderDocument> &
+		AggregatePaginateModel<IOrderDocument> &
+		SoftDeleteModel<IOrderDocument> &
+		IOrderModel
 >("Order", OrderSchema);
 
 export default OrderModal;

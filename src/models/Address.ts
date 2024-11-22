@@ -1,4 +1,12 @@
-import { Document, Model, PaginateModel, Schema, Types, model } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	PaginateModel,
+	Schema,
+	Types,
+	model,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import IAddress from "../interfaces/Address.interface";
 import { ICityDocument } from "./City";
@@ -71,7 +79,10 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 // modal definition
 const AddressModal = model<
 	IAddressDocument,
-	PaginateModel<IAddressDocument> & SoftDeleteModel<IAddressDocument> & IAddressModel
+	PaginateModel<IAddressDocument> &
+		AggregatePaginateModel<IAddressDocument> &
+		SoftDeleteModel<IAddressDocument> &
+		IAddressModel
 >("Address", AddressSchema);
 
 export default AddressModal;

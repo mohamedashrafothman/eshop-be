@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICart from "../interfaces/Cart.interface";
 import { IAddressDocument } from "./Address";
@@ -161,7 +169,10 @@ CartSchema.pre("save", async function (next) {
 // modal definition
 const CartModal = model<
 	ICartDocument,
-	PaginateModel<ICartDocument> & SoftDeleteModel<ICartDocument> & ICartModel
+	PaginateModel<ICartDocument> &
+		AggregatePaginateModel<ICartDocument> &
+		SoftDeleteModel<ICartDocument> &
+		ICartModel
 >("Cart", CartSchema);
 
 export default CartModal;

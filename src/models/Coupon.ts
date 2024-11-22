@@ -1,4 +1,12 @@
-import { Document, Model, model, PaginateModel, Schema, Types } from "mongoose";
+import {
+	AggregatePaginateModel,
+	Document,
+	Model,
+	model,
+	PaginateModel,
+	Schema,
+	Types,
+} from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ICoupon from "../interfaces/Coupon.interface";
 import { ICategoryDocument } from "./Category";
@@ -63,7 +71,10 @@ CouponSchema.pre("save", async function (next) {
 // modal definition
 const CouponModal = model<
 	ICouponDocument,
-	PaginateModel<ICouponDocument> & SoftDeleteModel<ICouponDocument> & ICouponModel
+	PaginateModel<ICouponDocument> &
+		AggregatePaginateModel<ICouponDocument> &
+		SoftDeleteModel<ICouponDocument> &
+		ICouponModel
 >("Coupon", CouponSchema);
 
 export default CouponModal;

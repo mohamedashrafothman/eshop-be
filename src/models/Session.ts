@@ -1,4 +1,4 @@
-import { Document, Model, PaginateModel, Schema, model } from "mongoose";
+import { AggregatePaginateModel, Document, Model, PaginateModel, Schema, model } from "mongoose";
 import { SoftDeleteInterface, SoftDeleteModel } from "mongoose-delete";
 import ISession from "../interfaces/Session.interface";
 
@@ -20,7 +20,10 @@ const SessionSchema: Schema<ISessionDocument, object, ISessionDocument> = new Sc
 // modal definition
 const SessionModal = model<
 	ISessionDocument,
-	PaginateModel<ISessionDocument> & SoftDeleteModel<ISessionDocument> & ISessionModel
+	PaginateModel<ISessionDocument> &
+		AggregatePaginateModel<ISessionDocument> &
+		SoftDeleteModel<ISessionDocument> &
+		ISessionModel
 >("Session", SessionSchema);
 
 export default SessionModal;
