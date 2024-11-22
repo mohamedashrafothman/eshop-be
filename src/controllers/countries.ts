@@ -141,7 +141,7 @@ export const getCountries = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
+	// q (search term), deleted (include deleted countries)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
@@ -245,8 +245,8 @@ export const getSingleCountry = async (
  * @param {Object} req - Express request object.
  * @param {String} req.params.country - The country ID or slug.
  * @param {Object} req.body - The new data for the country.
- * @param {String} [req.body.name] - Optional new name for the country.
- * @param {String} [req.body.code] - Optional new code for the country.
+ * @param {String} [req.body.name] - new name for the country (optional).
+ * @param {String} [req.body.code] - new code for the country (optional).
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *

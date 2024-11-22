@@ -12,6 +12,7 @@ import countriesRouter from "./countries";
 import couponsRouter from "./coupons";
 import ordersRouter from "./orders";
 import paymentMethodsRouter from "./paymentMethods";
+import policiesRouter from "./policies";
 import productsRouter from "./products";
 import reviewsRouter from "./reviews";
 import shippingMethodsRouter from "./shippingMethods";
@@ -68,6 +69,7 @@ router.use(
 );
 router.use("/orders", authController.passportJWTAuthenticate, ordersRouter);
 router.use("/reviews", reviewsRouter);
+router.use("/policies", policiesRouter);
 
 // Exporting router
 export default router;

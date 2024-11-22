@@ -159,7 +159,7 @@ export const getCoupons = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted countries), and query (pagination & sorting options)
+	// q (search term), deleted (include deleted countries)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag

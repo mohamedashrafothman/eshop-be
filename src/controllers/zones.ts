@@ -254,7 +254,7 @@ export const getZones = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted zones), and query (pagination & sorting options)
+	// q (search term), deleted (include deleted zones)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag

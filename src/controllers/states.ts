@@ -165,7 +165,7 @@ export const getStates = async (
 	next: NextFunction
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted countries), country (id of country), and query (pagination & sorting options)
+	// q (search term), deleted (include deleted countries), country (id of country)
 	const { q, deleted, country } = req.query || {};
 
 	// Check if the query includes a deleted flag
