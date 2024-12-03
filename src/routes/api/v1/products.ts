@@ -25,6 +25,15 @@ router
 	);
 
 router
+	.route("/home")
+	.all(allowMethods(["get"]))
+	.get(
+		productsController.validator("home"),
+		unprocessableEntityValidator,
+		productsController.getHomeProductsList
+	);
+
+router
 	.route("/:product")
 	.all(allowMethods(["get", "patch", "delete"]))
 	.get(authController.passportJWTSerialize, productsController.getSingleProduct)

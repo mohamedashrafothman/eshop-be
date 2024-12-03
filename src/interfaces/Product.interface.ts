@@ -15,4 +15,5 @@ export default interface Product {
 	reviews: string[];
 	averageRating: number;
 	reviewCount: number;
+	isFeatured: boolean;
 }

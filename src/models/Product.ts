@@ -168,6 +168,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			index: true,
 		},
 		reviewCount: { type: Number, default: 0, index: true },
+		isFeatured: { type: Boolean, default: false, index: true },
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );

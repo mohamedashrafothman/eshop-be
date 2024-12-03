@@ -1,6 +1,6 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
-import { body, ValidationChain } from "express-validator";
+import { body, query, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
@@ -26,7 +26,7 @@ import vars from "../utils/vars";
 /**
  * Validates the input fields based on the method provided.
  */
-export const validator = (method: "create" | "update"): ValidationChain[] => {
+export const validator = (method: "create" | "update" | "home"): ValidationChain[] => {
 	switch (method) {
 		case "create":
 			return [
@@ -100,6 +100,10 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Invalid country id!")
 					.notEmpty()
 					.withMessage("Category is required!"),
+				body("isFeatured")
+					.optional()
+					.isBoolean()
+					.withMessage("isFeatured must be a boolean!"),
 			];
 		case "update":
 			return [
@@ -178,6 +182,23 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Invalid country id!")
 					.notEmpty()
 					.withMessage("Category is required!"),
+				body("isFeatured")
+					.optional()
+					.isBoolean()
+					.withMessage("isFeatured must be a boolean!"),
+			];
+		case "home":
+			return [
+				query("type")
+					.trim()
+					.escape()
+					.notEmpty()
+					.withMessage("type is required!")
+					.custom((value: "latest" | "featured" | "onSale" | "topRated") => {
+						if (!["latest", "featured", "onSale", "topRated"].includes(value))
+							throw new Error(`Invalid type ${value || ""}`);
+						return true;
+					}),
 			];
 		default:
 			return [];
@@ -292,7 +313,14 @@ export const postNewProduct = async (
 		FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>,
 		Pick<
 			IProduct,
-			"name" | "description" | "quantity" | "colors" | "sizes" | "brand" | "category"
+			| "name"
+			| "description"
+			| "quantity"
+			| "colors"
+			| "sizes"
+			| "brand"
+			| "category"
+			| "isFeatured"
 		> & {
 			price: Pick<IProduct["price"], "normal" | "sale">;
 			thumbnail?: Express.Multer.File;
@@ -406,6 +434,7 @@ export const postNewProduct = async (
 					category: req.body.category,
 					...(thumbnail ? { thumbnail } : {}),
 					...(images.length ? { images } : {}),
+					...("isFeatured" in req.body && { isFeatured: req.body.isFeatured }),
 					user: req.user._id,
 				},
 			],
@@ -691,7 +720,14 @@ export const updateSingleProduct = async (
 		Partial<
 			Pick<
 				IProduct,
-				"name" | "description" | "quantity" | "colors" | "sizes" | "brand" | "category"
+				| "name"
+				| "description"
+				| "quantity"
+				| "colors"
+				| "sizes"
+				| "brand"
+				| "category"
+				| "isFeatured"
 			> & {
 				price: Partial<Pick<IProduct["price"], "normal" | "sale">>;
 				thumbnail?: Express.Multer.File;
@@ -908,6 +944,7 @@ export const updateSingleProduct = async (
 		...(req.body?.category && { category: req.body.category }),
 		...(createdThumbnail?.[0]?._id ? { thumbnail: createdThumbnail[0]._id } : {}),
 		...(createdImages?.length ? { images: createdImages?.map(({ _id }) => _id) } : {}),
+		...("isFeatured" in req.body && { isFeatured: req.body.isFeatured }),
 	});
 
 	// If the product is not found, pass control to the next middleware
@@ -1041,5 +1078,60 @@ export const restoreSingleProduct = async (
 	req.flash("success", "Successfully Restored.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
+	);
+};
+
+export const getHomeProductsList = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
+		{},
+		{ type?: "latest" | "featured" | "onSale" | "topRated" }
+	>,
+	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Destructure the query parameters (req.query) into the 'type' variable
+	const { type } = req.query || {};
+	const isTypeLatest = type === "latest";
+	const isTypeFeatured = type === "featured";
+	const isTypeOnSale = type === "onSale";
+	const isTypeTopRated = type === "topRated";
+
+	// Aggregation stages
+	let matchStage = {};
+	let sortStage = {};
+	switch (type) {
+		case "latest":
+			sortStage = { createdAt: -1 }; // Sort by newest creation date
+			break;
+		case "featured":
+			matchStage = { isFeatured: true }; // Replace with your actual field indicating featured products
+			break;
+		case "onSale":
+			matchStage = { "price.sale": { $ne: null } }; // Products with a sale price
+			break;
+		case "topRated":
+			sortStage = { averageRating: -1, reviewCount: -1 }; // Sort by highest average rating and reviews
+			break;
+		default:
+			break;
+	}
+
+	// Build the aggregation pipeline
+	const pipeline = [
+		...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []), // Apply filtering if necessary
+		...(Object.keys(sortStage).length > 0 ? [{ $sort: sortStage }] : []), // Apply sorting if necessary
+		{ $limit: 10 }, // Limit results for performance
+	];
+
+	// Attempt to retrieve the products using the given query,
+	// and if there was an error, return the error and end the request
+	const [paginatedProductsError, paginatedProducts] = await to(Product.aggregate(pipeline));
+	if (paginatedProductsError) return next(paginatedProductsError);
+
+	// Return the list of products in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({ status: httpStatus.OK, entities: { data: paginatedProducts } })
 	);
 };
