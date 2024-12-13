@@ -1,0 +1,19 @@
+{
+	"types": [
+		{ "type": "feat", "section": "Features" },
+		{ "type": "fix", "section": "Bug Fixes" },
+		{ "type": "docs", "section": "Docs" },
+		{ "type": "refactor", "section": "Changed" },
+		{ "type": "chore", "section": "Other" },
+		{ "type": "perf", "hidden": true },
+		{ "type": "test", "hidden": true },
+		{ "type": "style", "hidden": true },
+		{ "type": "build", "hidden": true },
+		{ "type": "ci", "hidden": true },
+		{ "type": "revert", "hidden": true },
+		{ "type": "wip", "hidden": true }
+	],
+	"commitUrlFormat": "https://github.com/mohamedashrafothman/eshop-be/commit/{{hash}}",
+	"compareUrlFormat": "https://github.com/mohamedashrafothman/eshop-be/compare/{{previousTag}}...{{currentTag}}",
+	"issueUrlFormat": "https://github.com/mohamedashrafothman/eshop-be/issues/{{id}}"
+}
