@@ -62,16 +62,6 @@ router
 	);
 
 router
-	.route("/email/verify/:token")
-	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
-	.get(authController.getEmailVerification);
-
-router
-	.route("/email/resend")
-	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
-	.get(authController.getResendEmailVerification);
-
-router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
 	.all(allowMethods(["post"]), (req, res, next) =>
 		!req.headers.authorization ? authController.passportJWTAuthenticate(req, res, next) : next()

@@ -40,5 +40,15 @@ router
 	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
 	.patch(usersController.restoreSingleUser);
 
+router
+	.route("/:user/email/verify/:token")
+	.all(allowMethods(["get"]))
+	.get(usersController.getUserEmailVerification);
+
+router
+	.route("/:user/email/resend")
+	.all(allowMethods(["get"]))
+	.get(usersController.getResendEmailVerification);
+
 // Exporting router
 export default router;
