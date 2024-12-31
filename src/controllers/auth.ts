@@ -1,8 +1,9 @@
 import to from "await-to-js";
+import axios from "axios";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
-import httpStatus from "http-status";
+import httpStatus, { HttpStatus } from "http-status";
 import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
 import mongoose, { ClientSession } from "mongoose";
 import passport, { type Profile } from "passport";
@@ -13,6 +14,8 @@ import {
 	type IVerifyOptions,
 	type VerifyFunctionWithRequest as LocalVerifyFunctionWithRequest,
 } from "passport-local";
+import qs from "qs";
+import IUser from "../interfaces/User.interface";
 import Email from "../models/Email";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
@@ -21,6 +24,7 @@ import {
 	countDownTimer,
 	createHashToken,
 	formatResponseObject,
+	FormatResponseObjectType,
 	handleTransactionError,
 } from "../utils/helpers";
 import vars from "../utils/vars";
@@ -29,7 +33,13 @@ import vars from "../utils/vars";
  * Validates the input fields based on the method provided.
  */
 export const validator = (
-	method: "login" | "social-user" | "refresh-token" | "forgot-password" | "reset-password"
+	method:
+		| "login"
+		| "register"
+		| "social-user"
+		| "refresh-token"
+		| "forgot-password"
+		| "reset-password"
 ): ValidationChain[] => {
 	switch (method) {
 		case "login":
@@ -57,6 +67,62 @@ export const validator = (
 						"Password must include one lowercase character, one uppercase character, a number, and a special character."
 					),
 				body("remember").optional().toBoolean(),
+			];
+		case "register":
+			return [
+				body("email")
+					.trim()
+					.notEmpty()
+					.withMessage("Email must supply an E-mail.")
+					.isEmail()
+					.withMessage("Email must be in an E-mail format.")
+					.normalizeEmail({
+						gmail_remove_dots: false,
+						gmail_remove_subaddress: false,
+						outlookdotcom_remove_subaddress: false,
+						yahoo_remove_subaddress: false,
+						icloud_remove_subaddress: false,
+					}),
+				body("name")
+					.notEmpty()
+					.withMessage("You must supply a name!")
+					.trim()
+					.escape()
+					.isLength({ max: 100 })
+					.withMessage("Name must be at most 100 characters long!"),
+				body("password")
+					.notEmpty()
+					.withMessage("Password can't be blank!")
+					.isLength({ min: 8, max: 64 })
+					.withMessage("Password must be at least 8 chars long")
+					.isStrongPassword()
+					.withMessage(
+						"Password must include one lowercase character, one uppercase character, a number, and a special character."
+					),
+				body("passwordConfirmation")
+					.notEmpty()
+					.withMessage("Password confirmation can't be blank!")
+					.custom((value, { req }) => value === req.body.password)
+					.withMessage("Your passwords don't match!"),
+				body("g-recaptcha-response")
+					.notEmpty()
+					.withMessage("Captcha can't be blank!")
+					.bail()
+					.custom(async (value) => {
+						const [recaptchaError, recaptchaResponse] = await to(
+							axios.post(
+								`${vars.recaptcha.verifyLink}?${qs.stringify({ secret: vars.recaptcha.secretKey, response: value })}`
+							)
+						);
+
+						if (recaptchaError)
+							throw new Error(recaptchaError.message || "Error verifying reCAPTCHA");
+
+						if (!recaptchaResponse?.data.success)
+							throw new Error("Failed reCAPTCHA validation");
+
+						return true;
+					}),
 			];
 		case "social-user":
 			return [
@@ -1155,6 +1221,193 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		);
 		return;
 	});
+};
+
+/**
+ * @summary Register a new user in the system.
+ * @description Handles the creation of a new user in the system.
+ * If the user is not authenticated, creates access and refresh tokens.
+ * Sends an email with the verification token to the user.
+ * Creates the new user in the database and related email and token records.
+ * Commits the transaction and returns a success response.
+ *
+ * @param {Request} req - Express request object.
+ * @param {Response} res - Express response object.
+ * @param {Object} req.body - The data for creating a new user.
+ * @param {NextFunction} next - Express next middleware function to handle errors.
+ *
+ * @returns {void} 201 - Success response with the created user entity.
+ *   * @property {Object} entities.data - The created user object.
+ *   * @property {Object} [entities.data.accessToken] - The user's access token.
+ *   * @property {Object} [entities.data.refreshToken] - The user's refresh token.
+ *   * @property {Object} [entities.data.tokenType] - The token type.
+ *   * @property {Array} flashes - Success message for new user creation.
+ * @throws {Error} 401 - Returns an error if the user is not authorized to create a user.
+ * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
+ */
+export const postRegister = async (
+	req: Request<
+		{},
+		FormatResponseObjectType<
+			IUserDocument & {
+				accessToken?: string;
+				refreshToken?: string;
+				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
+			},
+			HttpStatus["CREATED"]
+		>,
+		Pick<IUser, "email" | "name" | "password"> & {
+			passwordConfirmation: string;
+			"g-recaptcha-response": string;
+		}
+	>,
+	res: Response<
+		FormatResponseObjectType<
+			IUserDocument & {
+				accessToken?: string;
+				refreshToken?: string;
+				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
+			},
+			HttpStatus["CREATED"]
+		>
+	>,
+	next: NextFunction
+): Promise<void> => {
+	// Start a transaction to ensure data integrity
+	const session: ClientSession = await mongoose.startSession();
+	session.startTransaction();
+
+	// Get email value from the request body.
+	const { email } = req.body;
+
+	// Check if user already exists, if so, or if there is an error,
+	// rollback the transaction and pass the error to the next middleware
+	const [userError, existsUser] = await to(User.findOne({ email }).session(session));
+	if (userError || existsUser) {
+		handleTransactionError(session);
+		let error;
+		if (existsUser) error = createError(httpStatus.CONFLICT, "Account already exists!");
+		return next(userError || (error && { ...(error || {}), status: error.status }));
+	}
+
+	// Attempt to create the new user
+	// If there is an error creating the user,
+	// Rollback the transaction and pass the error to the next middleware
+	const [createdUserError, createdUser] = await to(
+		User.create([{ email, name: req.body.name, password: req.body.password, active: true }], {
+			session,
+		})
+	);
+	if (createdUserError) {
+		handleTransactionError(session);
+		return next(createdUserError);
+	}
+
+	// Attempt to create a new email verification token
+	// If there is an error creating the token,
+	// Rollback the transaction and pass the error to the next middleware
+	const token = createHashToken();
+	const [newVerifyEmailTokenError] = await to(
+		Token.create(
+			[
+				{
+					user: createdUser[0]._id,
+					token,
+					kind: vars.tokenTypes.verifyEmail,
+					expireAt: Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
+				},
+			],
+			{ session }
+		)
+	);
+	if (newVerifyEmailTokenError) {
+		handleTransactionError(session);
+		return next(newVerifyEmailTokenError);
+	}
+
+	// Attempt to send an email using the email service send method
+	// If there is an error sending the email,
+	// rollback the transaction and pass the error to the next middleware
+	const [sendEmailError, sendEmail] = await emailService.send({
+		to: createdUser[0],
+		from: vars.email.sender,
+		filename: "verify-user",
+		subject: `[${vars.app.name}] Verify User Account.`,
+		actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
+	});
+	if (sendEmailError) {
+		handleTransactionError(session);
+		return next(sendEmailError);
+	}
+
+	// Attempt to create a new email
+	// If there is an error creating the email,
+	// Rollback the transaction and pass the error to the next middleware
+	const [newEmailError] = await to(Email.create([sendEmail], { session }));
+	if (newEmailError) {
+		handleTransactionError(session);
+		return next(newEmailError);
+	}
+
+	// Create access and refresh tokens if the user is not authenticated to register a new user.
+	const accessToken: string = jsonwebtoken.sign(
+		{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
+		vars.auth.strategies.jwt.accessTokenSecret,
+		{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
+	);
+	const refreshToken: string = jsonwebtoken.sign(
+		{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
+		vars.auth.strategies.jwt.refreshTokenSecret,
+		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+	);
+
+	const [newRefreshTokenError] = await to(
+		Token.create(
+			[
+				{
+					user: createdUser[0]._id,
+					token: refreshToken,
+					kind: vars.tokenTypes.jwt,
+					expireAt:
+						Date.now() +
+						1000 * 60 * 60 * 24 * vars.auth.strategies.jwt.refreshTokenExpiresInDays,
+				},
+			],
+			{ session }
+		)
+	);
+	if (newRefreshTokenError) {
+		handleTransactionError(session);
+		return next(newRefreshTokenError);
+	}
+
+	// Add access and refresh tokens to the created user object
+	const newCreatedUser = Object.assign(createdUser[0], {
+		...(accessToken || refreshToken
+			? {
+					...(accessToken && { accessToken }),
+					...(refreshToken && { refreshToken }),
+					tokenType: vars.auth.strategies.jwt.tokenType,
+				}
+			: {}),
+	});
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	// Flash success message and respond with success status
+	req.flash(
+		"success",
+		"Account created successfully, to verify the account check entered e-mail address."
+	);
+	res.status(httpStatus.CREATED).json(
+		formatResponseObject({
+			status: httpStatus.CREATED,
+			entities: { data: newCreatedUser },
+			flashes: req.flash(),
+		})
+	);
 };
 
 /**

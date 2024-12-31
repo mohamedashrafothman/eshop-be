@@ -3,7 +3,6 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
-import jsonwebtoken from "jsonwebtoken";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
 import IUser from "../interfaces/User.interface";
@@ -48,22 +47,9 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.escape()
 					.isLength({ max: 100 })
 					.withMessage("Name must be at most 100 characters long!"),
-				body("password")
-					.notEmpty()
-					.withMessage("Password can't be blank!")
-					.isLength({ min: 8 })
-					.withMessage("Password must be at least 8 chars long")
-					.isStrongPassword()
-					.withMessage(
-						"Password must include one lowercase character, one uppercase character, a number, and a special character."
-					),
-				body("passwordConfirmation")
-					.notEmpty()
-					.withMessage("Password confirmation can't be blank!")
-					.custom((value, { req }) => value === req.body.password)
-					.withMessage("Your passwords don't match!"),
 				body("role")
-					.optional()
+					.notEmpty()
+					.withMessage("You must supply a role!")
 					.isIn([vars.auth.roles.admin, vars.auth.roles.user])
 					.withMessage("Invalid role"),
 			];
@@ -138,9 +124,6 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *
  * @returns {void} 201 - Success response with the created user entity.
  *   * @property {Object} entities.data - The created user object.
- *   * @property {Object} [entities.data.accessToken] - The user's access token.
- *   * @property {Object} [entities.data.refreshToken] - The user's refresh token.
- *   * @property {Object} [entities.data.tokenType] - The token type.
  *   * @property {Array} flashes - Success message for new user creation.
  * @throws {Error} 401 - Returns an error if the user is not authorized to create a user.
  * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
@@ -148,29 +131,10 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 export const postNewUser = async (
 	req: Request<
 		{},
-		FormatResponseObjectType<
-			IUserDocument & {
-				accessToken?: string;
-				refreshToken?: string;
-				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
-			},
-			HttpStatus["CREATED"]
-		>,
-		Pick<IUser, "email" | "name" | "password"> & {
-			passwordConfirmation: string;
-			role?: IUser["role"];
-		}
+		FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>,
+		Pick<IUser, "email" | "name" | "role">
 	>,
-	res: Response<
-		FormatResponseObjectType<
-			IUserDocument & {
-				accessToken?: string;
-				refreshToken?: string;
-				tokenType?: typeof vars.auth.strategies.jwt.tokenType;
-			},
-			HttpStatus["CREATED"]
-		>
-	>,
+	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Start a transaction to ensure data integrity
@@ -178,7 +142,7 @@ export const postNewUser = async (
 	session.startTransaction();
 
 	// Get email value from the request body.
-	const { email } = req.body;
+	const { email, name, role } = req.body;
 
 	// Check if user already exists, if so, or if there is an error,
 	// rollback the transaction and pass the error to the next middleware
@@ -196,18 +160,7 @@ export const postNewUser = async (
 	// If there is an error creating the user,
 	// Rollback the transaction and pass the error to the next middleware
 	const [createdUserError, createdUser] = await to(
-		User.create(
-			[
-				{
-					email,
-					name: req.body.name,
-					password: req.body.password,
-					active: true,
-					...(req.body?.role && { role: req.body.role }),
-				},
-			],
-			{ session }
-		)
+		User.create([{ email, name, role }], { session })
 	);
 	if (createdUserError) {
 		handleTransactionError(session);
@@ -260,59 +213,6 @@ export const postNewUser = async (
 		return next(newEmailError);
 	}
 
-	// Create variables to hold the created access and refresh tokens
-	let accessToken: string | undefined;
-	let refreshToken: string | undefined;
-
-	// Create access and refresh tokens if the user is not authenticated to register a new user.
-	if (req.isUnauthenticated()) {
-		accessToken = jsonwebtoken.sign(
-			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
-			vars.auth.strategies.jwt.accessTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
-		);
-		refreshToken = jsonwebtoken.sign(
-			{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
-			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
-		);
-
-		const [newRefreshTokenError] = await to(
-			Token.create(
-				[
-					{
-						user: createdUser[0]._id,
-						token: refreshToken,
-						kind: vars.tokenTypes.jwt,
-						expireAt:
-							Date.now() +
-							1000 *
-								60 *
-								60 *
-								24 *
-								vars.auth.strategies.jwt.refreshTokenExpiresInDays,
-					},
-				],
-				{ session }
-			)
-		);
-		if (newRefreshTokenError) {
-			handleTransactionError(session);
-			return next(newRefreshTokenError);
-		}
-	}
-
-	// Add access and refresh tokens to the created user object
-	const newCreatedUser = Object.assign(createdUser[0], {
-		...(accessToken || refreshToken
-			? {
-					...(accessToken && { accessToken }),
-					...(refreshToken && { refreshToken }),
-					tokenType: vars.auth.strategies.jwt.tokenType,
-				}
-			: {}),
-	});
-
 	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
@@ -325,7 +225,7 @@ export const postNewUser = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: newCreatedUser },
+			entities: { data: createdUser[0] },
 			flashes: req.flash(),
 		})
 	);

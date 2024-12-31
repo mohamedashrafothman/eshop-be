@@ -12,6 +12,7 @@ const ORDER_STATUS_SHIPPED = "SHIPPED";
 const ORDER_STATUS_COMPLETED = "COMPLETED";
 const ORDER_STATUS_CANCELLED = "CANCELLED";
 const ORDER_STATUS_REFUNDED = "REFUNDED";
+const RECAPTCHA_VERIFY_LINK = "https://www.google.com/recaptcha/api/siteverify";
 
 type VarsTypes = {
 	isProduction: boolean;
@@ -105,6 +106,10 @@ type VarsTypes = {
 		maxRequests: number;
 		loginFailedAttemptsTimeInMinutes: number;
 		loginFailedAttemptsMaxNumber: number;
+	};
+	recaptcha: {
+		verifyLink: string;
+		secretKey: string;
 	};
 	storage: {
 		uploadPath: string;
@@ -230,6 +235,10 @@ const vars: VarsTypes = {
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_TIME_IN_MINUTES || 0) || 0,
 		loginFailedAttemptsMaxNumber:
 			Number(process.env?.RATE_LIMITER_LOGIN_FAILED_ATTEMPTS_MAX_NUMBER || 0) || 0,
+	},
+	recaptcha: {
+		verifyLink: RECAPTCHA_VERIFY_LINK,
+		secretKey: process.env?.RECAPTCHA_SECRET || "",
 	},
 	storage: {
 		uploadPath: process.env?.UPLOAD_STORAGE || "",
