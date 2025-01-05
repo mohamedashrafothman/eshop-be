@@ -55,7 +55,6 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		},
 		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
 		password: { type: String, hidden: true },
-		picture: { type: String },
 		role: {
 			type: String,
 			enum: [...Object.values(vars.auth.roles)],

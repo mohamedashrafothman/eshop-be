@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { validationResult } from "express-validator";
+import { validationResult, type FieldValidationError } from "express-validator";
 import createError from "http-errors";
 import httpStatus from "http-status";
 import { formatValidationErrorMessagesResponse } from "../utils/helpers";
@@ -23,7 +23,12 @@ const middleware = (req: Request, _res: Response, next: NextFunction): void => {
 	if (validationErrors.isEmpty()) return next();
 
 	// If there are validation errors, add them to the flash and return an error
-	req.flash("danger", formatValidationErrorMessagesResponse(validationErrors.array()));
+	req.flash(
+		"danger",
+		formatValidationErrorMessagesResponse(
+			validationErrors.array({ onlyFirstError: true }) as FieldValidationError[]
+		)
+	);
 	const error = createError(httpStatus.UNPROCESSABLE_ENTITY);
 	return next({ ...(error || {}), status: error.status });
 };

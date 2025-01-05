@@ -151,7 +151,6 @@ export const validator = (
 					.trim()
 					.notEmpty()
 					.withMessage("Provider access token can't be blank!"),
-				body("picture").optional(),
 			];
 		case "refresh-token":
 			return [
@@ -472,9 +471,6 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 						name: `${profile.name.givenName} ${profile.name.middleName} ${profile.name.familyName}`,
 					}
 				: {}),
-			...(!user?.picture
-				? { picture: `https://graph.facebook.com/${profile.id}/picture?type=large` }
-				: {}),
 			emailVerified: true,
 			active: true,
 		});
@@ -581,7 +577,6 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 			`${profile?.name?.givenName || ""} ${profile?.name?.middleName || ""} ${
 				profile?.name?.familyName || ""
 			}`,
-		picture: `https://graph.facebook.com/${profile.id}/picture?type=large`,
 		email: profile?.emails?.[0]?.value || "",
 		facebook: profile.id,
 		active: true,
@@ -658,7 +653,6 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  *   * @property {String} req.body.providerId - User's ID in the social provider.
  *   * @property {String} req.body.email - User's email address.
  *   * @property {String} req.body.name - User's name.
- *   * @property {String} req.body.picture - User's profile picture URL (optional).
  *   * @property {String} req.body.providerToken - Access token received from the social provider.
  *
  * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
@@ -696,7 +690,6 @@ export const postSocialUser = async (
 		user = Object.assign(user, {
 			[req.params.provider]: req.body.providerId,
 			...(req?.body?.name ? { name: req.body.name } : {}),
-			...(req?.body?.picture ? { picture: req.body.picture } : {}),
 			emailVerified: true,
 			active: true,
 		});
@@ -943,7 +936,6 @@ export const postSocialUser = async (
 				{
 					email: req.body.email,
 					name: req.body.name,
-					...(req.body.picture && { picture: req.body.picture }),
 					[req.params.provider]: req.body.providerId,
 					active: true,
 					emailVerified: true,
@@ -1286,7 +1278,11 @@ export const postRegister = async (
 	if (userError || existsUser) {
 		handleTransactionError(session);
 		let error;
-		if (existsUser) error = createError(httpStatus.CONFLICT, "Account already exists!");
+		if (existsUser)
+			error = createError(
+				httpStatus.CONFLICT,
+				"Account already exist, try to login instead!"
+			);
 		return next(userError || (error && { ...(error || {}), status: error.status }));
 	}
 
@@ -1381,17 +1377,6 @@ export const postRegister = async (
 		return next(newRefreshTokenError);
 	}
 
-	// Add access and refresh tokens to the created user object
-	const newCreatedUser = Object.assign(createdUser[0], {
-		...(accessToken || refreshToken
-			? {
-					...(accessToken && { accessToken }),
-					...(refreshToken && { refreshToken }),
-					tokenType: vars.auth.strategies.jwt.tokenType,
-				}
-			: {}),
-	});
-
 	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
@@ -1404,7 +1389,13 @@ export const postRegister = async (
 	res.status(httpStatus.CREATED).json(
 		formatResponseObject({
 			status: httpStatus.CREATED,
-			entities: { data: newCreatedUser },
+			entities: {
+				data: Object.assign(createdUser[0]?.toJSON(), {
+					...(accessToken && { accessToken }),
+					...(refreshToken && { refreshToken }),
+					tokenType: vars.auth.strategies.jwt.tokenType,
+				}),
+			},
 			flashes: req.flash(),
 		})
 	);

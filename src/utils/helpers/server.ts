@@ -1,7 +1,6 @@
 import { Request } from "express";
-import { ValidationError } from "express-validator";
+import { FieldValidationError } from "express-validator";
 import httpStatus from "http-status";
-import _ from "lodash";
 import { ClientSession, Error, PaginateResult } from "mongoose";
 import vars from "../vars";
 
@@ -175,21 +174,16 @@ export const formatResponseObject = <
 /**
  * Formats an array of validation errors into a response object.
  *
- * @param {ValidationError[]} errors - An array of validation errors.
+ * @param {FieldValidationError[]} errors - An array of validation errors.
  * @returns {Record<string, string[]>[]} An array of objects where each key is a field path,
  * and the value is an array of error messages associated with that field.
  */
-export const formatValidationErrorMessagesResponse = (errors: ValidationError[]) => {
-	const errorsGroupedByPath = _.groupBy<{
-		path?: string;
-		msg?: string;
-		message?: string;
-	}>(errors, "path");
-	const errorsPaths = Object.keys(errorsGroupedByPath).filter(Boolean);
-	const errorsMapped = errorsPaths.map((path: string) => ({
-		[path]: errorsGroupedByPath[path].map((error) => error?.msg || error?.message),
-	}));
-	return JSON.parse(JSON.stringify(errorsMapped));
+export const formatValidationErrorMessagesResponse = (errors: FieldValidationError[]) => {
+	const errorsTransformed = errors.reduce(
+		(result, error) => ({ ...result, [error.path]: error?.msg || "" }),
+		{}
+	);
+	return JSON.parse(JSON.stringify(errorsTransformed));
 };
 
 /**
