@@ -254,7 +254,7 @@ export const _passportJWTStrategy = async (
 		Token.findOne({
 			user: user._id,
 			kind: vars.tokenTypes.jwt,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		})
 	);
 	if (tokenError) return done(tokenError, false);
@@ -752,7 +752,7 @@ export const postSocialUser = async (
 		const refreshToken = jsonwebtoken.sign(
 			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 		);
 
 		const [newRefreshTokenError] = await to(
@@ -833,14 +833,14 @@ export const postSocialUser = async (
 		const refreshToken = jsonwebtoken.sign(
 			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 		);
 
 		const [userRefreshTokenError, userRefreshToken] = await to(
 			Token.findOne({
 				user: user._id,
 				kind: vars.tokenTypes.jwt,
-				expireAt: { $gt: Date.now() },
+				expireAt: { $gt: new Date().toISOString() },
 			}).session(session)
 		);
 		if (userRefreshTokenError) {
@@ -974,7 +974,7 @@ export const postSocialUser = async (
 	const refreshToken = jsonwebtoken.sign(
 		{ sub: newUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 		vars.auth.strategies.jwt.refreshTokenSecret,
-		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 	);
 
 	const [newRefreshTokenError] = await to(
@@ -1131,14 +1131,14 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		const refreshToken = jsonwebtoken.sign(
 			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 		);
 
 		const [userRefreshTokenError, userRefreshToken] = await to(
 			Token.findOne({
 				user: user._id,
 				kind: vars.tokenTypes.jwt,
-				expireAt: { $gt: Date.now() },
+				expireAt: { $gt: new Date().toISOString() },
 			}).session(session)
 		);
 		if (userRefreshTokenError) {
@@ -1354,7 +1354,7 @@ export const postRegister = async (
 	const refreshToken: string = jsonwebtoken.sign(
 		{ sub: createdUser[0]._id.toString(), iat: Math.floor(Date.now() / 1000) },
 		vars.auth.strategies.jwt.refreshTokenSecret,
-		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+		{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 	);
 
 	const [newRefreshTokenError] = await to(
@@ -1524,12 +1524,11 @@ export const postRefreshToken = async (
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const { refreshToken: refreshToken } = req.body as { refreshToken: string };
 	const [userRefreshTokenError, userRefreshToken] = await to(
 		Token.findOne({
-			token: refreshToken,
+			token: req.body.refreshToken,
 			kind: vars.tokenTypes.jwt,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (userRefreshTokenError) {
@@ -1538,7 +1537,7 @@ export const postRefreshToken = async (
 	}
 	if (!userRefreshToken) {
 		handleTransactionError(session);
-		req.flash("danger", "Token has been expired, please login again!");
+		req.flash("danger", "Your session has been ended, please login again!");
 		res.status(httpStatus.FORBIDDEN).json(
 			formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() })
 		);
@@ -1546,7 +1545,7 @@ export const postRefreshToken = async (
 	}
 
 	jsonwebtoken.verify(
-		refreshToken,
+		userRefreshToken.token,
 		vars.auth.strategies.jwt.refreshTokenSecret,
 		async (error: VerifyErrors | null, payload: JwtPayload | string | undefined) => {
 			if (error) {
@@ -1562,16 +1561,12 @@ export const postRefreshToken = async (
 			const refreshToken = jsonwebtoken.sign(
 				{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
 				vars.auth.strategies.jwt.refreshTokenSecret,
-				{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays} days` }
+				{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
 			);
 
 			const [newRefreshTokenError] = await to(
 				Token.updateOne(
-					{
-						token: refreshToken,
-						kind: vars.tokenTypes.jwt,
-						expireAt: { $gt: Date.now() },
-					},
+					{ _id: userRefreshToken._id },
 					{
 						$set: {
 							token: refreshToken,
@@ -1648,7 +1643,7 @@ export const postForgotPassword = async (
 		Token.findOne({
 			user: user._id,
 			kind: vars.tokenTypes.resetPassword,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (resetPasswordTokenError) {
@@ -1678,7 +1673,7 @@ export const postForgotPassword = async (
 				{
 					user: user._id,
 					kind: vars.tokenTypes.resetPassword,
-					expireAt: { $gt: Date.now() },
+					expireAt: { $gt: new Date().toISOString() },
 				},
 				{
 					$set: {
@@ -1748,7 +1743,7 @@ export const postResetPassword = async (
 		Token.findOne({
 			token: req.params.token,
 			kind: vars.tokenTypes.resetPassword,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (resetPasswordTokenError) {
@@ -1785,7 +1780,7 @@ export const postResetPassword = async (
 		Token.deleteOne({
 			user: newUser._id,
 			kind: vars.tokenTypes.resetPassword,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (deleteResetPasswordTokenError) {

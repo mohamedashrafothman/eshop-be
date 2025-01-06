@@ -256,7 +256,7 @@ export const getUserEmailVerification = async (
 		Token.findOne({
 			token,
 			kind: vars.tokenTypes.verifyEmail,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (verifyEmailTokenError) {
@@ -285,7 +285,7 @@ export const getUserEmailVerification = async (
 		Token.deleteOne({
 			token,
 			kind: vars.tokenTypes.verifyEmail,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (deleteVerifyEmailTokenError) {
@@ -339,7 +339,7 @@ export const getResendEmailVerification = async (
 		Token.findOne({
 			user: user._id,
 			kind: vars.tokenTypes.verifyEmail,
-			expireAt: { $gt: Date.now() },
+			expireAt: { $gt: new Date().toISOString() },
 		}).session(session)
 	);
 	if (userRefreshTokenError) {

@@ -20,9 +20,7 @@
 								{
 									"listen": "prerequest",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -69,15 +67,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/register",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"register"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "register"]
 								},
 								"description": "Registers a new user with the provided information. A verification email will be sent to the provided email address.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| name | String | Required |  |\n| password | String | Required if social is equal to false | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if social is equal to false | Must match password. |"
 							},
@@ -109,14 +100,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/register",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"register"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "register"]
 										}
 									},
 									"status": "Created",
@@ -258,14 +243,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/register",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"register"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "register"]
 										}
 									},
 									"status": "Bad Request",
@@ -403,14 +382,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/register",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"register"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "register"]
 										}
 									},
 									"status": "Bad Request",
@@ -563,15 +536,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/login",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"login"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "login"]
 								},
 								"description": "Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| password | String | Required | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |"
 							},
@@ -598,14 +564,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/login",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"login"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "login"]
 										}
 									},
 									"status": "OK",
@@ -738,14 +698,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/login",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"login"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "login"]
 										}
 									},
 									"status": "Bad Request",
@@ -874,14 +828,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/login",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"login"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "login"]
 										}
 									},
 									"status": "Not Found",
@@ -1034,15 +982,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/:provider",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										":provider"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", ":provider"],
 									"variable": [
 										{
 											"key": "provider",
@@ -1085,14 +1026,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/:provider",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												":provider"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", ":provider"],
 											"variable": [
 												{
 													"key": "provider",
@@ -1242,14 +1177,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/:provider",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												":provider"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", ":provider"],
 											"variable": [
 												{
 													"key": "provider",
@@ -1402,14 +1331,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/:provider",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												":provider"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", ":provider"],
 											"variable": [
 												{
 													"key": "provider",
@@ -1555,14 +1478,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/:provider",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												":provider"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", ":provider"],
 											"variable": [
 												{
 													"key": "provider",
@@ -1717,15 +1634,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/refresh-token",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"refresh-token"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "refresh-token"]
 								},
 								"description": "Exchanges a valid refresh token for a new access token if the refresh token is not expired.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| refresh_token | Srting | Required |  |"
 							},
@@ -1757,14 +1667,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/refresh-token",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"refresh-token"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "refresh-token"]
 										}
 									},
 									"status": "OK",
@@ -1902,14 +1806,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/refresh-token",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"refresh-token"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "refresh-token"]
 										}
 									},
 									"status": "Bad Request",
@@ -2043,14 +1941,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/refresh-token",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"refresh-token"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "refresh-token"]
 										}
 									},
 									"status": "Forbidden",
@@ -2159,7 +2051,7 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n    \"status\": 403,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Token has been expired, please login again!\"\n            }\n        ]\n    },\n    \"entities\": {\n        \"data\": {},\n        \"meta\": {\n            \"pagination\": {},\n            \"sort\": [],\n            \"filter\": {}\n        }\n    }\n}"
+									"body": "{\n    \"status\": 403,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Your session has been ended, please login again!\"\n            }\n        ]\n    },\n    \"entities\": {\n        \"data\": {},\n        \"meta\": {\n            \"pagination\": {},\n            \"sort\": [],\n            \"filter\": {}\n        }\n    }\n}"
 								}
 							]
 						},
@@ -2181,9 +2073,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/:provider/unlink",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -2224,9 +2114,7 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/oauth/google/unlink",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"oauth",
@@ -2351,9 +2239,7 @@
 								{
 									"listen": "test",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -2375,15 +2261,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/logout",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"logout"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "logout"]
 								},
 								"description": "Logout the current user, and revokes all tokens associated with the user and deactivates the user account."
 							},
@@ -2411,14 +2290,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/logout",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"logout"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "logout"]
 										}
 									},
 									"status": "OK",
@@ -2553,16 +2426,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/password/forgot",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"password",
-										"forgot"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "password", "forgot"]
 								},
 								"description": "Sends a password reset email to the user's email address if the email exists in the user database.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |"
 							},
@@ -2589,9 +2454,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/forgot",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -2730,9 +2593,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/forgot",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -2867,9 +2728,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/forgot",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3015,9 +2874,7 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/password/reset/:token",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -3063,9 +2920,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/reset/:token",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3216,9 +3071,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/reset/:token",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3369,9 +3222,7 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/password/reset/:token",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3511,9 +3362,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/email/verify/:token",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -3555,9 +3404,7 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3709,9 +3556,7 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"auth",
@@ -3860,16 +3705,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/email/resend",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"email",
-										"resend"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "auth", "email", "resend"]
 								},
 								"description": "Resend an email verification link to a user who hasn't verified their email yet."
 							},
@@ -3897,15 +3734,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"email",
-												"resend"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
 										}
 									},
 									"status": "OK",
@@ -4039,15 +3869,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"email",
-												"resend"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
 										}
 									},
 									"status": "Not Found",
@@ -4172,9 +3995,7 @@
 								{
 									"listen": "prerequest",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -4182,9 +4003,7 @@
 								{
 									"listen": "test",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -4215,14 +4034,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users"]
 								},
 								"description": "Registers a new user with the provided information. A verification email will be sent to the provided email address.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| name | String | Required |  |\n| password | String | Required if social is equal to false | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if social is equal to false | Must match password. |"
 							},
@@ -4254,13 +4067,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"]
 										}
 									},
 									"status": "Created",
@@ -4402,13 +4210,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"]
 										}
 									},
 									"status": "Bad Request",
@@ -4546,13 +4349,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"]
 										}
 									},
 									"status": "Bad Request",
@@ -4683,14 +4481,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users"],
 									"query": [
 										{
 											"key": "q",
@@ -4768,13 +4560,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"]
 										}
 									},
 									"status": "OK",
@@ -4908,13 +4695,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users?is_verified=false",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"],
 											"query": [
 												{
 													"key": "is_verified",
@@ -5054,13 +4836,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users?pagination[limit]=1",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users"],
 											"query": [
 												{
 													"key": "pagination[limit]",
@@ -5197,15 +4974,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/me",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users",
-										"me"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users", "me"]
 								},
 								"description": "Fetches a user based on the provided slug or ID."
 							},
@@ -5233,14 +5003,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/auth/me",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"me"
-											]
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "me"]
 										}
 									},
 									"status": "OK",
@@ -5371,15 +5135,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users",
-										":user"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users", ":user"],
 									"variable": [
 										{
 											"key": "user",
@@ -5413,14 +5170,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:id",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":id"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":id"],
 											"variable": [
 												{
 													"key": "id",
@@ -5560,14 +5311,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -5713,15 +5458,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users",
-										":user"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users", ":user"],
 									"variable": [
 										{
 											"key": "user",
@@ -5764,14 +5502,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -5920,14 +5652,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -6076,14 +5802,8 @@
 										},
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -6220,15 +5940,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users",
-										":user"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users", ":user"],
 									"variable": [
 										{
 											"key": "user",
@@ -6262,14 +5975,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -6409,14 +6116,8 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/users/:user",
-											"host": [
-												"{{base_url}}"
-											],
-											"path": [
-												"{{api_endpoint}}",
-												"users",
-												":user"
-											],
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "users", ":user"],
 											"variable": [
 												{
 													"key": "user",
@@ -6553,16 +6254,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user/restore",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"users",
-										":user",
-										"restore"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "users", ":user", "restore"],
 									"variable": [
 										{
 											"key": "user",
@@ -6596,9 +6289,7 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/taks/:task/restore",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"taks",
@@ -6740,9 +6431,7 @@
 										],
 										"url": {
 											"raw": "{{base_url}}/{{api_endpoint}}/tasks/:task/restore",
-											"host": [
-												"{{base_url}}"
-											],
+											"host": ["{{base_url}}"],
 											"path": [
 												"{{api_endpoint}}",
 												"tasks",
@@ -6896,14 +6585,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"addresses"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "addresses"]
 								},
 								"description": "Creates a new address for the authenticated user.\n\nCreates a new address for the authenticated user, setting it as the default address if it's the first address.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| street | String | Required |  |\n| building | Number | Required | Only decimal allowed. |\n| floor | Number | Required | Only decimal allowed. |\n| apartment | Number | Required | Only decimal allowed. |\n| area | String | Required |  |\n| country | String | Required |  |\n| city | String | Required |  |\n| zip | String | Optional |  |\n| user | String | Required |  |"
 							},
@@ -6927,14 +6610,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"addresses"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "addresses"],
 									"query": [
 										{
 											"key": "q",
@@ -6996,15 +6673,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses/:address",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"addresses",
-										":address"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "addresses", ":address"],
 									"variable": [
 										{
 											"key": "address",
@@ -7043,15 +6713,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses/:address",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"addresses",
-										":address"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "addresses", ":address"],
 									"variable": [
 										{
 											"key": "address",
@@ -7081,15 +6744,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses/:address",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"addresses",
-										":address"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "addresses", ":address"],
 									"variable": [
 										{
 											"key": "address",
@@ -7119,9 +6775,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/addresses/:address/shipping-methods",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -7188,14 +6842,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"categories"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "categories"]
 								},
 								"description": "Creates a new category.\n\nHandles the creation of a new category in the system. Optionally uploads and attaches a icon image if provided in the request.\n\nIf a icon image is provided, it will be uploaded and linked to the category. The category is then saved to the database.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Required |  |\n| icon | File | Required | Image format with max 5MB size. |\n| parent | String | Optional | parent category id |"
 							},
@@ -7219,14 +6867,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"categories"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "categories"],
 									"query": [
 										{
 											"key": "q",
@@ -7288,15 +6930,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories/:category",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"categories",
-										":category"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "categories", ":category"],
 									"variable": [
 										{
 											"key": "category",
@@ -7346,15 +6981,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories/:category",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"categories",
-										":category"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "categories", ":category"],
 									"variable": [
 										{
 											"key": "category",
@@ -7384,15 +7012,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories/:category",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"categories",
-										":category"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "categories", ":category"],
 									"variable": [
 										{
 											"key": "category",
@@ -7422,9 +7043,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/categories/:category/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -7492,14 +7111,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"brands"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "brands"]
 								},
 								"description": "Creates a new brand.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Required |  |\n| Logo | File | Optional | Image format with max 5MB size. |"
 							},
@@ -7523,14 +7136,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"brands"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "brands"],
 									"query": [
 										{
 											"key": "q",
@@ -7592,15 +7199,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands/:brand",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"brands",
-										":brand"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "brands", ":brand"],
 									"variable": [
 										{
 											"key": "brand",
@@ -7650,15 +7250,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands/:brand",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"brands",
-										":brand"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "brands", ":brand"],
 									"variable": [
 										{
 											"key": "brand",
@@ -7688,15 +7281,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands/:brand",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"brands",
-										":brand"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "brands", ":brand"],
 									"variable": [
 										{
 											"key": "brand",
@@ -7726,9 +7312,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/brands/:brand/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -7759,9 +7343,7 @@
 								{
 									"listen": "test",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -7769,9 +7351,7 @@
 								{
 									"listen": "prerequest",
 									"script": {
-										"exec": [
-											""
-										],
+										"exec": [""],
 										"type": "text/javascript",
 										"packages": {}
 									}
@@ -7863,14 +7443,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products"]
 								},
 								"description": "#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Required |  |\n| Logo | File | Optional | Image format with max 5MB size. |"
 							},
@@ -7903,15 +7477,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/:product",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products",
-										":product"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products", ":product"],
 									"variable": [
 										{
 											"key": "product",
@@ -7941,14 +7508,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products"],
 									"query": [
 										{
 											"key": "q",
@@ -8046,15 +7607,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/:product",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products",
-										":product"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products", ":product"],
 									"variable": [
 										{
 											"key": "product",
@@ -8084,15 +7638,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/:product",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products",
-										":product"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products", ":product"],
 									"variable": [
 										{
 											"key": "product",
@@ -8122,9 +7669,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/:product/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -8161,9 +7706,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/:product/reviews",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -8199,15 +7742,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/products/home?type=featured",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"products",
-										"home"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "products", "home"],
 									"query": [
 										{
 											"key": "type",
@@ -8242,14 +7778,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/wishlists",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"wishlists"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "wishlists"]
 								}
 							},
 							"response": []
@@ -8281,14 +7811,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/wishlists",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"wishlists"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "wishlists"]
 								}
 							},
 							"response": []
@@ -8311,15 +7835,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/wishlists/:product",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"wishlists",
-										":product"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "wishlists", ":product"],
 									"variable": [
 										{
 											"key": "product",
@@ -8348,14 +7865,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/wishlists",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"wishlists"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "wishlists"]
 								}
 							},
 							"response": []
@@ -8392,14 +7903,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"countries"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "countries"]
 								}
 							},
 							"response": []
@@ -8422,14 +7927,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"countries"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "countries"],
 									"query": [
 										{
 											"key": "q",
@@ -8497,15 +7996,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries/:country",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"countries",
-										":country"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "countries", ":country"],
 									"variable": [
 										{
 											"key": "country",
@@ -8544,15 +8036,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries/:country",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"countries",
-										":country"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "countries", ":country"],
 									"variable": [
 										{
 											"key": "country",
@@ -8582,15 +8067,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries/:country",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"countries",
-										":country"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "countries", ":country"],
 									"variable": [
 										{
 											"key": "country",
@@ -8620,9 +8098,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/countries/:country/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -8673,14 +8149,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"states"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "states"]
 								}
 							},
 							"response": []
@@ -8703,14 +8173,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"states"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "states"],
 									"query": [
 										{
 											"key": "q",
@@ -8784,15 +8248,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states/:state",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"states",
-										":state"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "states", ":state"],
 									"variable": [
 										{
 											"key": "state",
@@ -8831,15 +8288,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states/:state",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"states",
-										":state"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "states", ":state"],
 									"variable": [
 										{
 											"key": "state",
@@ -8869,15 +8319,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states/:state",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"states",
-										":state"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "states", ":state"],
 									"variable": [
 										{
 											"key": "state",
@@ -8907,9 +8350,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/states/:state/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -8960,14 +8401,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cities"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cities"]
 								}
 							},
 							"response": []
@@ -8990,14 +8425,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cities"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cities"],
 									"query": [
 										{
 											"key": "q",
@@ -9077,15 +8506,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities/:city",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cities",
-										":city"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cities", ":city"],
 									"variable": [
 										{
 											"key": "city",
@@ -9124,15 +8546,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities/:city",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cities",
-										":city"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cities", ":city"],
 									"variable": [
 										{
 											"key": "city",
@@ -9162,15 +8577,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities/:city",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cities",
-										":city"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cities", ":city"],
 									"variable": [
 										{
 											"key": "city",
@@ -9200,9 +8608,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cities/:city/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -9253,14 +8659,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes"]
 								},
 								"description": "Creates a new tax entry in the database.  \nHandles the creation of a new tax entity using the data provided in the request body.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Optional |  |\n| rate | Number | Required |  |\n| isPercentage | Boolean | Optional | default to true |\n| applicableToAllProducts | Boolean | Optional | default to true |\n| applicableCategories | Array | Optional | list of categories ids |"
 							},
@@ -9284,14 +8684,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes"],
 									"query": [
 										{
 											"key": "q",
@@ -9346,15 +8740,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes/:tax",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes",
-										":tax"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes", ":tax"],
 									"variable": [
 										{
 											"key": "tax",
@@ -9388,15 +8775,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes/:tax",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes",
-										":tax"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes", ":tax"],
 									"variable": [
 										{
 											"key": "tax",
@@ -9426,15 +8806,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes/:tax",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes",
-										":tax"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes", ":tax"],
 									"variable": [
 										{
 											"key": "tax",
@@ -9464,16 +8837,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/taxes/:tax/restore",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"taxes",
-										":tax",
-										"restore"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "taxes", ":tax", "restore"],
 									"variable": [
 										{
 											"key": "tax",
@@ -9518,14 +8883,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"coupons"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "coupons"]
 								},
 								"description": "Creates a new tax entry in the database.  \nHandles the creation of a new tax entity using the data provided in the request body.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Optional |  |\n| rate | Number | Required |  |\n| isPercentage | Boolean | Optional | default to true |\n| applicableToAllProducts | Boolean | Optional | default to true |\n| applicableCategories | Array | Optional | list of categories ids |"
 							},
@@ -9549,14 +8908,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"coupons"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "coupons"],
 									"query": [
 										{
 											"key": "q",
@@ -9617,15 +8970,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons/:coupon",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"coupons",
-										":coupon"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "coupons", ":coupon"],
 									"variable": [
 										{
 											"key": "coupon",
@@ -9659,15 +9005,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons/:coupon",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"coupons",
-										":coupon"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "coupons", ":coupon"],
 									"variable": [
 										{
 											"key": "coupon",
@@ -9697,15 +9036,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons/:coupon",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"coupons",
-										":coupon"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "coupons", ":coupon"],
 									"variable": [
 										{
 											"key": "coupon",
@@ -9735,9 +9067,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/coupons/:coupon/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -9788,14 +9118,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones"]
 								}
 							},
 							"response": []
@@ -9818,14 +9142,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones"],
 									"query": [
 										{
 											"key": "q",
@@ -9893,15 +9211,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones/:zone",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones",
-										":zone"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones", ":zone"],
 									"variable": [
 										{
 											"key": "zone",
@@ -9940,15 +9251,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones/:zone",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones",
-										":zone"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones", ":zone"],
 									"variable": [
 										{
 											"key": "zone",
@@ -9978,15 +9282,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones/:zone",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones",
-										":zone"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones", ":zone"],
 									"variable": [
 										{
 											"key": "zone",
@@ -10016,16 +9313,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/zones/:zone/restore",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"zones",
-										":zone",
-										"restore"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "zones", ":zone", "restore"],
 									"variable": [
 										{
 											"key": "zone",
@@ -10070,14 +9359,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"shipping-methods"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "shipping-methods"]
 								}
 							},
 							"response": []
@@ -10100,14 +9383,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"shipping-methods"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "shipping-methods"],
 									"query": [
 										{
 											"key": "q",
@@ -10181,9 +9458,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10228,9 +9503,7 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10266,9 +9539,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10304,9 +9575,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/shipping-methods/:method/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10369,14 +9638,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"payment-methods"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "payment-methods"]
 								}
 							},
 							"response": []
@@ -10399,14 +9662,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"payment-methods"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "payment-methods"],
 									"query": [
 										{
 											"key": "q",
@@ -10474,9 +9731,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10534,9 +9789,7 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10572,9 +9825,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods/:method",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10610,9 +9861,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/payment-methods/:method/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10664,14 +9913,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart"]
 								},
 								"description": "Adds a product to the user's cart.\n\nHandles adding a product to the user's cart. If the cart does not exist, a new cart and cart item are created. If the product already exists in the cart, the quantity is updated. The method checks product stock before performing any updates, and all operations are performed within a MongoDB transaction to ensure data consistency.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| product | String | Required |  |\n| quantity | String | Required |  |\n| color | String | Required | color name or value. |\n| size | String | Required |  |"
 							},
@@ -10707,14 +9950,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart"]
 								},
 								"description": "Retrieves the current user's cart.\n\nFetches the cart associated with the currently logged-in user. If no cart is found for the user, an empty object is returned. This method ensures the user is authenticated before proceeding to retrieve the cart."
 							},
@@ -10738,9 +9975,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/items/:cartItem",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10777,14 +10012,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart"]
 								},
 								"description": "Updates the quantity of a product in the user's cart.\n\nHandles the update of a specific cart item's quantity for the logged-in user. The method checks if the user is authenticated, verifies the existence of the cart item and the product's stock, and updates the quantity of the cart item. If the cart item exists in the cart, it is updated with the new quantity."
 							},
@@ -10817,9 +10046,7 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/items/:cartItem",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -10865,15 +10092,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/shipping-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart",
-										"shipping-methods"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart", "shipping-methods"]
 								}
 							},
 							"response": []
@@ -10905,15 +10125,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/payment-methods",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart",
-										"payment-methods"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart", "payment-methods"]
 								}
 							},
 							"response": []
@@ -10945,15 +10158,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/coupons",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart",
-										"coupons"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart", "coupons"]
 								}
 							},
 							"response": []
@@ -10976,15 +10182,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/cart/coupons",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"cart",
-										"coupons"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "cart", "coupons"]
 								}
 							},
 							"response": []
@@ -11022,14 +10221,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"orders"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "orders"]
 								}
 							},
 							"response": []
@@ -11052,14 +10245,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"orders"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "orders"]
 								}
 							},
 							"response": []
@@ -11091,15 +10278,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders/:order",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"orders",
-										":order"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "orders", ":order"],
 									"variable": [
 										{
 											"key": "order",
@@ -11137,9 +10317,7 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders/:order/items/:orderItem",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -11180,15 +10358,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders/:order",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"orders",
-										":order"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "orders", ":order"],
 									"variable": [
 										{
 											"key": "order",
@@ -11217,15 +10388,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders/:order",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"orders",
-										":order"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "orders", ":order"],
 									"variable": [
 										{
 											"key": "order",
@@ -11254,9 +10418,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/orders/:order/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -11301,14 +10463,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"reviews"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "reviews"]
 								},
 								"description": "#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| name | String | Required |  |\n| description | String | Required |  |\n| Logo | File | Optional | Image format with max 5MB size. |"
 							},
@@ -11332,14 +10488,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"reviews"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "reviews"],
 									"query": [
 										{
 											"key": "deleted",
@@ -11406,15 +10556,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews/:review",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"reviews",
-										":review"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "reviews", ":review"],
 									"variable": [
 										{
 											"key": "review",
@@ -11447,15 +10590,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews/:review",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"reviews",
-										":review"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "reviews", ":review"],
 									"variable": [
 										{
 											"key": "review",
@@ -11485,15 +10621,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews/:reviews",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"reviews",
-										":reviews"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "reviews", ":reviews"],
 									"variable": [
 										{
 											"key": "reviews",
@@ -11523,9 +10652,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/reviews/:reviews/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -11576,14 +10703,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"policies"
-									]
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "policies"]
 								}
 							},
 							"response": []
@@ -11606,14 +10727,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"policies"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "policies"],
 									"query": [
 										{
 											"key": "q",
@@ -11681,15 +10796,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies/:policy",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"policies",
-										":policy"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "policies", ":policy"],
 									"variable": [
 										{
 											"key": "policy",
@@ -11728,15 +10836,8 @@
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies/:policy",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"policies",
-										":policy"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "policies", ":policy"],
 									"variable": [
 										{
 											"key": "policy",
@@ -11766,15 +10867,8 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies/:policy",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"policies",
-										":policy"
-									],
+									"host": ["{{base_url}}"],
+									"path": ["{{api_endpoint}}", "v1", "policies", ":policy"],
 									"variable": [
 										{
 											"key": "policy",
@@ -11804,9 +10898,7 @@
 								],
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/policies/:policy/restore",
-									"host": [
-										"{{base_url}}"
-									],
+									"host": ["{{base_url}}"],
 									"path": [
 										"{{api_endpoint}}",
 										"v1",
@@ -11845,18 +10937,14 @@
 			"listen": "prerequest",
 			"script": {
 				"type": "text/javascript",
-				"exec": [
-					""
-				]
+				"exec": [""]
 			}
 		},
 		{
 			"listen": "test",
 			"script": {
 				"type": "text/javascript",
-				"exec": [
-					""
-				]
+				"exec": [""]
 			}
 		}
 	]
