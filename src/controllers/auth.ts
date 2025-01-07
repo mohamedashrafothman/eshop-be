@@ -4,7 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
-import jsonwebtoken, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
+import jsonwebtoken, { JwtPayload } from "jsonwebtoken";
 import mongoose, { ClientSession } from "mongoose";
 import passport, { type Profile } from "passport";
 import { type VerifyFunctionWithRequest as FacebookVerifyFunctionWithRequest } from "passport-facebook";
@@ -1093,7 +1093,7 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const { email } = req.body;
+	const { email, remember = false } = req.body;
 	const [userError, user] = await to(User.findOne({ email }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
@@ -1131,7 +1131,9 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		const refreshToken = jsonwebtoken.sign(
 			{ sub: user._id.toString(), iat: Math.floor(Date.now() / 1000) },
 			vars.auth.strategies.jwt.refreshTokenSecret,
-			{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
+			{
+				expiresIn: `${remember ? vars.auth.strategies.jwt.refreshTokenRememberMeExpiresInDays : vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
+			}
 		);
 
 		const [userRefreshTokenError, userRefreshToken] = await to(
@@ -1161,7 +1163,10 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 									60 *
 									60 *
 									24 *
-									vars.auth.strategies.jwt.refreshTokenExpiresInDays,
+									(remember
+										? vars.auth.strategies.jwt
+												.refreshTokenRememberMeExpiresInDays
+										: vars.auth.strategies.jwt.refreshTokenExpiresInDays),
 						},
 					],
 					{ session }
@@ -1180,7 +1185,10 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 									60 *
 									60 *
 									24 *
-									vars.auth.strategies.jwt.refreshTokenExpiresInDays,
+									(remember
+										? vars.auth.strategies.jwt
+												.refreshTokenRememberMeExpiresInDays
+										: vars.auth.strategies.jwt.refreshTokenExpiresInDays),
 						},
 					}
 				).session(session)
@@ -1544,66 +1552,70 @@ export const postRefreshToken = async (
 		return;
 	}
 
-	jsonwebtoken.verify(
+	const payload = jsonwebtoken.verify(
 		userRefreshToken.token,
+		vars.auth.strategies.jwt.refreshTokenSecret
+	);
+
+	if (!payload) {
+		handleTransactionError(session);
+		return next(userRefreshTokenError);
+	}
+
+	const { sub, exp } = payload as JwtPayload;
+	const iat = Math.floor(Date.now() / 1000);
+
+	const accessToken = jsonwebtoken.sign(
+		{ sub, iat },
+		vars.auth.strategies.jwt.accessTokenSecret,
+		{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
+	);
+	const refreshToken = jsonwebtoken.sign(
+		{ sub, iat },
 		vars.auth.strategies.jwt.refreshTokenSecret,
-		async (error: VerifyErrors | null, payload: JwtPayload | string | undefined) => {
-			if (error) {
-				handleTransactionError(session);
-				return next(formatResponseObject({ status: httpStatus.FORBIDDEN, error }));
-			}
-			const _id = payload?.sub || "";
-			const accessToken = jsonwebtoken.sign(
-				{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
-				vars.auth.strategies.jwt.accessTokenSecret,
-				{ expiresIn: `${vars.auth.strategies.jwt.accessTokenExpiresInMinutes}m` }
-			);
-			const refreshToken = jsonwebtoken.sign(
-				{ sub: _id.toString(), iat: Math.floor(Date.now() / 1000) },
-				vars.auth.strategies.jwt.refreshTokenSecret,
-				{ expiresIn: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d` }
-			);
-
-			const [newRefreshTokenError] = await to(
-				Token.updateOne(
-					{ _id: userRefreshToken._id },
-					{
-						$set: {
-							token: refreshToken,
-							expireAt:
-								Date.now() +
-								1000 *
-									60 *
-									60 *
-									24 *
-									vars.auth.strategies.jwt.refreshTokenExpiresInDays,
-						},
-					}
-				).session(session)
-			);
-			if (newRefreshTokenError) {
-				handleTransactionError(session);
-				return next(newRefreshTokenError);
-			}
-
-			// Commit the transaction
-			await session.commitTransaction();
-			session.endSession();
-
-			res.status(httpStatus.OK).json(
-				formatResponseObject({
-					status: httpStatus.OK,
-					entities: {
-						data: {
-							accessToken,
-							refreshToken,
-							tokenType: vars.auth.strategies.jwt.tokenType,
-						},
-					},
-				})
-			);
-			return;
+		{
+			expiresIn: exp
+				? `${exp - iat}s`
+				: `${vars.auth.strategies.jwt.refreshTokenExpiresInDays}d`,
 		}
+	);
+
+	const [newRefreshTokenError] = await to(
+		Token.updateOne(
+			{ _id: userRefreshToken._id },
+			{
+				$set: {
+					token: refreshToken,
+					expireAt:
+						1000 *
+						(exp
+							? exp
+							: Date.now() +
+								60 * 60 * 24 * vars.auth.strategies.jwt.refreshTokenExpiresInDays),
+				},
+			}
+		).session(session)
+	);
+	if (newRefreshTokenError) {
+		handleTransactionError(session);
+		return next(newRefreshTokenError);
+	}
+
+	// Commit the transaction
+	await session.commitTransaction();
+	session.endSession();
+
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: {
+				data: {
+					accessToken,
+					refreshToken,
+					tokenType: vars.auth.strategies.jwt.tokenType,
+				},
+			},
+		})
 	);
 };
 

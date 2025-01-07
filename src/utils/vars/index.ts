@@ -56,6 +56,7 @@ type VarsTypes = {
 				accessTokenExpiresInMinutes: number;
 				refreshTokenSecret: string;
 				refreshTokenExpiresInDays: number;
+				refreshTokenRememberMeExpiresInDays: number;
 				tokenType: "Bearer";
 			};
 			social: {
@@ -182,6 +183,9 @@ const vars: VarsTypes = {
 				refreshTokenSecret: process.env?.JWT_REFRESH_TOKEN_SECRET || "",
 				refreshTokenExpiresInDays:
 					Number(process.env?.JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS || 0) || 0,
+				refreshTokenRememberMeExpiresInDays: Number(
+					process.env?.JWT_REFRESH_TOKEN_REMEMBER_ME_EXPIRES_IN_DAYS || 0
+				),
 				tokenType: "Bearer",
 			},
 			social: {
