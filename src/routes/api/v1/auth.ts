@@ -63,7 +63,9 @@ router
 
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
-	.all(allowMethods(["post"]))
+	.all(allowMethods(["post"]), (req, res, next) =>
+		req.headers.authorization ? authController.passportJWTAuthenticate(req, res, next) : next()
+	)
 	.post(
 		authController.validator("social-user"),
 		unprocessableEntityValidator,
@@ -72,8 +74,8 @@ router
 
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})/unlink`)
-	.all(allowMethods(["get"]), authController.passportJWTAuthenticate)
-	.get(authController.getSocialUnlink);
+	.all(allowMethods(["post"]), authController.passportJWTAuthenticate)
+	.post(authController.postSocialUnlink);
 
 // Exporting router
 export default router;

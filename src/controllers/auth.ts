@@ -798,6 +798,8 @@ export const postSocialUser = async (
 				flashes: req.flash(),
 			})
 		);
+
+		return;
 	}
 
 	const [existsUserError, existsUser] = await to(
@@ -1027,7 +1029,7 @@ export const postSocialUser = async (
 
  * @returns {Object} 200 - Success response with a success message.
  */
-export const getSocialUnlink = async (
+export const postSocialUnlink = async (
 	req: Request,
 	res: Response,
 	next: NextFunction
@@ -1064,6 +1066,14 @@ export const getSocialUnlink = async (
 		return next(updateUserError);
 	}
 
+	const [userAfterUpdateError, userAfterUpdate] = await to(
+		User.findOne({ _id }).session(session)
+	);
+	if (userAfterUpdateError) {
+		handleTransactionError(session);
+		return next(userAfterUpdateError);
+	}
+
 	// Commit the transaction
 	await session.commitTransaction();
 	session.endSession();
@@ -1072,6 +1082,7 @@ export const getSocialUnlink = async (
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
+			entities: { data: userAfterUpdate?.toJSON() },
 			flashes: req.flash(),
 		})
 	);
