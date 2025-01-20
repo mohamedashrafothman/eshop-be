@@ -10,10 +10,7 @@ import passport, { type Profile } from "passport";
 import { type VerifyFunctionWithRequest as FacebookVerifyFunctionWithRequest } from "passport-facebook";
 import { type VerifyCallback as GoogleVerifyCallback } from "passport-google-oauth20";
 import { type VerifiedCallback as JWTVerifyCallback } from "passport-jwt";
-import {
-	type IVerifyOptions,
-	type VerifyFunctionWithRequest as LocalVerifyFunctionWithRequest,
-} from "passport-local";
+import { type VerifyFunctionWithRequest as LocalVerifyFunctionWithRequest } from "passport-local";
 import qs from "qs";
 import IUser from "../interfaces/User.interface";
 import Email from "../models/Email";
@@ -280,12 +277,14 @@ export const _passportGoogleStrategy = async (
 		);
 		if (existsUserError || existsUser) {
 			handleTransactionError(session);
-			if (existsUser)
-				req.flash(
-					"danger",
+			let error;
+			if (existsUser) {
+				error = createError(
+					httpStatus.CONFLICT,
 					"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
 				);
-			return done(existsUserError);
+			}
+			return done(existsUserError || (error && { ...(error || {}), status: error.status }));
 		}
 
 		let userError = null;
@@ -387,12 +386,14 @@ export const _passportGoogleStrategy = async (
 	);
 	if (existsEmailError || existsEmail) {
 		handleTransactionError(session);
-		if (existsEmail)
-			req.flash(
-				"danger",
-				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
+		let error;
+		if (existsEmail) {
+			error = createError(
+				httpStatus.CONFLICT,
+				"There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings."
 			);
-		return done(existsEmailError);
+		}
+		return done(existsEmailError || (error && { ...(error || {}), status: error.status }));
 	}
 
 	const user = {
@@ -432,7 +433,7 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	accessToken,
 	_refreshToken,
 	profile,
-	done: (verifyError: Error | null, user?: Express.User | false, options?: IVerifyOptions) => void
+	done: (error: any, user?: any, info?: any) => void
 ) => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
@@ -444,17 +445,14 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 		);
 		if (existsUserError || existsUser) {
 			handleTransactionError(session);
-			if (existsUser)
-				req.flash(
-					"danger",
+			let error;
+			if (existsUser) {
+				error = createError(
+					httpStatus.CONFLICT,
 					"There is already an account using this email address. Sign in to that account and link it with Facebook manually from Account Settings."
 				);
-			return done(
-				existsUserError ||
-					new Error(
-						"There is already an account using this email address. Sign in to that account and link it with Facebook manually from Account Settings."
-					)
-			);
+			}
+			return done(existsUserError || (error && { ...(error || {}), status: error.status }));
 		}
 
 		let [userError, user] = await to(User.findOne({ _id: req.user._id }).session(session));
@@ -563,12 +561,14 @@ export const _passportFacebookStrategy: FacebookVerifyFunctionWithRequest = asyn
 	);
 	if (existsEmailError || existsEmail) {
 		handleTransactionError(session);
-		if (existsEmail)
-			req.flash(
-				"danger",
-				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
+		let error;
+		if (existsEmail) {
+			error = createError(
+				httpStatus.CONFLICT,
+				"There is already an account using this email address. Sign in to that account and link it with Facebook manually from Account Settings."
 			);
-		return done(existsEmailError);
+		}
+		return done(existsEmailError || (error && { ...(error || {}), status: error.status }));
 	}
 
 	const user = {
@@ -673,12 +673,14 @@ export const postSocialUser = async (
 		);
 		if (existsUserError || existsUser) {
 			handleTransactionError(session);
-			if (existsUser)
-				req.flash(
-					"danger",
-					`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
+			let error;
+			if (existsUser) {
+				error = createError(
+					httpStatus.CONFLICT,
+					"There is already an account using this email address. Sign in to that account and link it with Facebook manually from Account Settings."
 				);
-			return next(existsUserError);
+			}
+			return next(existsUserError || (error && { ...(error || {}), status: error.status }));
 		}
 
 		let [userError, user] = await to(User.findOne({ _id: req.user._id }).session(session));
@@ -924,12 +926,14 @@ export const postSocialUser = async (
 	);
 	if (existsEmailError || existsEmail) {
 		handleTransactionError(session);
-		if (existsEmail)
-			req.flash(
-				"danger",
-				`There is already an account using this email address. Sign in to that account and link it with Google manually from Account Settings.`
+		let error;
+		if (existsEmail) {
+			error = createError(
+				httpStatus.CONFLICT,
+				`There is already an account using this email address. Sign in to that account and link it with ${req.params.provider} manually from Account Settings.`
 			);
-		return next(existsEmailError);
+		}
+		return next(existsEmailError || (error && { ...(error || {}), status: error.status }));
 	}
 
 	const [newUserError, newUser] = await to(

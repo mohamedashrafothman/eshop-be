@@ -63,9 +63,12 @@ router
 
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
-	.all(allowMethods(["post"]), (req, res, next) =>
-		req.headers.authorization ? authController.passportJWTAuthenticate(req, res, next) : next()
-	)
+	.all(allowMethods(["post"]), (req, res, next) => {
+		console.log("req.headers.authorization: ", req.headers.authorization);
+		return req.headers.authorization
+			? authController.passportJWTAuthenticate(req, res, next)
+			: next();
+	})
 	.post(
 		authController.validator("social-user"),
 		unprocessableEntityValidator,
