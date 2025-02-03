@@ -1543,23 +1543,15 @@ export const postRefreshToken = async (
 	res: Response,
 	next: NextFunction
 ): Promise<void> => {
-	// Start a transaction to ensure data integrity
-	const session: ClientSession = await mongoose.startSession();
-	session.startTransaction();
-
 	const [userRefreshTokenError, userRefreshToken] = await to(
 		Token.findOne({
 			token: req.body.refreshToken,
 			kind: vars.tokenTypes.jwt,
 			expireAt: { $gt: new Date().toISOString() },
-		}).session(session)
+		})
 	);
-	if (userRefreshTokenError) {
-		handleTransactionError(session);
-		return next(userRefreshTokenError);
-	}
+	if (userRefreshTokenError) return next(userRefreshTokenError);
 	if (!userRefreshToken) {
-		handleTransactionError(session);
 		req.flash("danger", "Your session has been ended, please login again!");
 		res.status(httpStatus.FORBIDDEN).json(
 			formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() })
@@ -1567,17 +1559,10 @@ export const postRefreshToken = async (
 		return;
 	}
 
-	const payload = jsonwebtoken.verify(
+	const { sub, exp } = jsonwebtoken.verify(
 		userRefreshToken.token,
 		vars.auth.strategies.jwt.refreshTokenSecret
-	);
-
-	if (!payload) {
-		handleTransactionError(session);
-		return next(userRefreshTokenError);
-	}
-
-	const { sub, exp } = payload as JwtPayload;
+	) as JwtPayload;
 	const iat = Math.floor(Date.now() / 1000);
 
 	const accessToken = jsonwebtoken.sign(
@@ -1609,16 +1594,9 @@ export const postRefreshToken = async (
 								60 * 60 * 24 * vars.auth.strategies.jwt.refreshTokenExpiresInDays),
 				},
 			}
-		).session(session)
+		)
 	);
-	if (newRefreshTokenError) {
-		handleTransactionError(session);
-		return next(newRefreshTokenError);
-	}
-
-	// Commit the transaction
-	await session.commitTransaction();
-	session.endSession();
+	if (newRefreshTokenError) return next(newRefreshTokenError);
 
 	res.status(httpStatus.OK).json(
 		formatResponseObject({

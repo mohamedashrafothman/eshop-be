@@ -29,7 +29,7 @@ type SuccessStatusCodeType = (typeof SUCCESS_STATUS_CODE)[number];
 type ErrorStatusCodeType = (typeof ERROR_STATUS_CODE)[number];
 export type SortItemType<T extends string = string> = {
 	name: string;
-	value: { [K in T]?: 1 | -1 } & { [K in Exclude<T, keyof any>]?: never };
+	value: { [K in T]?: 1 | -1 | "asc" | "desc" } & { [K in Exclude<T, keyof any>]?: never };
 };
 type MetaDataType<T> = {
 	pagination: Omit<PaginateResult<T>, "docs" | "meta">;
