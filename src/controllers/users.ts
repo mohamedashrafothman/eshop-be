@@ -485,10 +485,10 @@ export const getUsers = async (
 
 	// List of sort options
 	const sort: SortItemType<"name" | "createdAt">[] = [
-		{ name: "Name A-Z", value: { name: "desc" } },
-		{ name: "Name Z-A", value: { name: "asc" } },
-		{ name: "Created Date Ascending", value: { createdAt: "desc" } },
-		{ name: "Created Date Descending", value: { createdAt: "asc" } },
+		{ name: "Name A-Z", value: { name: "asc" } },
+		{ name: "Name Z-A", value: { name: "desc" } },
+		{ name: "Created Date Ascending", value: { createdAt: "asc" } },
+		{ name: "Created Date Descending", value: { createdAt: "desc" } },
 	];
 
 	// Attempt to retrieve the users using the given query and pagination options,
