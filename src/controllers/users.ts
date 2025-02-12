@@ -197,7 +197,7 @@ export const postNewUser = async (
 		from: vars.email.sender,
 		filename: "verify-user",
 		subject: `[${vars.app.name}] Verify User Account.`,
-		actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
+		actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
 	});
 	if (sendEmailError) {
 		handleTransactionError(session);
@@ -265,8 +265,7 @@ export const getUserEmailVerification = async (
 	}
 	if (!verifyEmailToken) {
 		handleTransactionError(session);
-		req.flash("danger", "token is invalid or has expired.");
-		const error = createError(httpStatus.NOT_FOUND);
+		const error = createError(httpStatus.BAD_REQUEST, "token is invalid or has expired.");
 		return next({ ...(error || {}), status: error.status });
 	}
 
@@ -325,14 +324,17 @@ export const getResendEmailVerification = async (
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	const [userError, user] = await to(
-		User.findOne({ _id: userIdentifier, emailVerified: { $ne: true } }).session(session)
-	);
+	const [userError, user] = await to(User.findOne({ _id: userIdentifier }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
 		let error;
-		if (!user) error = createError(httpStatus.NOT_FOUND, "Email Already Verified!");
+		if (!user) error = createError(httpStatus.NOT_FOUND);
 		return next(userError || (error && { ...(error || {}), status: error.status }));
+	}
+
+	if (user.emailVerified) {
+		handleTransactionError(session);
+		return next(createError(httpStatus.BAD_REQUEST, "Email Already Verified!"));
 	}
 
 	const [userRefreshTokenError, userRefreshToken] = await to(
@@ -390,7 +392,7 @@ export const getResendEmailVerification = async (
 		from: vars.email.sender,
 		filename: "verify-user",
 		subject: `[${vars.app.name}] Verify User Account.`,
-		actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
+		actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
 	});
 	if (sendEmailError) {
 		handleTransactionError(session);
@@ -736,7 +738,7 @@ export const updateSingleUser = async (
 			from: vars.email.sender,
 			filename: "verify-user",
 			subject: `[${vars.app.name}] Verify User Account.`,
-			actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
+			actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
 		});
 		if (sendEmailError) {
 			handleTransactionError(session);

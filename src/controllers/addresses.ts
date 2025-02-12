@@ -582,9 +582,13 @@ export const updateSingleAddress = async (
 		);
 		if (addressesError || !addresses?.length) {
 			handleTransactionError(session);
+			let error;
 			if (!addresses?.length)
-				req.flash("danger", "Cannot set the only address to non-default");
-			return next(addressesError);
+				error = createError(
+					httpStatus.BAD_REQUEST,
+					"Cannot set the only address to non-default"
+				);
+			return next(addressesError || (error && { ...(error || {}), status: error.status }));
 		}
 	}
 
@@ -734,8 +738,8 @@ export const deleteSingleAddress = async (
 	// If there are no more addresses for the user, show an error message
 	if (!restOfUserAddresses.length) {
 		handleTransactionError(session);
-		req.flash("danger", "Cannot delete the only address.");
-		return next();
+		const error = createError(httpStatus.BAD_REQUEST, "Cannot delete the only address.");
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	// Attempt to delete the address, and if there is an error during the deletion,

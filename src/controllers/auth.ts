@@ -1122,8 +1122,10 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 		}
 		if (!isMatch) {
 			handleTransactionError(session);
-			req.flash("danger", "Your credentials doesn't match our records.");
-			const error = createError(httpStatus.UNPROCESSABLE_ENTITY);
+			const error = createError(
+				httpStatus.UNPROCESSABLE_ENTITY,
+				"Your credentials doesn't match our records."
+			);
 			return next({ ...(error || {}), status: error.status });
 		}
 
@@ -1442,24 +1444,15 @@ export const _loginRateLimitHandler = async (
 	const resetTime = req.rateLimit?.resetTime;
 
 	// Check if the reset time is valid
-	if (!resetTime) {
-		const error = createError(httpStatus.INTERNAL_SERVER_ERROR);
-		return next({ ...(error || {}), status: error.status });
-	}
+	if (!resetTime) return next();
 
 	// Check if the user has exceeded the maximum attempts
 	const remainingTime = countDownTimer(resetTime);
-	req.flash(
-		"danger",
+	const error = createError(
+		httpStatus.TOO_MANY_REQUESTS,
 		`Too Many Login Attempts. Please try again in ${remainingTime.minutes}:${remainingTime.seconds} ${remainingTime?.minutes ? "minutes" : "seconds"}.`
 	);
-	res.status(httpStatus.TOO_MANY_REQUESTS).json(
-		formatResponseObject({
-			status: httpStatus.TOO_MANY_REQUESTS,
-			flashes: req.flash(),
-		})
-	);
-	return;
+	return next({ ...(error || {}), status: error.status });
 };
 
 /**
@@ -1552,11 +1545,11 @@ export const postRefreshToken = async (
 	);
 	if (userRefreshTokenError) return next(userRefreshTokenError);
 	if (!userRefreshToken) {
-		req.flash("danger", "Your session has been ended, please login again!");
-		res.status(httpStatus.FORBIDDEN).json(
-			formatResponseObject({ status: httpStatus.FORBIDDEN, flashes: req.flash() })
+		const error = createError(
+			httpStatus.FORBIDDEN,
+			"Your session has been ended, please login again!"
 		);
-		return;
+		return next({ ...(error || {}), status: error.status });
 	}
 
 	const { sub, exp } = jsonwebtoken.verify(
@@ -1638,8 +1631,7 @@ export const postForgotPassword = async (
 	}
 	if (!user) {
 		handleTransactionError(session);
-		req.flash("danger", "No account found with this email.");
-		const error = createError(httpStatus.NOT_FOUND);
+		const error = createError(httpStatus.BAD_REQUEST, "No account found with this email.");
 		return next({ ...(error || {}), status: error.status });
 	}
 
@@ -1757,8 +1749,7 @@ export const postResetPassword = async (
 	}
 	if (!resetPasswordToken) {
 		handleTransactionError(session);
-		req.flash("danger", "token is invalid or has expired.");
-		const error = createError(httpStatus.NOT_FOUND);
+		const error = createError(httpStatus.BAD_REQUEST, "token is invalid or has expired.");
 		return next({ ...(error || {}), status: error.status });
 	}
 
