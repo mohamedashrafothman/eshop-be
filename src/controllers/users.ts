@@ -132,7 +132,7 @@ export const postNewUser = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>,
-		Pick<IUser, "email" | "name" | "role">
+		Pick<IUser, "email" | "name" | "role" | "emailVerified">
 	>,
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -142,7 +142,7 @@ export const postNewUser = async (
 	session.startTransaction();
 
 	// Get email value from the request body.
-	const { email, name, role } = req.body;
+	const { email, name, role, emailVerified = true } = req.body;
 
 	// Check if user already exists, if so, or if there is an error,
 	// rollback the transaction and pass the error to the next middleware
@@ -160,57 +160,60 @@ export const postNewUser = async (
 	// If there is an error creating the user,
 	// Rollback the transaction and pass the error to the next middleware
 	const [createdUserError, createdUser] = await to(
-		User.create([{ email, name, role }], { session })
+		User.create([{ email, name, role, emailVerified }], { session })
 	);
 	if (createdUserError) {
 		handleTransactionError(session);
 		return next(createdUserError);
 	}
 
-	// Attempt to create a new email verification token
-	// If there is an error creating the token,
-	// Rollback the transaction and pass the error to the next middleware
-	const token = createHashToken();
-	const [newVerifyEmailTokenError] = await to(
-		Token.create(
-			[
-				{
-					user: createdUser[0]._id,
-					token,
-					kind: vars.tokenTypes.verifyEmail,
-					expireAt: Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
-				},
-			],
-			{ session }
-		)
-	);
-	if (newVerifyEmailTokenError) {
-		handleTransactionError(session);
-		return next(newVerifyEmailTokenError);
-	}
+	if (!emailVerified) {
+		// Attempt to create a new email verification token
+		// If there is an error creating the token,
+		// Rollback the transaction and pass the error to the next middleware
+		const token = createHashToken();
+		const [newVerifyEmailTokenError] = await to(
+			Token.create(
+				[
+					{
+						user: createdUser[0]._id,
+						token,
+						kind: vars.tokenTypes.verifyEmail,
+						expireAt:
+							Date.now() + 1000 * 60 * vars.email.emailVerifyTokenExpiresInMinutes,
+					},
+				],
+				{ session }
+			)
+		);
+		if (newVerifyEmailTokenError) {
+			handleTransactionError(session);
+			return next(newVerifyEmailTokenError);
+		}
 
-	// Attempt to send an email using the email service send method
-	// If there is an error sending the email,
-	// rollback the transaction and pass the error to the next middleware
-	const [sendEmailError, sendEmail] = await emailService.send({
-		to: createdUser[0],
-		from: vars.email.sender,
-		filename: "verify-user",
-		subject: `[${vars.app.name}] Verify User Account.`,
-		actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
-	});
-	if (sendEmailError) {
-		handleTransactionError(session);
-		return next(sendEmailError);
-	}
+		// Attempt to send an email using the email service send method
+		// If there is an error sending the email,
+		// rollback the transaction and pass the error to the next middleware
+		const [sendEmailError, sendEmail] = await emailService.send({
+			to: createdUser[0],
+			from: vars.email.sender,
+			filename: "verify-user",
+			subject: `[${vars.app.name}] Verify User Account.`,
+			actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
+		});
+		if (sendEmailError) {
+			handleTransactionError(session);
+			return next(sendEmailError);
+		}
 
-	// Attempt to create a new email
-	// If there is an error creating the email,
-	// Rollback the transaction and pass the error to the next middleware
-	const [newEmailError] = await to(Email.create([sendEmail], { session }));
-	if (newEmailError) {
-		handleTransactionError(session);
-		return next(newEmailError);
+		// Attempt to create a new email
+		// If there is an error creating the email,
+		// Rollback the transaction and pass the error to the next middleware
+		const [newEmailError] = await to(Email.create([sendEmail], { session }));
+		if (newEmailError) {
+			handleTransactionError(session);
+			return next(newEmailError);
+		}
 	}
 
 	// Commit the transaction
@@ -640,7 +643,7 @@ export const updateSingleUser = async (
 	req: Request<
 		{ user: string },
 		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
-		Partial<Pick<IUser, "email" | "name" | "password">> & {
+		Partial<Pick<IUser, "email" | "name" | "password" | "emailVerified">> & {
 			oldPassword?: string;
 			passwordConfirmation?: string;
 		}
@@ -687,6 +690,7 @@ export const updateSingleUser = async (
 
 	// Merge the request body data into the existing user object
 	user = Object.assign(user, {
+		...("emailVerified" in req.body ? { emailVerified: req.body.emailVerified } : {}),
 		...(req.body?.name ? { name: req.body.name } : {}),
 		...(isEmailModified ? { emailVerified: false, email: req.body.email } : {}),
 		...(isPasswordModified ? { password: req.body.password } : {}),

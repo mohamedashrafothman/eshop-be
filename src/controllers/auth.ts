@@ -1112,7 +1112,13 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 	const [userError, user] = await to(User.findOne({ email }).session(session));
 	if (userError || !user) {
 		handleTransactionError(session);
-		return next(userError);
+		let error;
+		if (!user)
+			error = createError(
+				httpStatus.UNPROCESSABLE_ENTITY,
+				"Your credentials doesn't match our records."
+			);
+		return next(userError || (error && { ...(error || {}), status: error.status }));
 	}
 
 	user.comparePassword(req.body.password, async (compareError, isMatch) => {
