@@ -1,4 +1,4 @@
-export default interface Category {
+export default interface Brand {
 	name: string;
 	description?: string;
 	logo?: string;
