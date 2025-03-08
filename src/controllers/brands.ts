@@ -504,6 +504,7 @@ export const deleteSingleBrand = async (
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
+	console.log("brand:", req.params);
 	// Check if user logged in
 	if (
 		req.isUnauthenticated() ||
@@ -527,6 +528,7 @@ export const deleteSingleBrand = async (
 			],
 		})
 	);
+	console.log("brand:", brand);
 	if (brandError || !brand) return next(brandError);
 
 	// Attempt to soft-delete the found brand, and if there is an error during the deletion,

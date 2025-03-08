@@ -31,10 +31,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("code")
 					.trim()
 					.escape()
+					.toUpperCase()
 					.notEmpty()
 					.withMessage("You must supply a code!")
 					.isLength({ max: 3, min: 1 })
-					.withMessage("Code must be at most 100 characters long!"),
+					.withMessage("Code must be minimum 1 and at most 3 characters long!"),
 			];
 		case "update":
 			return [
@@ -50,10 +51,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.trim()
 					.escape()
 					.optional()
+					.toUpperCase()
 					.notEmpty()
 					.withMessage("You must supply a code!")
 					.isLength({ max: 3, min: 1 })
-					.withMessage("Code must be at most 100 characters long!"),
+					.withMessage("Code must be minimum 1 and at most 3 characters long!"),
 			];
 		default:
 			return [];
