@@ -103,12 +103,12 @@ export const postNewCity = async (
 ): Promise<void> => {
 	// Attempt to find the country the city belongs to,
 	// If the country is not found or there is an error, pass the error to the next middleware
-	const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
+	const [countryError, country] = await to(Country.findOneWithDeleted({ _id: req.body.country }));
 	if (countryError || !country) return next(countryError);
 
 	// Attempt to find the state the city belongs to,
 	// If the state is not found or there is an error, pass the error to the next middleware
-	const [stateError, state] = await to(State.findById({ _id: req.body.state }));
+	const [stateError, state] = await to(State.findOneWithDeleted({ _id: req.body.state }));
 	if (stateError || !state) return next(stateError);
 
 	// Attempt to create the new city
@@ -311,14 +311,16 @@ export const updateSingleCity = async (
 	// Attempt to find the country the city belongs to if country id exists in the request body,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	if (req.body?.country) {
-		const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
+		const [countryError, country] = await to(
+			Country.findOneWithDeleted({ _id: req.body.country })
+		);
 		if (countryError || !country) return next(countryError);
 	}
 
 	// Attempt to find the state the city belongs to if state id exists in the request body,
 	// If the state is not found or there is an error, pass the error to the next middleware
 	if (req.body?.state) {
-		const [stateError, state] = await to(State.findById({ _id: req.body.state }));
+		const [stateError, state] = await to(State.findOneWithDeleted({ _id: req.body.state }));
 		if (stateError || !state) return next(stateError);
 	}
 

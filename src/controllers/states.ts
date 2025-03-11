@@ -102,7 +102,7 @@ export const postNewState = async (
 ): Promise<void> => {
 	// Attempt to find the country the state belongs to,
 	// If the country is not found or there is an error, pass the error to the next middleware
-	const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
+	const [countryError, country] = await to(Country.findOneWithDeleted({ _id: req.body.country }));
 	if (countryError || !country) return next(countryError);
 
 	// Attempt to create the new state
@@ -299,7 +299,9 @@ export const updateSingleState = async (
 	// Attempt to find the country the state belongs to if country id exists in the request body,
 	// If the country is not found or there is an error, pass the error to the next middleware
 	if (req.body?.country) {
-		const [countryError, country] = await to(Country.findById({ _id: req.body.country }));
+		const [countryError, country] = await to(
+			Country.findOneWithDeleted({ _id: req.body.country })
+		);
 		if (countryError || !country) return next(countryError);
 	}
 
