@@ -58,7 +58,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n\t\"email\": \"{{email}}\",\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\"\r\n}",
+									"raw": "{\r\n\t\"email\": \"{{email}}\",\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\",\r\n\t\"g-recaptcha-response\": \"1234...\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -70,7 +70,7 @@
 									"host": ["{{base_url}}"],
 									"path": ["{{api_endpoint}}", "v1", "auth", "register"]
 								},
-								"description": "Registers a new user with the provided information. A verification email will be sent to the provided email address.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| name | String | Required |  |\n| password | String | Required if social is equal to false | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if social is equal to false | Must match password. |"
+								"description": "Registers a new user with the provided information. A verification email will be sent to the provided email address.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| name | String | Required |  |\n| password | String | Required if social is equal to false | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if social is equal to false | Must match password. |\n| g-recaptcha-respons | String | Required | reCaptcha response from FE reCaptcha plugin |"
 							},
 							"response": [
 								{
@@ -91,7 +91,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"password\": \"Secret1234$\",\r\n\t\"passwordConfirmation\": \"Secret1234$\"\r\n}",
+											"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"password\": \"Secret1234$\",\r\n\t\"passwordConfirmation\": \"Secret1234$\",\r\n\t\"g-recaptcha-respons\": \"1234....\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -99,9 +99,11 @@
 											}
 										},
 										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/auth/register",
-											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "auth", "register"]
+											"raw": "http://localhost:8088/api/auth/register",
+											"protocol": "http",
+											"host": ["localhost"],
+											"port": "8088",
+											"path": ["api", "auth", "register"]
 										}
 									},
 									"status": "Created",
@@ -234,7 +236,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\"\r\n}",
+											"raw": "{\r\n\t\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\",\r\n\t\"g-recaptcha-respons\": \"1234....\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -373,7 +375,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\"email\": \"{{email}}\",\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\"\r\n}",
+											"raw": "{\r\n\t\"email\": \"{{email}}\",\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\",\r\n\t\"g-recaptcha-respons\": \"1234....\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -532,14 +534,14 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    // \"email\": \"{{email}}\",\r\n\t\"email\": \"user@domain.com\",\r\n    \"password\": \"{{password}}\"\r\n}"
+									"raw": "{\r\n    \"remember\": true, // for 30 days session if true, or 7 days session if false or not sent\r\n\t\"email\": \"{{email}}\",\r\n\t// \"email\": \"mohamedashrafothman@gmail.com\",\r\n    \"password\": \"{{password}}\"\r\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/login",
 									"host": ["{{base_url}}"],
 									"path": ["{{api_endpoint}}", "v1", "auth", "login"]
 								},
-								"description": "Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| password | String | Required | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |"
+								"description": "Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| password | String | Required | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| remember | Boolean | Optional | if true, session duration will be 30 days, if false session duration will be only 7 days.  <br>default false. |"
 							},
 							"response": [
 								{
@@ -2051,14 +2053,14 @@
 										}
 									],
 									"cookie": [],
-									"body": "{\n    \"status\": 403,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Your session has been ended, please login again!\"\n            }\n        ]\n    },\n    \"entities\": {\n        \"data\": {},\n        \"meta\": {\n            \"pagination\": {},\n            \"sort\": [],\n            \"filter\": {}\n        }\n    }\n}"
+									"body": "{\n    \"status\": 403,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Token has been expired, please login again!\"\n            }\n        ]\n    },\n    \"entities\": {\n        \"data\": {},\n        \"meta\": {\n            \"pagination\": {},\n            \"sort\": [],\n            \"filter\": {}\n        }\n    }\n}"
 								}
 							]
 						},
 						{
 							"name": "Unlink Social Provider",
 							"request": {
-								"method": "GET",
+								"method": "POST",
 								"header": [
 									{
 										"key": "Accept",
@@ -2071,6 +2073,15 @@
 										"type": "text"
 									}
 								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
 								"url": {
 									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/:provider/unlink",
 									"host": ["{{base_url}}"],
@@ -2084,7 +2095,7 @@
 									"variable": [
 										{
 											"key": "provider",
-											"value": "google"
+											"value": "facebook"
 										}
 									]
 								},
@@ -3343,645 +3354,6 @@
 									"body": "{\n    \"success\": false,\n    \"status\": 400,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"password\": {\n                    \"msg\": \"Password can't be blank!\",\n                    \"param\": \"password\",\n                    \"location\": \"body\"\n                },\n                \"password_confirmation\": {\n                    \"value\": \"Secret1234$\",\n                    \"msg\": \"Your passwords don't match!\",\n                    \"param\": \"password_confirmation\",\n                    \"location\": \"body\"\n                }\n            }\n        ]\n    }\n}"
 								}
 							]
-						},
-						{
-							"name": "Verify Email",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Accept",
-										"value": "application/json",
-										"type": "text"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/email/verify/:token",
-									"host": ["{{base_url}}"],
-									"path": [
-										"{{api_endpoint}}",
-										"v1",
-										"auth",
-										"email",
-										"verify",
-										":token"
-									],
-									"variable": [
-										{
-											"key": "token",
-											"value": "{{hash_token}}"
-										}
-									]
-								},
-								"description": "Verifies a user's email using a valid email verification token.\n\n#### Path Variables\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| hash | String | Required |  |"
-							},
-							"response": [
-								{
-									"name": "Success",
-									"originalRequest": {
-										"method": "GET",
-										"header": [
-											{
-												"key": "Authorization",
-												"value": "Bearer {{access_token}}",
-												"type": "text"
-											},
-											{
-												"key": "Accept",
-												"value": "application/json",
-												"type": "text"
-											},
-											{
-												"key": "Content-Type",
-												"value": "application/json",
-												"type": "text"
-											}
-										],
-										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
-											"host": ["{{base_url}}"],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"email",
-												"verify",
-												":email",
-												":hash"
-											],
-											"variable": [
-												{
-													"key": "email",
-													"value": "{{email}}"
-												},
-												{
-													"key": "hash",
-													"value": "{{hash_token}}"
-												}
-											]
-										}
-									},
-									"status": "OK",
-									"code": 200,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Security-Policy",
-											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-										},
-										{
-											"key": "Cross-Origin-Embedder-Policy",
-											"value": "require-corp"
-										},
-										{
-											"key": "Cross-Origin-Opener-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "Cross-Origin-Resource-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "X-DNS-Prefetch-Control",
-											"value": "off"
-										},
-										{
-											"key": "Expect-CT",
-											"value": "max-age=0"
-										},
-										{
-											"key": "X-Frame-Options",
-											"value": "SAMEORIGIN"
-										},
-										{
-											"key": "Strict-Transport-Security",
-											"value": "max-age=15552000; includeSubDomains"
-										},
-										{
-											"key": "X-Download-Options",
-											"value": "noopen"
-										},
-										{
-											"key": "X-Content-Type-Options",
-											"value": "nosniff"
-										},
-										{
-											"key": "Origin-Agent-Cluster",
-											"value": "?1"
-										},
-										{
-											"key": "X-Permitted-Cross-Domain-Policies",
-											"value": "none"
-										},
-										{
-											"key": "Referrer-Policy",
-											"value": "no-referrer"
-										},
-										{
-											"key": "X-XSS-Protection",
-											"value": "0"
-										},
-										{
-											"key": "Access-Control-Allow-Origin",
-											"value": "http://127.0.0.1:8080"
-										},
-										{
-											"key": "Vary",
-											"value": "Origin, Accept, Accept-Encoding"
-										},
-										{
-											"key": "RateLimit-Limit",
-											"value": "100"
-										},
-										{
-											"key": "RateLimit-Remaining",
-											"value": "91"
-										},
-										{
-											"key": "RateLimit-Reset",
-											"value": "561"
-										},
-										{
-											"key": "Content-Type",
-											"value": "application/json; charset=utf-8"
-										},
-										{
-											"key": "Content-Length",
-											"value": "149"
-										},
-										{
-											"key": "ETag",
-											"value": "W/\"95-NyQ0Eur+6Ig6B8lMJf1XtXQnfi4\""
-										},
-										{
-											"key": "Date",
-											"value": "Sat, 07 May 2022 12:58:31 GMT"
-										},
-										{
-											"key": "Connection",
-											"value": "keep-alive"
-										},
-										{
-											"key": "Keep-Alive",
-											"value": "timeout=5"
-										}
-									],
-									"cookie": [],
-									"body": "{\n    \"success\": true,\n    \"status\": 200,\n    \"flashes\": {\n        \"success\": [\n            {\n                \"msg\": \"Your account has been Verified\"\n            }\n        ]\n    },\n}"
-								},
-								{
-									"name": "Faild - Not Found",
-									"originalRequest": {
-										"method": "GET",
-										"header": [
-											{
-												"key": "Authorization",
-												"value": "Bearer {{access_token}}",
-												"type": "text"
-											},
-											{
-												"key": "Accept",
-												"value": "application/json",
-												"type": "text"
-											},
-											{
-												"key": "Content-Type",
-												"value": "application/json",
-												"type": "text"
-											}
-										],
-										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
-											"host": ["{{base_url}}"],
-											"path": [
-												"{{api_endpoint}}",
-												"auth",
-												"email",
-												"verify",
-												":email",
-												":hash"
-											],
-											"variable": [
-												{
-													"key": "email",
-													"value": "{{email}}"
-												},
-												{
-													"key": "hash",
-													"value": "{{hash_token}}"
-												}
-											]
-										}
-									},
-									"status": "Not Found",
-									"code": 404,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Security-Policy",
-											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-										},
-										{
-											"key": "Cross-Origin-Embedder-Policy",
-											"value": "require-corp"
-										},
-										{
-											"key": "Cross-Origin-Opener-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "Cross-Origin-Resource-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "X-DNS-Prefetch-Control",
-											"value": "off"
-										},
-										{
-											"key": "Expect-CT",
-											"value": "max-age=0"
-										},
-										{
-											"key": "X-Frame-Options",
-											"value": "SAMEORIGIN"
-										},
-										{
-											"key": "Strict-Transport-Security",
-											"value": "max-age=15552000; includeSubDomains"
-										},
-										{
-											"key": "X-Download-Options",
-											"value": "noopen"
-										},
-										{
-											"key": "X-Content-Type-Options",
-											"value": "nosniff"
-										},
-										{
-											"key": "Origin-Agent-Cluster",
-											"value": "?1"
-										},
-										{
-											"key": "X-Permitted-Cross-Domain-Policies",
-											"value": "none"
-										},
-										{
-											"key": "Referrer-Policy",
-											"value": "no-referrer"
-										},
-										{
-											"key": "X-XSS-Protection",
-											"value": "0"
-										},
-										{
-											"key": "Access-Control-Allow-Origin",
-											"value": "http://127.0.0.1:8080"
-										},
-										{
-											"key": "Vary",
-											"value": "Origin, Accept, Accept-Encoding"
-										},
-										{
-											"key": "RateLimit-Limit",
-											"value": "100"
-										},
-										{
-											"key": "RateLimit-Remaining",
-											"value": "92"
-										},
-										{
-											"key": "RateLimit-Reset",
-											"value": "608"
-										},
-										{
-											"key": "Content-Type",
-											"value": "application/json; charset=utf-8"
-										},
-										{
-											"key": "Content-Length",
-											"value": "189"
-										},
-										{
-											"key": "ETag",
-											"value": "W/\"bd-2mOtbihIkzTorJ7wKgtUBqDPKUU\""
-										},
-										{
-											"key": "Date",
-											"value": "Sat, 07 May 2022 12:57:44 GMT"
-										},
-										{
-											"key": "Connection",
-											"value": "keep-alive"
-										},
-										{
-											"key": "Keep-Alive",
-											"value": "timeout=5"
-										}
-									],
-									"cookie": [],
-									"body": "{\n    \"success\": false,\n    \"status\": 404,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Invalid approach, please use the link that has been send to your email.\"\n            }\n        ]\n    },\n}"
-								}
-							]
-						},
-						{
-							"name": "Resend Email Verification",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Accept",
-										"value": "application/json",
-										"type": "text"
-									},
-									{
-										"key": "Content-Type",
-										"value": "application/json",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/{{api_endpoint}}/v1/auth/email/resend",
-									"host": ["{{base_url}}"],
-									"path": ["{{api_endpoint}}", "v1", "auth", "email", "resend"]
-								},
-								"description": "Resend an email verification link to a user who hasn't verified their email yet."
-							},
-							"response": [
-								{
-									"name": "Success",
-									"originalRequest": {
-										"method": "GET",
-										"header": [
-											{
-												"key": "Authorization",
-												"value": "Bearer {{access_token}}",
-												"type": "text"
-											},
-											{
-												"key": "Accept",
-												"value": "application/json",
-												"type": "text"
-											},
-											{
-												"key": "Content-Type",
-												"value": "application/json",
-												"type": "text"
-											}
-										],
-										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
-											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
-										}
-									},
-									"status": "OK",
-									"code": 200,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Security-Policy",
-											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-										},
-										{
-											"key": "Cross-Origin-Embedder-Policy",
-											"value": "require-corp"
-										},
-										{
-											"key": "Cross-Origin-Opener-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "Cross-Origin-Resource-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "X-DNS-Prefetch-Control",
-											"value": "off"
-										},
-										{
-											"key": "Expect-CT",
-											"value": "max-age=0"
-										},
-										{
-											"key": "X-Frame-Options",
-											"value": "SAMEORIGIN"
-										},
-										{
-											"key": "Strict-Transport-Security",
-											"value": "max-age=15552000; includeSubDomains"
-										},
-										{
-											"key": "X-Download-Options",
-											"value": "noopen"
-										},
-										{
-											"key": "X-Content-Type-Options",
-											"value": "nosniff"
-										},
-										{
-											"key": "Origin-Agent-Cluster",
-											"value": "?1"
-										},
-										{
-											"key": "X-Permitted-Cross-Domain-Policies",
-											"value": "none"
-										},
-										{
-											"key": "Referrer-Policy",
-											"value": "no-referrer"
-										},
-										{
-											"key": "X-XSS-Protection",
-											"value": "0"
-										},
-										{
-											"key": "Access-Control-Allow-Origin",
-											"value": "http://127.0.0.1:8080"
-										},
-										{
-											"key": "Vary",
-											"value": "Origin, Accept, Accept-Encoding"
-										},
-										{
-											"key": "RateLimit-Limit",
-											"value": "100"
-										},
-										{
-											"key": "RateLimit-Remaining",
-											"value": "89"
-										},
-										{
-											"key": "RateLimit-Reset",
-											"value": "520"
-										},
-										{
-											"key": "Content-Type",
-											"value": "application/json; charset=utf-8"
-										},
-										{
-											"key": "Content-Length",
-											"value": "156"
-										},
-										{
-											"key": "ETag",
-											"value": "W/\"9c-a8BcVIPQPKtWjL0qgInUOeZduDw\""
-										},
-										{
-											"key": "Date",
-											"value": "Sat, 07 May 2022 12:59:15 GMT"
-										},
-										{
-											"key": "Connection",
-											"value": "keep-alive"
-										},
-										{
-											"key": "Keep-Alive",
-											"value": "timeout=5"
-										}
-									],
-									"cookie": [],
-									"body": "{\n    \"success\": true,\n    \"status\": 200,\n    \"flashes\": {\n        \"success\": [\n            {\n                \"msg\": \"Email Verification sent successfully!\"\n            }\n        ]\n    }\n}"
-								},
-								{
-									"name": "Failed - Not Found",
-									"originalRequest": {
-										"method": "GET",
-										"header": [
-											{
-												"key": "Authorization",
-												"value": "Bearer {{access_token}}",
-												"type": "text"
-											},
-											{
-												"key": "Accept",
-												"value": "application/json",
-												"type": "text"
-											},
-											{
-												"key": "Content-Type",
-												"value": "application/json",
-												"type": "text"
-											}
-										],
-										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
-											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
-										}
-									},
-									"status": "Not Found",
-									"code": 404,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Security-Policy",
-											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
-										},
-										{
-											"key": "Cross-Origin-Embedder-Policy",
-											"value": "require-corp"
-										},
-										{
-											"key": "Cross-Origin-Opener-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "Cross-Origin-Resource-Policy",
-											"value": "same-origin"
-										},
-										{
-											"key": "X-DNS-Prefetch-Control",
-											"value": "off"
-										},
-										{
-											"key": "Expect-CT",
-											"value": "max-age=0"
-										},
-										{
-											"key": "X-Frame-Options",
-											"value": "SAMEORIGIN"
-										},
-										{
-											"key": "Strict-Transport-Security",
-											"value": "max-age=15552000; includeSubDomains"
-										},
-										{
-											"key": "X-Download-Options",
-											"value": "noopen"
-										},
-										{
-											"key": "X-Content-Type-Options",
-											"value": "nosniff"
-										},
-										{
-											"key": "Origin-Agent-Cluster",
-											"value": "?1"
-										},
-										{
-											"key": "X-Permitted-Cross-Domain-Policies",
-											"value": "none"
-										},
-										{
-											"key": "Referrer-Policy",
-											"value": "no-referrer"
-										},
-										{
-											"key": "X-XSS-Protection",
-											"value": "0"
-										},
-										{
-											"key": "Access-Control-Allow-Origin",
-											"value": "http://127.0.0.1:8080"
-										},
-										{
-											"key": "Vary",
-											"value": "Origin, Accept, Accept-Encoding"
-										},
-										{
-											"key": "RateLimit-Limit",
-											"value": "100"
-										},
-										{
-											"key": "RateLimit-Remaining",
-											"value": "90"
-										},
-										{
-											"key": "RateLimit-Reset",
-											"value": "548"
-										},
-										{
-											"key": "Content-Type",
-											"value": "application/json; charset=utf-8"
-										},
-										{
-											"key": "Content-Length",
-											"value": "141"
-										},
-										{
-											"key": "ETag",
-											"value": "W/\"8d-OMWVueGXO7gHSBGiI0fYMpzyQ/k\""
-										},
-										{
-											"key": "Date",
-											"value": "Sat, 07 May 2022 12:58:44 GMT"
-										},
-										{
-											"key": "Connection",
-											"value": "keep-alive"
-										},
-										{
-											"key": "Keep-Alive",
-											"value": "timeout=5"
-										}
-									],
-									"cookie": [],
-									"body": "{\n    \"success\": false,\n    \"status\": 404,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Email Already Verified!\"\n            }\n        ]\n    }\n}"
-								}
-							]
 						}
 					],
 					"description": "This module contains requests related to user authentication and authorization using JWT Auth. It provides endpoints for user registration, login, token management, email activation, and potentially password reset."
@@ -4025,7 +3397,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n\t\"email\": \"\",\r\n\t\"name\": \"\",\r\n\t\"password\": \"\",\r\n\t\"passwordConfirmation\": \"\"\r\n}",
+									"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"role\": \"USER\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -4058,7 +3430,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"password\": \"Secret1234$\",\r\n\t\"passwordConfirmation\": \"Secret1234$\"\r\n}",
+											"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"role\": \"USER\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4066,9 +3438,9 @@
 											}
 										},
 										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/users",
+											"raw": "{{base_url}}/{{api_endpoint}}/v1/users",
 											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "users"]
+											"path": ["{{api_endpoint}}", "v1", "users"]
 										}
 									},
 									"status": "Created",
@@ -4201,7 +3573,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\"\r\n}",
+											"raw": "{\r\n\t\r\n\t\"name\": \"john doe\",\r\n\t\"role\": \"USER\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4209,9 +3581,9 @@
 											}
 										},
 										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/users",
+											"raw": "{{base_url}}/{{api_endpoint}}/v1/users",
 											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "users"]
+											"path": ["{{api_endpoint}}", "v1", "users"]
 										}
 									},
 									"status": "Bad Request",
@@ -4340,7 +3712,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\r\n\t\"email\": \"{{email}}\",\r\n\t\"name\": \"{{name}}\",\r\n\t\"password\": \"{{password}}\",\r\n\t\"passwordConfirmation\": \"{{password}}\"\r\n}",
+											"raw": "{\r\n\t\"email\": \"john@doe.com\",\r\n\t\"name\": \"john doe\",\r\n\t\"role\": \"USER\"\r\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4348,9 +3720,9 @@
 											}
 										},
 										"url": {
-											"raw": "{{base_url}}/{{api_endpoint}}/users",
+											"raw": "{{base_url}}/{{api_endpoint}}/v1/users",
 											"host": ["{{base_url}}"],
-											"path": ["{{api_endpoint}}", "users"]
+											"path": ["{{api_endpoint}}", "v1", "users"]
 										}
 									},
 									"status": "Bad Request",
@@ -4492,43 +3864,43 @@
 										},
 										{
 											"key": "emailVerified",
-											"value": null,
+											"value": "",
 											"description": "Filter users by email verification status (true/false).",
 											"disabled": true
 										},
 										{
 											"key": "deleted",
-											"value": null,
+											"value": "",
 											"description": "Filter users by deleted status (true/false).",
 											"disabled": true
 										},
 										{
 											"key": "active",
-											"value": null,
+											"value": "",
 											"description": "Filter users by active status (true/false).",
 											"disabled": true
 										},
 										{
 											"key": "page",
-											"value": null,
+											"value": "",
 											"description": "Page number for pagination (default: 1).",
 											"disabled": true
 										},
 										{
 											"key": "limit",
-											"value": null,
+											"value": "",
 											"description": "Number of users per page (default: 10).",
 											"disabled": true
 										},
 										{
 											"key": "offset",
-											"value": null,
+											"value": "",
 											"description": "Number of users to skip (default: 0).",
 											"disabled": true
 										},
 										{
-											"key": "sort",
-											"value": null,
+											"key": "sort[name]",
+											"value": "",
 											"description": "Optional flag refer to the sort order of the addresses (e.g., name, email).",
 											"disabled": true
 										}
@@ -5118,6 +4490,663 @@
 							]
 						},
 						{
+							"name": "Verify User Email",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user/email/verify/:token",
+									"host": ["{{base_url}}"],
+									"path": [
+										"{{api_endpoint}}",
+										"v1",
+										"users",
+										":user",
+										"email",
+										"verify",
+										":token"
+									],
+									"variable": [
+										{
+											"key": "user",
+											"value": ""
+										},
+										{
+											"key": "token",
+											"value": "{{hash_token}}"
+										}
+									]
+								},
+								"description": "Verifies a user's email using a valid email verification token.\n\n#### Path Variables\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Required | Must be in email format |\n| hash | String | Required |  |"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}",
+												"type": "text"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
+											"host": ["{{base_url}}"],
+											"path": [
+												"{{api_endpoint}}",
+												"auth",
+												"email",
+												"verify",
+												":email",
+												":hash"
+											],
+											"variable": [
+												{
+													"key": "email",
+													"value": "{{email}}"
+												},
+												{
+													"key": "hash",
+													"value": "{{hash_token}}"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "Expect-CT",
+											"value": "max-age=0"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=15552000; includeSubDomains"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "http://127.0.0.1:8080"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept, Accept-Encoding"
+										},
+										{
+											"key": "RateLimit-Limit",
+											"value": "100"
+										},
+										{
+											"key": "RateLimit-Remaining",
+											"value": "91"
+										},
+										{
+											"key": "RateLimit-Reset",
+											"value": "561"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "149"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"95-NyQ0Eur+6Ig6B8lMJf1XtXQnfi4\""
+										},
+										{
+											"key": "Date",
+											"value": "Sat, 07 May 2022 12:58:31 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"success\": true,\n    \"status\": 200,\n    \"flashes\": {\n        \"success\": [\n            {\n                \"msg\": \"Your account has been Verified\"\n            }\n        ]\n    },\n}"
+								},
+								{
+									"name": "Faild - Not Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}",
+												"type": "text"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/verify/:email/:hash",
+											"host": ["{{base_url}}"],
+											"path": [
+												"{{api_endpoint}}",
+												"auth",
+												"email",
+												"verify",
+												":email",
+												":hash"
+											],
+											"variable": [
+												{
+													"key": "email",
+													"value": "{{email}}"
+												},
+												{
+													"key": "hash",
+													"value": "{{hash_token}}"
+												}
+											]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "Expect-CT",
+											"value": "max-age=0"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=15552000; includeSubDomains"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "http://127.0.0.1:8080"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept, Accept-Encoding"
+										},
+										{
+											"key": "RateLimit-Limit",
+											"value": "100"
+										},
+										{
+											"key": "RateLimit-Remaining",
+											"value": "92"
+										},
+										{
+											"key": "RateLimit-Reset",
+											"value": "608"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "189"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"bd-2mOtbihIkzTorJ7wKgtUBqDPKUU\""
+										},
+										{
+											"key": "Date",
+											"value": "Sat, 07 May 2022 12:57:44 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"success\": false,\n    \"status\": 404,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Invalid approach, please use the link that has been send to your email.\"\n            }\n        ]\n    },\n}"
+								}
+							]
+						},
+						{
+							"name": "Resend User Email Verification",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/{{api_endpoint}}/v1/users/:user/email/resend",
+									"host": ["{{base_url}}"],
+									"path": [
+										"{{api_endpoint}}",
+										"v1",
+										"users",
+										":user",
+										"email",
+										"resend"
+									],
+									"variable": [
+										{
+											"key": "user",
+											"value": ""
+										}
+									]
+								},
+								"description": "Resend an email verification link to a user who hasn't verified their email yet."
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}",
+												"type": "text"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "Expect-CT",
+											"value": "max-age=0"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=15552000; includeSubDomains"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "http://127.0.0.1:8080"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept, Accept-Encoding"
+										},
+										{
+											"key": "RateLimit-Limit",
+											"value": "100"
+										},
+										{
+											"key": "RateLimit-Remaining",
+											"value": "89"
+										},
+										{
+											"key": "RateLimit-Reset",
+											"value": "520"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "156"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"9c-a8BcVIPQPKtWjL0qgInUOeZduDw\""
+										},
+										{
+											"key": "Date",
+											"value": "Sat, 07 May 2022 12:59:15 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"success\": true,\n    \"status\": 200,\n    \"flashes\": {\n        \"success\": [\n            {\n                \"msg\": \"Email Verification sent successfully!\"\n            }\n        ]\n    }\n}"
+								},
+								{
+									"name": "Failed - Not Found",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{access_token}}",
+												"type": "text"
+											},
+											{
+												"key": "Accept",
+												"value": "application/json",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{base_url}}/{{api_endpoint}}/auth/email/resend",
+											"host": ["{{base_url}}"],
+											"path": ["{{api_endpoint}}", "auth", "email", "resend"]
+										}
+									},
+									"status": "Not Found",
+									"code": 404,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "Expect-CT",
+											"value": "max-age=0"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=15552000; includeSubDomains"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "http://127.0.0.1:8080"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept, Accept-Encoding"
+										},
+										{
+											"key": "RateLimit-Limit",
+											"value": "100"
+										},
+										{
+											"key": "RateLimit-Remaining",
+											"value": "90"
+										},
+										{
+											"key": "RateLimit-Reset",
+											"value": "548"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "141"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"8d-OMWVueGXO7gHSBGiI0fYMpzyQ/k\""
+										},
+										{
+											"key": "Date",
+											"value": "Sat, 07 May 2022 12:58:44 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"success\": false,\n    \"status\": 404,\n    \"flashes\": {\n        \"danger\": [\n            {\n                \"msg\": \"Email Already Verified!\"\n            }\n        ]\n    }\n}"
+								}
+							]
+						},
+						{
 							"name": "Single By Id/Slug",
 							"request": {
 								"method": "GET",
@@ -5467,7 +5496,7 @@
 										}
 									]
 								},
-								"description": "Updates a user's profile information based on the provided data. Only the currently authenticated user can update their own profile.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Optional | Must be in email format |\n| name | String | Optional |  |\n| old_password | String | Required if password sent. | Must be equal to old password, and matches password validation criteria. |\n| password | String | Required if old_password sent. | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if password_confirmation sent. | Must match password. |\n| logout | Boolean | Optional | If you want to logout from other devices |"
+								"description": "Updates a user's profile information based on the provided data. Only the currently authenticated user can update their own profile.\n\n#### Body Parameters\n\n| **Parameter** | **Type** | **State** | **Description** |\n| --- | --- | --- | --- |\n| email | String | Optional | Must be in email format |\n| name | String | Optional |  |\n| emailVerified | Boolean | Optional |  |\n| old_password | String | Required if password sent. | Must be equal to old password, and matches password validation criteria. |\n| password | String | Required if old_password sent. | Must be at least 8 chars long, include one lowercase character, one uppercase character, a number, and a special character. |\n| password_confirmation | String | Required if password_confirmation sent. | Must match password. |\n| logout | Boolean | Optional | If you want to logout from other devices |"
 							},
 							"response": [
 								{
