@@ -66,12 +66,7 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 			required: [true, "City is required!"],
 			autopopulate: { maxDepth: 1, select: "name" },
 		},
-		user: {
-			type: Schema.Types.ObjectId,
-			ref: "User",
-			required: [true, "User is required!"],
-			autopopulate: { maxDepth: 1 },
-		},
+		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );

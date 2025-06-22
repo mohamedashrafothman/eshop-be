@@ -378,7 +378,13 @@ export const getAddresses = async (
 				...((req.user && { user: req.user._id }) || {}),
 			},
 			{
-				...("sort" in req.query && { sort: req.query.sort }),
+				sort: {
+					default: -1,
+					...(("sort" in req.query &&
+						typeof req.query.sort === "object" &&
+						req.query.sort) ||
+						{}),
+				},
 				...("page" in req.query && { page: Number(req.query.page) }),
 				...("limit" in req.query && { limit: Number(req.query.limit) }),
 				...("offset" in req.query && { offset: Number(req.query.offset) }),
