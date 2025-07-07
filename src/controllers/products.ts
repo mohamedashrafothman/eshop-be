@@ -92,12 +92,12 @@ export const validator = (method: "create" | "update" | "home"): ValidationChain
 					.withMessage("at least one Image is required!"),
 				body("brand")
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid brand id!")
 					.notEmpty()
 					.withMessage("Brand is required!"),
 				body("category")
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid category id!")
 					.notEmpty()
 					.withMessage("Category is required!"),
 				body("isFeatured")
@@ -173,13 +173,13 @@ export const validator = (method: "create" | "update" | "home"): ValidationChain
 				body("brand")
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid brand id!")
 					.notEmpty()
 					.withMessage("Brand is required!"),
 				body("category")
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid category id!")
 					.notEmpty()
 					.withMessage("Category is required!"),
 				body("isFeatured")

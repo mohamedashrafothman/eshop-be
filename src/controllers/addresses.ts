@@ -278,7 +278,7 @@ export const postNewAddress = async (
 
 	// Attempt to update the user with the new address
 	// If there is an error, rollback the transaction and pass the error to the next middleware
-	const [updatedUserError, _updatedUser] = await to(
+	const [updatedUserError] = await to(
 		User.updateOne(
 			{ _id: req.body.user },
 			{ $addToSet: { addresses: createdAddress[0]._id } }
@@ -317,7 +317,6 @@ export const postNewAddress = async (
  * @param {String} [req.query.offset] - The number of addresses to skip.
  * @param {String} [req.query.pagination] - Enable or disable pagination.
  * @param {String} [req.query.q] - Search term for filtering addresses by name or street.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted addresses.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
@@ -335,19 +334,14 @@ export const getAddresses = async (
 		Partial<
 			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 				q?: string;
-				deleted?: boolean | number;
 			}
 		>
 	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted countries)
-	const { q, deleted } = req.query || {};
-
-	// Check if the query includes a deleted flag
-	const isFilterByDeletedAllowed = "deleted" in req.query;
+	// Destructure the query parameters (req.query) into q (search term)
+	const { q } = req.query || {};
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "street"];
@@ -372,8 +366,6 @@ export const getAddresses = async (
 					})),
 				}) ||
 					{}),
-				// If the query includes a deleted flag, include deleted addresses
-				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// If the user is authenticated, filter by user
 				...((req.user && { user: req.user._id }) || {}),
 			},
@@ -751,7 +743,7 @@ export const deleteSingleAddress = async (
 	// Attempt to delete the address, and if there is an error during the deletion,
 	// pass the error to the next middleware
 	const [deleteAddressError] = await to(
-		Address.deleteById(address._id, req.user._id).session(session)
+		Address.findOneAndDelete({ _id: address._id }).session(session)
 	);
 	if (deleteAddressError) {
 		handleTransactionError(session);
@@ -759,6 +751,7 @@ export const deleteSingleAddress = async (
 	}
 
 	// If the deleted address was the default address, make the last added address the default
+	// and update the deleted address to set the default flag to false
 	if (address.default) {
 		const [newDefaultAddress] = [...(restOfUserAddresses || [])]?.sort(
 			(a, b) => b?.createdAt.getTime() - a?.createdAt.getTime()

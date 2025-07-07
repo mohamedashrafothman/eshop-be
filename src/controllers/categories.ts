@@ -45,7 +45,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("parent")
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid parent ids!")
 					.notEmpty()
 					.withMessage("You must supply a parent!"),
 			];
@@ -71,7 +71,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("parent")
 					.optional()
 					.isMongoId()
-					.withMessage("Invalid country id!")
+					.withMessage("Invalid parent ids!")
 					.notEmpty()
 					.withMessage("You must supply a parent!"),
 			];

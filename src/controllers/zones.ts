@@ -50,22 +50,22 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.withMessage("Invalid country ID(s) provided."),
 				body("states")
 					.isArray({ min: 1 })
-					.withMessage("States must be an array with at least one country ID.")
+					.withMessage("States must be an array with at least one state ID.")
 					.custom((states: string[]) => {
 						return states.every((countryId: string) =>
 							mongoose.Types.ObjectId.isValid(countryId)
 						);
 					})
-					.withMessage("Invalid country ID(s) provided."),
+					.withMessage("Invalid state ID(s) provided."),
 				body("cities")
 					.isArray({ min: 1 })
-					.withMessage("Cities must be an array with at least one country ID.")
+					.withMessage("Cities must be an array with at least one city ID.")
 					.custom((cities: string[]) => {
 						return cities.every((countryId: string) =>
 							mongoose.Types.ObjectId.isValid(countryId)
 						);
 					})
-					.withMessage("Invalid country ID(s) provided."),
+					.withMessage("Invalid city ID(s) provided."),
 			];
 		case "update":
 			return [
@@ -98,23 +98,23 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("states")
 					.optional()
 					.isArray({ min: 1 })
-					.withMessage("States must be an array with at least one country ID.")
+					.withMessage("States must be an array with at least one state ID.")
 					.custom((states: string[]) => {
 						return states.every((countryId: string) =>
 							mongoose.Types.ObjectId.isValid(countryId)
 						);
 					})
-					.withMessage("Invalid country ID(s) provided."),
+					.withMessage("Invalid state ID(s) provided."),
 				body("cities")
 					.optional()
 					.isArray({ min: 1 })
-					.withMessage("Cities must be an array with at least one country ID.")
+					.withMessage("Cities must be an array with at least one city ID.")
 					.custom((cities: string[]) => {
 						return cities.every((countryId: string) =>
 							mongoose.Types.ObjectId.isValid(countryId)
 						);
 					})
-					.withMessage("Invalid country ID(s) provided."),
+					.withMessage("Invalid city ID(s) provided."),
 			];
 		default:
 			return [];
