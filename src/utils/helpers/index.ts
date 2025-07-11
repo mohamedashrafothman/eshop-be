@@ -3,6 +3,9 @@ import { Request } from "express";
 export * from "./attachment";
 export * from "./server";
 
+export const isObject = (value: unknown): boolean =>
+	typeof value === "object" && !Array.isArray(value) && value !== null;
+
 /**
  * Calculates the time difference between a given date and the current time in days, hours, minutes and seconds.
  * @param date Date or string representing the date to calculate the time difference from

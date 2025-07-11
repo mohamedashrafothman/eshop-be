@@ -16,6 +16,7 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	isObject,
 	type SortItemType,
 } from "../utils/helpers";
 import vars from "../utils/vars";
@@ -44,10 +45,10 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 				body("icon").notEmpty().withMessage("You must add an icon!"),
 				body("parent")
 					.optional()
-					.isMongoId()
-					.withMessage("Invalid parent ids!")
-					.notEmpty()
-					.withMessage("You must supply a parent!"),
+					.isArray({ min: 1 })
+					.withMessage("Parent must be a non-empty array of IDs.")
+					.custom((arr: string[]) => arr.every((id) => isMongoId(id)))
+					.withMessage("Each parent ID must be a valid UUID."),
 			];
 		case "update":
 			return [
@@ -68,12 +69,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.isLength({ max: 1000 })
 					.withMessage("Description must be at most 100 characters long!"),
 				body("icon").optional().notEmpty().withMessage("Icon can't be empty!"),
-				body("parent")
-					.optional()
-					.isMongoId()
-					.withMessage("Invalid parent ids!")
-					.notEmpty()
-					.withMessage("You must supply a parent!"),
+				body("parent").optional(),
 			];
 		default:
 			return [];
@@ -195,7 +191,9 @@ export const postNewCategory = async (
 				{
 					name: req.body.name,
 					description: req.body.description,
-					...(req.body.parent ? { parent: req.body.parent } : {}),
+					...(req.body?.parent && req.body?.parent.length
+						? { parent: req.body.parent }
+						: {}),
 					...(createdAttachment?.length &&
 						createdAttachment[0]?._id && { icon: createdAttachment[0]._id }),
 				},
@@ -209,11 +207,11 @@ export const postNewCategory = async (
 	}
 
 	// Check if parent category exists in the request body.
-	if (req.body?.parent && createdCategory[0]?._id) {
+	if (req.body?.parent && req.body?.parent.length && createdCategory[0]?._id) {
 		// Add the created category to the parent category's children
 		// and if there was an error, return the error and end the request
 		const [updatedParentCategoryError] = await to(
-			Category.updateOne(
+			Category.updateManyWithDeleted(
 				{ _id: req.body.parent },
 				{ $addToSet: { children: createdCategory[0]._id } }
 			).session(session)
@@ -255,6 +253,7 @@ export const postNewCategory = async (
  * @param {String} [req.query.pagination] - Enable or disable pagination.
  * @param {String} [req.query.q] - Search term for filtering categories by name or description.
  * @param {Boolean} [req.query.deleted] - Flag to include deleted categories.
+ * @param {Boolean} [req.query.firstLevelOnly] - Flag to include only first-level categories.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware function to handle errors.
  *
@@ -273,6 +272,7 @@ export const getCategories = async (
 			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
 				q?: string;
 				deleted?: boolean | number;
+				firstLevelOnly?: boolean | number;
 			}
 		>
 	>,
@@ -286,13 +286,16 @@ export const getCategories = async (
 	}
 
 	// Destructure the query parameters (req.query) into
-	// q (search term), deleted (include deleted countries)
-	const { q, deleted } = req.query || {};
+	// q (search term), deleted (include deleted countries), firstLevelOnly (include first level categories)
+	const { q, deleted, firstLevelOnly } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
 		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "");
+
+	// Check if the query includes a firstLevelOnly flag
+	const isFilterByFirstLevelOnlyAllowed: boolean = "firstLevelOnly" in req.query;
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -320,7 +323,11 @@ export const getCategories = async (
 				// If the query includes a deleted flag, include deleted categories
 				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
 				// get just the parent categories.
-				parent: { $size: 0 },
+				...(isFilterByFirstLevelOnlyAllowed &&
+				firstLevelOnly !== undefined &&
+				Boolean(+firstLevelOnly) === true
+					? { parent: { $size: 0 } }
+					: {}),
 			},
 			// Use the query parameters for pagination and sorting
 			{
@@ -423,6 +430,9 @@ export const updateSingleCategory = async (
 
 	// Retrieve the category ID or slug from the request parameters
 	const { category: categoryIdentifier } = req.params || {};
+	const isParentPresentedInTheRequest = "parent" in req.body;
+	const isParentValueIncluded =
+		req.body?.parent && Array.isArray(req.body?.parent) && req.body?.parent.length > 0;
 
 	// Attempt to retrieve a category from the database with the given ID or slug,
 	// and if there was an error or no category was found, return the error and end the request
@@ -488,14 +498,35 @@ export const updateSingleCategory = async (
 	}
 
 	// Check if parent exists.
-	if (req.body?.parent) {
-		// Find the category associated with the parent
-		const [parentCategoryError, parentCategory] = await to(
-			Category.findOne({ _id: req.body.parent }).session(session)
+	if (isParentPresentedInTheRequest) {
+		const [removedParentCategoriesError] = await to(
+			Category.updateManyWithDeleted(
+				{
+					_id: category.parent?.map((singleParent) =>
+						!isObject(singleParent) ? singleParent : singleParent._id
+					),
+				},
+				{ $pull: { children: category._id } }
+			).session(session)
 		);
-		if (parentCategoryError || !parentCategory) {
+		if (removedParentCategoriesError) {
 			handleTransactionError(session);
-			return next(parentCategoryError);
+			return next(removedParentCategoriesError);
+		}
+
+		if (isParentValueIncluded) {
+			// Add the created category to the parent category's children
+			// and if there was an error, return the error and end the request
+			const [updatedParentCategoriesError] = await to(
+				Category.updateManyWithDeleted(
+					{ _id: req.body.parent },
+					{ $addToSet: { children: category._id } }
+				).session(session)
+			);
+			if (updatedParentCategoriesError) {
+				handleTransactionError(session);
+				return next(updatedParentCategoriesError);
+			}
 		}
 	}
 
@@ -503,7 +534,7 @@ export const updateSingleCategory = async (
 	category = Object.assign(category, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.description && { description: req.body.description }),
-		...(req.body?.parent && { parent: req.body.parent }),
+		...(isParentPresentedInTheRequest && { parent: req.body?.parent || [] }),
 		...(createdAttachment && createdAttachment?.[0]?._id && { icon: createdAttachment[0]._id }),
 	});
 

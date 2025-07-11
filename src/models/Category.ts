@@ -52,7 +52,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 			autopopulate: { select: "path alt" },
 		},
 		parent: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
-		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: { maxDepth: 2 } }],
+		children: [{ type: Schema.Types.ObjectId, ref: "Category", autopopulate: true }],
 		products: [{ type: Schema.Types.ObjectId, ref: "Product", default: [] }],
 		productsCount: { type: Number, default: 0 },
 	},
