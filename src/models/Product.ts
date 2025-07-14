@@ -138,7 +138,11 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			ref: "Brand",
 			index: true,
 			required: [true, "Brand is required!"],
-			autopopulate: { maxDepth: 1, select: "name slug description" },
+			autopopulate: {
+				select: "name slug description logo",
+				populate: { path: "logo", select: "path alt" },
+				maxDepth: 1,
+			},
 		},
 		category: {
 			type: Schema.Types.ObjectId,

@@ -428,7 +428,13 @@ export const updateSinglePaymentMethod = async (
 			}
 
 			// delete file from disk if it exists
-			deleteFileFromDisk(paymentMethodAttachment.path);
+			const [deleteFileFromDiskError] = await to(
+				deleteFileFromDisk(paymentMethodAttachment.path)
+			);
+			if (deleteFileFromDiskError) {
+				handleTransactionError(session);
+				return next(deleteFileFromDiskError);
+			}
 		}
 
 		// Create a new attachment from the request body icon, and if there was an error,

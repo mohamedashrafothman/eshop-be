@@ -426,7 +426,11 @@ export const updateSingleBrand = async (
 			}
 
 			// delete file from disk if it exists
-			deleteFileFromDisk(brandAttachment.path);
+			const [deleteFileFromDiskError] = await to(deleteFileFromDisk(brandAttachment.path));
+			if (deleteFileFromDiskError) {
+				handleTransactionError(session);
+				return next(deleteFileFromDiskError);
+			}
 		}
 
 		// Create a new attachment from the request body logo, and if there was an error,
@@ -528,7 +532,6 @@ export const deleteSingleBrand = async (
 			],
 		})
 	);
-	console.log("brand:", brand);
 	if (brandError || !brand) return next(brandError);
 
 	// Attempt to soft-delete the found brand, and if there is an error during the deletion,

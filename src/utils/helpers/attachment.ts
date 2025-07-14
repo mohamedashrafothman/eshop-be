@@ -56,21 +56,22 @@ export const handleFileToUpload = (
 /**
  * Deletes a file from the file system.
  *
- * @param {String} [file] - The file path to delete.
+ * @param {string} [file] - The file path to delete.
+ * @returns {Promise<void>}
  */
-export const deleteFileFromDisk = (file?: string): NodeJS.ErrnoException | void => {
-	// Check if the file exists
-	if (!file) return;
+export const deleteFileFromDisk = (file?: string): Promise<void> => {
+	return new Promise((resolve, reject) => {
+		if (!file) return resolve();
 
-	// Create the file path by joining the upload path and the file path.
-	// The file path is extracted from the URL and is resolved relative to the upload path.
-	const filePath = path.join(__dirname, `../../../`, new URL(file)?.pathname);
+		const filePath = path.join(__dirname, "../../../", new URL(file).pathname);
 
-	// Check if the file exists
-	if (fs.existsSync(filePath)) {
-		// Delete the file
-		fs.unlink(filePath, (err) => {
-			if (err) throw err;
+		fs.access(filePath, fs.constants.F_OK, (accessErr) => {
+			if (accessErr) return resolve(); // File doesn't exist, resolve silently
+
+			fs.unlink(filePath, (unlinkErr) => {
+				if (unlinkErr) return reject(unlinkErr);
+				resolve();
+			});
 		});
-	}
+	});
 };

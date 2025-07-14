@@ -788,7 +788,11 @@ export const updateSingleProduct = async (
 			}
 
 			// delete file from disk if it exists
-			deleteFileFromDisk(productThumbnail.path);
+			const [deleteFileFromDiskError] = await to(deleteFileFromDisk(productThumbnail.path));
+			if (deleteFileFromDiskError) {
+				handleTransactionError(session);
+				return next(deleteFileFromDiskError);
+			}
 		}
 
 		// Create a new thumbnail from the request body logo, and if there was an error,
@@ -842,7 +846,15 @@ export const updateSingleProduct = async (
 			}
 
 			// delete files from disk if they exist
-			productImages?.forEach(({ path }) => path && deleteFileFromDisk(path));
+			for (const { path } of productImages || []) {
+				if (!path) continue;
+
+				const [deleteFileFromDiskError] = await to(deleteFileFromDisk(path));
+				if (deleteFileFromDiskError) {
+					handleTransactionError(session);
+					return next(deleteFileFromDiskError);
+				}
+			}
 		}
 
 		// Create a new thumbnail from the request body logo, and if there was an error,

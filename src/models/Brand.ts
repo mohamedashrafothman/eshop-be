@@ -46,7 +46,7 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 		logo: {
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
-			autopopulate: { select: "path alt" },
+			autopopulate: { select: "path alt", maxDepth: 1 },
 		},
 		products: [
 			{

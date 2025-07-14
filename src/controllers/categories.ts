@@ -475,7 +475,11 @@ export const updateSingleCategory = async (
 			}
 
 			// delete file from disk if it exists
-			deleteFileFromDisk(categoryAttachment.path);
+			const [deleteFileFromDiskError] = await to(deleteFileFromDisk(categoryAttachment.path));
+			if (deleteFileFromDiskError) {
+				handleTransactionError(session);
+				return next(deleteFileFromDiskError);
+			}
 		}
 
 		// Create a new attachment from the request body icon, and if there was an error,
