@@ -58,7 +58,7 @@ export const validator = (method: "create" | "update" | "home"): ValidationChain
 					.isFloat({ min: 0 })
 					.withMessage("Sale price must be greater than or equal to 0!")
 					.custom((value, { req }) => {
-						if (value >= req.body.price.normal)
+						if (value && +value >= +req.body.price.normal)
 							throw new Error("Sale price must be less than normal price!");
 						return true;
 					}),
@@ -138,7 +138,7 @@ export const validator = (method: "create" | "update" | "home"): ValidationChain
 					.isFloat({ min: 0 })
 					.withMessage("Sale price must be greater than or equal to 0!")
 					.custom((value, { req }) => {
-						if (value >= req.body.price.normal)
+						if (value && +value >= +req.body.price.normal)
 							throw new Error("Sale price must be less than normal price!");
 						return true;
 					}),
