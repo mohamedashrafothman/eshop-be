@@ -241,8 +241,9 @@ export const postNewCategory = async (
 /**
  * @summary Retrieves a paginated list of categories.
  * @description Fetches categories based on query parameters. Supports filtering by name,
- * description, and deletion status. Also includes pagination and sorting options. If the user is an
- * admin or super admin, deleted categories can also be included in the results.
+ * description, and deletion status in case of logged in users.
+ * Also includes pagination and sorting options. If the user is an admin or super admin,
+ * deleted categories can also be included in the results.
  *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - The query parameters for filtering and pagination.
@@ -279,12 +280,6 @@ export const getCategories = async (
 	res: Response<FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries), firstLevelOnly (include first level categories)
 	const { q, deleted, firstLevelOnly } = req.query || {};
@@ -292,7 +287,10 @@ export const getCategories = async (
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "");
+		Boolean(
+			req?.user &&
+				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
+		);
 
 	// Check if the query includes a firstLevelOnly flag
 	const isFilterByFirstLevelOnlyAllowed: boolean = "firstLevelOnly" in req.query;
