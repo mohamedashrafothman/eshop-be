@@ -378,10 +378,16 @@ export const getSingleCategory = async (
 	// Retrieve the category ID or slug from the request parameters
 	const { category: categoryIdentifier } = req.params || {};
 
+	// Check if the user is authenticated and has the required roles.
+	const canGetCategoryWithoutDeleted: boolean =
+		req.isUnauthenticated() ||
+		!req.user ||
+		(req.isAuthenticated() && req.user && [vars.auth.roles.user].includes(req.user.role));
+
 	// Attempt to retrieve a category from the database with the given ID or slug,
 	// and if there was an error or no category was found, return the error and end the request
 	const [categoryError, category] = await to(
-		Category.findOneWithDeleted({
+		Category[canGetCategoryWithoutDeleted ? "findOne" : "findOneWithDeleted"]({
 			$or: [
 				{ slug: categoryIdentifier },
 				...(isMongoId(categoryIdentifier) ? [{ _id: categoryIdentifier }] : []),

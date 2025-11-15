@@ -25,12 +25,16 @@ router
 
 router
 	.route("/:category")
+	.get(
+		allowMethods(["get"]),
+		authController.passportJWTSerialize,
+		categoriesController.getSingleCategory
+	)
 	.all(
-		allowMethods(["get", "patch", "delete"]),
+		allowMethods(["patch", "delete"]),
 		authController.passportJWTAuthenticate,
 		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
 	)
-	.get(categoriesController.getSingleCategory)
 	.patch(
 		categoriesController.uploadCategoryIcon,
 		categoriesController.validator("update"),
