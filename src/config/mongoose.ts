@@ -13,7 +13,11 @@ mongoose.plugin(mongoosePagination);
 mongoose.plugin(mongooseAggregatePagination);
 mongoose.plugin(slug);
 mongoose.plugin(mongooseAutopopulate);
-mongoose.plugin(MongooseDelete, { deletedAt: true, deletedBy: true });
+mongoose.plugin(MongooseDelete, {
+	deletedAt: true,
+	deletedBy: true,
+	overrideMethods: ["findOne", "findOneAndUpdate", "update", "updateOne", "updateMany"],
+});
 mongoose.set("debug", !vars.isProduction);
 mongoose.connection
 	.once("open", () => console.log(chalk.blue("✅  Connected to the database")))
