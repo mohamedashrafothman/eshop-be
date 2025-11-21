@@ -19,6 +19,7 @@ import logger from "./middlewares/logger";
 import queryParser from "./middlewares/queryParser";
 import rateLimiter from "./middlewares/rateLimiter";
 import session from "./middlewares/session";
+import swagger from "./middlewares/swagger";
 import userAgent from "./middlewares/userAgent";
 import routes from "./routes";
 import { normalizePort } from "./utils/helpers";
@@ -69,6 +70,7 @@ app.use(userAgent); // attach browser information to express application.
 app.use(locals);
 
 // Routes
+app.use("/api-docs", ...swagger);
 app.use("/", rateLimiter, routes);
 
 // Error Handling
