@@ -1360,7 +1360,7 @@ export const postRegister = async (
 		from: vars.email.sender,
 		filename: "verify-user",
 		subject: `[${vars.app.name}] Verify User Account.`,
-		actionUrl: `${vars.app.frontEndUrl}/auth/email/verify/${token}`,
+		actionUrl: `${vars.app.frontEndUrl}/user/email/verify/${token}`,
 	});
 	if (sendEmailError) {
 		handleTransactionError(session);
