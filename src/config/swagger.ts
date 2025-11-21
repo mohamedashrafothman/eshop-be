@@ -11,11 +11,21 @@ const swaggerOptions: swaggerJSDoc.OAS3Options = {
 			description: "REST API documentation for the backend",
 		},
 		servers: [{ url: vars.app.url, description: "" }],
+		components: {
+			securitySchemes: {
+				bearerAuth: {
+					type: vars.app.protocol,
+					scheme: vars.auth.strategies.jwt.tokenType,
+					bearerFormat: vars.tokenTypes.jwt,
+				},
+			},
+		},
+		security: [{ bearerAuth: [] }],
 	},
 	apis: [
-		path.join(__dirname, "../../api-schemas/*.ts"),
-		path.join(__dirname, "../../routes/api/**/*.ts"),
-		path.join(__dirname, "../../controllers/**/*.ts"),
+		path.join(__dirname, "../api-schemas/*.ts"),
+		path.join(__dirname, "../routes/api/**/*.ts"),
+		path.join(__dirname, "../controllers/**/*.ts"),
 	],
 };
 
