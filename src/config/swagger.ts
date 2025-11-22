@@ -1,5 +1,6 @@
 import path from "path";
 import swaggerJsdoc, * as swaggerJSDoc from "swagger-jsdoc";
+import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
 import vars from "../utils/vars";
 
 const swaggerOptions: swaggerJSDoc.OAS3Options = {
@@ -8,7 +9,8 @@ const swaggerOptions: swaggerJSDoc.OAS3Options = {
 		info: {
 			title: `${vars.app.name}'s API Documentation`,
 			version: "",
-			description: "REST API documentation for the backend",
+			description:
+				"REST API documentation.\n\n[Download OpenAPI JSON](/api-docs/swagger.json)",
 		},
 		servers: [{ url: vars.app.url, description: "" }],
 		components: {
@@ -29,6 +31,13 @@ const swaggerOptions: swaggerJSDoc.OAS3Options = {
 	],
 };
 
+const swaggerSetupOptions = {
+	explorer: true,
+	customCss: new SwaggerTheme().getBuffer(SwaggerThemeNameEnum.NEWSPAPER),
+	swaggerOptions: { url: "/api-docs/swagger.json" },
+};
+
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+export { swaggerSetupOptions };
 export default swaggerSpec;

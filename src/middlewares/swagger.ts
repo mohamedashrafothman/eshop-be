@@ -1,11 +1,6 @@
-import { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
-import swaggerSpec from "../config/swagger";
+import swaggerSpec, { swaggerSetupOptions } from "../config/swagger";
 
-const middleware = [
-	swaggerUi.serve,
-	(req: Request, res: Response, next: NextFunction) =>
-		swaggerUi.setup(swaggerSpec)(req, res, next),
-];
+const middleware = [swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerSetupOptions)];
 
 export default middleware;

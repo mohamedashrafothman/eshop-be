@@ -11,6 +11,7 @@ import methodOverride from "method-override";
 import passport from "passport";
 import path from "path";
 import xss from "xss-clean";
+import swaggerSpec from "./config/swagger";
 import cors from "./middlewares/cors";
 import csrf from "./middlewares/csrf";
 import { internalServerErrorHandler, notFoundErrorHandler } from "./middlewares/errorHandlers";
@@ -61,8 +62,11 @@ app.use(i18n.init); // i18n init parses req for language headers, cookies, etc.
 app.use(userAgent); // attach browser information to express application.
 app.use(locals);
 
-// Routes
+// API Swagger Documentation Routes
+app.get("/api-docs/swagger.json", (_req, res) => res.json(swaggerSpec));
 app.use("/api-docs", ...swagger);
+
+// Routes
 app.use("/", rateLimiter, routes);
 
 // Error Handling
