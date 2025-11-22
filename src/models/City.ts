@@ -36,19 +36,33 @@ const CitySchema: Schema<ICityDocument, object, ICityDocument> = new Schema(
 			index: true,
 			maxlength: [100, "Name can't be greater than 100 characters!"],
 			required: [true, "Name is required!"],
+			description:
+				"The official name of the city, trimmed and indexed for search, limited to 100 characters.",
 		},
-		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
+		slug: {
+			type: String,
+			slug: "name",
+			unique: true,
+			index: true,
+			slugPaddingSize: 6,
+			description:
+				"A URL-friendly version of the city name, automatically generated from 'name', unique for routing and SEO purposes.",
+		},
 		country: {
 			type: Schema.Types.ObjectId,
 			required: [true, "Country is required!"],
 			ref: "Country",
 			autopopulate: { maxDepth: 1, select: "name code" },
+			description:
+				"Reference to the country this city belongs to, autopopulated with 'name' and 'code' for display and relational purposes.",
 		},
 		state: {
 			type: Schema.Types.ObjectId,
 			required: [true, "State is required!"],
 			ref: "State",
 			autopopulate: { maxDepth: 1, select: "name code" },
+			description:
+				"Reference to the state/province this city is located in, autopopulated with 'name' and 'code' for context.",
 		},
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }

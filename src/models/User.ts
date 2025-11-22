@@ -46,31 +46,69 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			trim: true,
 			required: [true, "Email is required!"],
 			validate: [isEmail, "Invalid Email Address!"],
+			description:
+				"The user's email address, used for login, communication, and unique identification.",
 		},
 		name: {
 			type: String,
 			trim: true,
 			maxlength: [100, "Name can't be greater than 100 characters!"],
 			required: [true, "Name is required!"],
+			description:
+				"The full name of the user, used for display and personalization, limited to 100 characters.",
 		},
-		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
-		password: { type: String, hidden: true },
+		slug: {
+			type: String,
+			slug: "name",
+			unique: true,
+			index: true,
+			slugPaddingSize: 6,
+			description:
+				"A URL-friendly version of the user's name, generated from 'name', used for routing and SEO.",
+		},
+		password: {
+			type: String,
+			hidden: true,
+			description:
+				"Hashed password for authentication; hidden in outputs and not exposed via toJSON.",
+		},
 		role: {
 			type: String,
 			enum: [...Object.values(vars.auth.roles)],
 			default: vars.auth.roles.user,
 			required: [true, "Role is required!"],
+			description:
+				"The user's role, determining access level and permissions within the application.",
 		},
-		active: { type: Boolean, default: false },
-		emailVerified: { type: Boolean, default: false },
-		google: { type: String, default: undefined },
-		facebook: { type: String, default: undefined },
+		active: {
+			type: Boolean,
+			default: false,
+			description:
+				"Indicates whether the user's account is active and can be used to log in.",
+		},
+		emailVerified: {
+			type: Boolean,
+			default: false,
+			description: "Indicates whether the user's email address has been verified.",
+		},
+		google: {
+			type: String,
+			default: undefined,
+			description: "Identifier or token for the user's Google authentication, if linked.",
+		},
+		facebook: {
+			type: String,
+			default: undefined,
+			description: "Identifier or token for the user's Facebook authentication, if linked.",
+		},
 		addresses: [
 			{
 				type: Schema.Types.ObjectId,
 				ref: "Address",
 				default: [],
 				autopopulate: { maxDepth: 1 },
+				description:
+					"Array of references to the user's saved addresses, autopopulated for display and order selection.",
 			},
 		],
 	},

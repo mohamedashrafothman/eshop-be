@@ -146,30 +146,150 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new address entry in the database.
- * @description Handles the creation of a new address entity using the data provided in the request body.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The payload containing details for the new address entity.
- * @param {String} req.body.name - The name of the address.
- * @param {String} req.body.street - The street of the address.
- * @param {Number} [req.body.building] - The building number of the address.
- * @param {Number} [req.body.floor] - The floor number of the address.
- * @param {Number} req.body.apartment - The apartment number of the address.
- * @param {String} req.body.area - The area of the address.
- * @param {String} [req.body.zip] - The zip code of the address (optional).
- * @param {String} req.body.country - The ID of the country where the address is located.
- * @param {String} req.body.state - The ID of the state where the address is located.
- * @param {String} req.body.city - The ID of the city where the address is located.
- * @param {String} req.body.user - The ID of the user associated with the address.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created address entity.
- *   * @property {Object} entities.data - The newly created address entity.
- * @throws {Error} 401 - Returns an error if the user is unauthorized to create the address.
- * @throws {Error} 404 - Returns an error if the country, state, city, or user is not found.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
+ * @openapi
+ * /v1/addresses:
+ *   post:
+ *     summary: Creates a new address entry in the database.
+ *     description: |
+ *       Creates an address inside a MongoDB transaction and links it to the specified user.
+ *       Requires a valid bearer JWT. If the authenticated user has role `user`, their id must
+ *       match the `user` field in the payload.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - street
+ *               - building
+ *               - area
+ *               - country
+ *               - state
+ *               - city
+ *               - user
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               street:
+ *                 type: string
+ *               building:
+ *                 type: number
+ *               floor:
+ *                 type: number
+ *               apartment:
+ *                 type: string
+ *               area:
+ *                 type: string
+ *               zip:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               state:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               city:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               user:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *           example:
+ *             name: "Home"
+ *             street: "El Nasr St."
+ *             building: 12
+ *             floor: 3
+ *             apartment: "3B"
+ *             area: "Heliopolis"
+ *             zip: "11511"
+ *             country: "64b7f7f9a1d2c3e4f5a6b7c8"
+ *             state: "64b7f8a0a1d2c3e4f5a6b7c9"
+ *             city: "64b7f8c1a1d2c3e4f5a6b7ca"
+ *             user: "64b7f8e2a1d2c3e4f5a6b7cb"
+ *     responses:
+ *       "201":
+ *         description: Address created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *             example:
+ *               status: 201
+ *               entities:
+ *                 data:
+ *                   _id: "650f1c2e3d4b5a6c7d8e9f01"
+ *                   name: "Home"
+ *                   street: "El Nasr St."
+ *                   building: 12
+ *                   floor: 3
+ *                   apartment: "3B"
+ *                   area: "Heliopolis"
+ *                   zip: "11511"
+ *                   country: "64b7f7f9a1d2c3e4f5a6b7c8"
+ *                   state: "64b7f8a0a1d2c3e4f5a6b7c9"
+ *                   city: "64b7f8c1a1d2c3e4f5a6b7ca"
+ *                   user: "64b7f8e2a1d2c3e4f5a6b7cb"
+ *                   default: true
+ *       "400":
+ *         description: Validation error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: 400
+ *               errors:
+ *                 - msg: "You must supply a name!"
+ *                   param: "name"
+ *                   location: "body"
+ *       "401":
+ *         description: Unauthorized access or insufficient permissions.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: 401
+ *               message: "Unauthorized"
+ *       "404":
+ *         description: Referenced country, state, city, or user not found.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               country:
+ *                 value:
+ *                   status: 404
+ *                   message: "Country not found"
+ *               state:
+ *                 value:
+ *                   status: 404
+ *                   message: "State not found"
+ *               city:
+ *                 value:
+ *                   status: 404
+ *                   message: "City not found"
+ *               user:
+ *                 value:
+ *                   status: 404
+ *                   message: "User not found"
+ *       "500":
+ *         description: Transaction failure or unexpected server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: 500
+ *               message: "Internal Server Error"
  */
 export const postNewAddress = async (
 	req: Request<

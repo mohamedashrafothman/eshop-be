@@ -36,27 +36,40 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 			index: true,
 			maxlength: [100, "Name can't be greater than 100 characters!"],
 			required: [true, "Name is required!"],
+			description: "The name of the brand",
 		},
-		slug: { type: String, slug: "name", unique: true, index: true, slugPaddingSize: 6 },
+		slug: {
+			type: String,
+			slug: "name",
+			unique: true,
+			index: true,
+			slugPaddingSize: 6,
+			description: "The slug of the brand",
+		},
 		description: {
 			type: String,
 			trim: true,
-			maxlength: [1000, "Description can't be greater than 100 characters!"],
+			maxlength: [1000, "Description can't be greater than 1000 characters!"],
+			description: "The description of the brand",
 		},
 		logo: {
 			type: Schema.Types.ObjectId,
 			ref: "Attachment",
 			autopopulate: { select: "path alt", maxDepth: 1 },
+			description: "The logo of the brand",
 		},
-		products: [
-			{
-				type: Schema.Types.ObjectId,
-				ref: "Product",
-				default: [],
-				autopopulate: { maxDepth: 1, select: "name slug" },
-			},
-		],
-		productsCount: { type: Number, default: 0 },
+		products: {
+			type: [Schema.Types.ObjectId],
+			ref: "Product",
+			default: [],
+			autopopulate: { maxDepth: 1, select: "name slug" },
+			description: "The products associated with the brand",
+		},
+		productsCount: {
+			type: Number,
+			default: 0,
+			description: "The number of products associated with the brand",
+		},
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );

@@ -47,12 +47,17 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 			type: Schema.Types.ObjectId,
 			ref: "User",
 			required: [true, "User is required!"],
+			description: "The user who owns this cart.",
 		},
 		items: [
 			{
 				type: Schema.Types.ObjectId,
 				ref: "CartItem",
-				autopopulate: { maxDepth: 2, select: "quantity total price size color product" },
+				autopopulate: {
+					maxDepth: 2,
+					select: "quantity total price size color product",
+				},
+				description: "All items added to the cart, including quantity and product details.",
 			},
 		],
 		taxes: [
@@ -63,31 +68,48 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 					maxDepth: 1,
 					select: "name rate isPercentage applicableCategories applicableToAllProducts",
 				},
+				description: "List of applied tax rules for this cart.",
 			},
 		],
 		shippingMethod: {
 			type: Schema.Types.ObjectId,
 			ref: "ShippingMethod",
 			autopopulate: { maxDepth: 1 },
+			description: "Selected shipping method for the order.",
 		},
 		paymentMethod: {
 			type: Schema.Types.ObjectId,
 			ref: "PaymentMethod",
 			autopopulate: { maxDepth: 1 },
+			description: "Selected payment method used by the user.",
 		},
 		coupon: {
 			type: Schema.Types.ObjectId,
 			ref: "Coupon",
 			autopopulate: { maxDepth: 1 },
+			description: "Applied coupon providing discounts.",
 		},
 		address: {
 			type: Schema.Types.ObjectId,
 			ref: "Address",
 			autopopulate: { maxDepth: 1 },
+			description: "The delivery address associated with this cart.",
 		},
-		subtotal: { type: Number, default: 0 },
-		total: { type: Number, default: 0 },
-		locked: { type: Boolean, default: false },
+		subtotal: {
+			type: Number,
+			default: 0,
+			description: "Total price of cart items before taxes, shipping, and discounts.",
+		},
+		total: {
+			type: Number,
+			default: 0,
+			description: "Final cart total after applying taxes, discounts, and shipping.",
+		},
+		locked: {
+			type: Boolean,
+			default: false,
+			description: "Indicates if the cart is locked during checkout.",
+		},
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
 );

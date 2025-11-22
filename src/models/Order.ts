@@ -45,29 +45,46 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 			unique: true,
 			index: true,
 			required: [true, "Short Id is required!"],
+			description:
+				"A unique, short identifier for the order used for quick reference and tracking.",
 		},
 		status: {
 			type: String,
 			enum: Object.values(vars.order.status),
 			index: true,
 			required: [true, "Status is required!"],
+			description:
+				"The current status of the order (e.g., pending, shipped, delivered), constrained to predefined allowed values.",
 		},
-		user: { type: Types.ObjectId, ref: "User", required: [true, "User is required!"] },
+		user: {
+			type: Types.ObjectId,
+			ref: "User",
+			required: [true, "User is required!"],
+			description: "Reference to the user who placed the order.",
+		},
 		items: [
 			{
 				type: Types.ObjectId,
 				ref: "OrderItem",
 				required: [true, "Order items are required!"],
+				description:
+					"Array of references to the items included in the order, each pointing to an OrderItem document.",
 			},
 		],
 		taxes: [
 			{
-				name: { type: String, required: [true, "Tax name is required!"] },
+				name: {
+					type: String,
+					required: [true, "Tax name is required!"],
+					description: "The name of the tax applied to the order.",
+				},
 				rate: {
 					type: Number,
 					default: 0,
 					required: [true, "Order tax rate is required!"],
 					min: [0, "Order tax rate can't be less than 0!"],
+					description:
+						"The rate of the tax applied, expressed as a number, defaulting to 0.",
 				},
 				description: {
 					type: String,
@@ -76,39 +93,89 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 						1000,
 						"Order tax description can't be greater than 1000 characters!",
 					],
+					description:
+						"Optional description explaining the tax purpose or calculation rules.",
 				},
-				isPercentage: Boolean,
-				applicableCategories: { type: [String], default: [] },
-				applicableToAllProducts: { type: Boolean, default: true },
+				isPercentage: {
+					type: Boolean,
+					description:
+						"Indicates whether the tax rate is a percentage of the order total.",
+				},
+				applicableCategories: {
+					type: [String],
+					default: [],
+					description:
+						"List of product categories to which this tax applies. Empty array means no category restriction.",
+				},
+				applicableToAllProducts: {
+					type: Boolean,
+					default: true,
+					description:
+						"Flag indicating whether the tax applies to all products regardless of category.",
+				},
 			},
 		],
 		shippingMethod: {
-			name: { type: String, required: [true, "Shipping method name is required!"] },
+			name: {
+				type: String,
+				required: [true, "Shipping method name is required!"],
+				description: "The name of the shipping method selected for this order.",
+			},
 			rate: {
 				type: Number,
 				required: [true, "Shipping method price is required!"],
 				min: [0, "Normal price can't be less than 0!"],
+				description: "The cost of the shipping method applied to the order.",
 			},
-			zone: { type: String, required: [true, "Zone title is required!"] },
-			deliveryTime: { min: Number, max: Number },
+			zone: {
+				type: String,
+				required: [true, "Zone title is required!"],
+				description: "The geographical shipping zone for which this method applies.",
+			},
+			deliveryTime: {
+				min: { type: Number, description: "Minimum estimated delivery time in days." },
+				max: { type: Number, description: "Maximum estimated delivery time in days." },
+			},
 		},
 		address: {
-			name: { type: String, required: [true, "Address name is required!"] },
-			street: { type: String, required: [true, "Address street is required!"] },
-			building: { type: Number, required: [true, "Address building is required!"] },
-			floor: { type: Number, min: [1, "Floor can't be less than 1!"] },
-			apartment: { type: String },
-			area: { type: String, required: [true, "Address area is required!"] },
+			name: {
+				type: String,
+				required: [true, "Address name is required!"],
+				description: "The name associated with the delivery address.",
+			},
+			street: {
+				type: String,
+				required: [true, "Address street is required!"],
+				description: "Street name of the delivery address.",
+			},
+			building: {
+				type: Number,
+				required: [true, "Address building is required!"],
+				description: "Building number for the delivery address.",
+			},
+			floor: {
+				type: Number,
+				min: [1, "Floor can't be less than 1!"],
+				description: "Optional floor number in the building.",
+			},
+			apartment: { type: String, description: "Optional apartment or unit identifier." },
+			area: {
+				type: String,
+				required: [true, "Address area is required!"],
+				description: "Neighborhood or area of the delivery address.",
+			},
 			country: {
 				name: {
 					type: String,
 					index: true,
 					required: [true, "Address country name is required!"],
+					description: "Country name of the delivery address.",
 				},
 				code: {
 					type: String,
 					index: true,
 					required: [true, "Address country code is required!"],
+					description: "ISO-like code representing the country.",
 				},
 			},
 			state: {
@@ -116,21 +183,38 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 					type: String,
 					index: true,
 					required: [true, "Address state name is required!"],
+					description: "State or province name of the delivery address.",
 				},
-				code: { type: String, index: true },
+				code: {
+					type: String,
+					index: true,
+					description: "Optional code for the state or province.",
+				},
 			},
-			city: { name: { type: String, index: true } },
-			zip: { type: String },
+			city: {
+				name: { type: String, index: true, description: "Name of the city for delivery." },
+			},
+			zip: { type: String, description: "Postal code of the delivery address." },
 		},
 		paymentMethod: {
-			name: { type: String, required: [true, "Payment method name is required!"] },
+			name: {
+				type: String,
+				required: [true, "Payment method name is required!"],
+				description: "The name of the payment method used for the order.",
+			},
 			description: {
 				type: String,
 				trim: true,
 				maxlength: [1000, "Description can't be greater than 1000 characters!"],
 				required: [true, "Payment method description is required!"],
+				description:
+					"Detailed description of the payment method, including instructions or terms.",
 			},
-			gateway: Object,
+			gateway: {
+				type: Object,
+				description:
+					"Object containing gateway-specific configuration or transaction details.",
+			},
 		},
 		history: [
 			{
@@ -139,21 +223,38 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 					type: String,
 					enum: Object.values(vars.order.status),
 					required: [true, "Status is required!"],
+					description: "The status recorded in the order history at the given date.",
 				},
-				date: { type: Date, required: [true, "Date is required!"] },
+				date: {
+					type: Date,
+					required: [true, "Date is required!"],
+					description: "The date and time when the status update occurred.",
+				},
 				updatedBy: {
 					type: Types.ObjectId,
 					ref: "User",
 					required: [true, "User is required!"],
+					description: "Reference to the user who updated the order status.",
 				},
 			},
 		],
-		subtotal: { type: Number, default: 0 },
-		total: { type: Number, default: 0 },
+		subtotal: {
+			type: Number,
+			default: 0,
+			description:
+				"The sum of all order items' prices before taxes, shipping, and discounts.",
+		},
+		total: {
+			type: Number,
+			default: 0,
+			description:
+				"The final total amount for the order, including taxes, shipping, and any discounts applied.",
+		},
 		note: {
 			type: String,
 			trim: true,
 			maxlength: [1000, "Note can't be greater than 1000 characters!"],
+			description: "Optional note provided by the customer or admin related to this order.",
 		},
 	},
 	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
