@@ -2,7 +2,6 @@ import compression from "compression";
 import flash from "connect-flash";
 import timeout from "connect-timeout";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import express from "express";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
@@ -12,6 +11,7 @@ import methodOverride from "method-override";
 import passport from "passport";
 import path from "path";
 import xss from "xss-clean";
+import cors from "./middlewares/cors";
 import csrf from "./middlewares/csrf";
 import { internalServerErrorHandler, notFoundErrorHandler } from "./middlewares/errorHandlers";
 import locals from "./middlewares/locals";
@@ -53,15 +53,7 @@ app.use(helmet()); // secure apps by setting various HTTP headers
 app.use(mongoSanitize()); // sanitizes user-supplied data to prevent MongoDB Operator Injection.
 app.use(xss()); // sanitize user input in request body, params, and query.
 app.use(hpp()); // protect against HTTP Parameter Pollution.
-app.use(
-	cors((req, callback) => {
-		let corsOptions = {};
-		if (vars.cors.allowedOrigins.indexOf(req.header("Origin") || "") >= 0)
-			corsOptions = { origin: true };
-		else corsOptions = { origin: true };
-		callback(null, corsOptions);
-	})
-); // secure apps by setting various HTTP headers
+app.use(cors); // secure apps by setting various HTTP headers
 app.use(compression()); // Gzip compressing can decrease the size of the response body.
 app.use(csrf); // csrf protection MUST be defined after cookieParser and session middleware.
 app.use(flash());
