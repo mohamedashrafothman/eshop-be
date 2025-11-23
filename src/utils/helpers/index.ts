@@ -66,7 +66,20 @@ export const rateLimitKeyGenerator = (req: Request): string => {
  * @param {number} [number=6] The length of the generated id
  * @returns {Promise<string>} A promise that resolves with a unique short id
  */
-export const getShortUniqueId = async (number: number = 6) => {
+export const getShortUniqueId = async (number: number = 6): Promise<string> => {
 	const nanoId = await import("nanoid");
 	return nanoId.customAlphabet("0123456789", number)();
 };
+
+/**
+ * Capitalizes the first letter of each word in a sentence.
+ * @param {string} sentence The sentence to capitalize
+ * @returns {string} The capitalized sentence
+ */
+export const capitalize = (sentence: string): string =>
+	sentence
+		.split(" ")
+		.map((word) => {
+			return word.charAt(0).toUpperCase() + word.slice(1);
+		})
+		.join(" ");

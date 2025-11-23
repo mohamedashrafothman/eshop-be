@@ -46,7 +46,7 @@ const CountrySchema: Schema<ICountryDocument, object, ICountryDocument> = new Sc
 				"The ISO-like country code (up to 3 uppercase characters), used for identification, sorting, and relational integrity.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Countries" }
 );
 
 // modal definition

@@ -45,7 +45,7 @@ const WishlistSchema: Schema<IWishlistDocument, object, IWishlistDocument> = new
 			},
 		],
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Wishlists" }
 );
 
 // modal definition

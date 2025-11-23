@@ -75,7 +75,11 @@ const ShippingMethodSchema: Schema<IShippingMethodDocument, object, IShippingMet
 					"Reference to the geographical zone this shipping method applies to, autopopulated for display and filtering.",
 			},
 		},
-		{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+		{
+			toJSON: { versionKey: false, virtual: true },
+			timestamps: true,
+			collection: "Shipping Methods",
+		}
 	);
 
 // modal definition

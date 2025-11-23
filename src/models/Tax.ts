@@ -82,7 +82,7 @@ const TaxSchema: Schema<ITaxDocument, object, ITaxDocument> = new Schema(
 				"Flag indicating if the tax is applied to all products regardless of category.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Taxes" }
 );
 
 // modal definition

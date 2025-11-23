@@ -104,7 +104,7 @@ const OrderItemSchema: Schema<IOrderItemDocument, object, IOrderItemDocument> = 
 				"The total cost for this order item, calculated as price multiplied by quantity.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "OrderItems" }
 );
 
 // schema hooks

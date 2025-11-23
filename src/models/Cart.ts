@@ -111,7 +111,7 @@ const CartSchema: Schema<ICartDocument, object, ICartDocument> = new Schema(
 			description: "Indicates if the cart is locked during checkout.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Cart" }
 );
 
 // schema hooks

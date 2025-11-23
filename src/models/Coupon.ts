@@ -88,7 +88,7 @@ const CouponSchema: Schema<ICouponDocument, object, ICouponDocument> = new Schem
 				"The date after which the coupon becomes invalid, indexed for efficient querying of active coupons.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Coupons" }
 );
 
 // schema hooks

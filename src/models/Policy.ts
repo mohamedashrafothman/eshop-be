@@ -40,7 +40,7 @@ const PolicySchema: Schema<IPolicyDocument, object, IPolicyDocument> = new Schem
 				"The full text content of the policy, containing all rules, terms, or information relevant to this policy.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Policies" }
 );
 
 // modal definition

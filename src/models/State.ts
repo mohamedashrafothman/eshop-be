@@ -64,7 +64,7 @@ const StateSchema: Schema<IStateDocument, object, IStateDocument> = new Schema(
 				"Reference to the country this state belongs to, autopopulated with country name and code.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "States" }
 );
 
 // modal definition

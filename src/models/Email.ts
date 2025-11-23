@@ -52,7 +52,7 @@ const EmailSchema: Schema<IEmailDocument, object, IEmailDocument> = new Schema(
 				"The subject line of the email, required for all messages to provide context to recipients.",
 		},
 	},
-	{ timestamps: true }
+	{ timestamps: true, collection: "Emails" }
 );
 
 // modal definition

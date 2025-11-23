@@ -64,7 +64,7 @@ const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schem
 			description: "Reference to the user who submitted the review.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Reviews" }
 );
 
 // modal definition

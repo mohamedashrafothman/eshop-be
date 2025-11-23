@@ -78,24 +78,63 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new review.
- * @description This function validates the request body to ensure that it contains the required fields,
- * and then creates a new review document in the database.
- *
- * @param {Request} req - Express request object containing the review data in the body.
- * @param {string} req.params.product - The ID of the product to review.
- * @param {string} req.params.order - The ID of the order containing the product.
- * @param {string} [req.params.comment] - The comment for the review (optional).
- * @param {number} req.params.rating - The rating for the review.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created review data.
- * @property {Object} res.body.data - The created review object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 400 - Returns an error if the user has already reviewed the product before,
- * or if the product does not belong to the user orders in complete status.
- * @throws {Error} - Returns an error if there is an issue during the database operations.
+ * @openapi
+ * /v1/reviews:
+ *   post:
+ *     summary: Creates a new review.
+ *     description: Creates a review for a product from a completed order. Requires User role.
+ *     tags:
+ *       - Reviews
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - product
+ *               - rating
+ *               - order
+ *             properties:
+ *               product:
+ *                 type: string
+ *                 description: Product ID
+ *               order:
+ *                 type: string
+ *                 description: Order ID
+ *               rating:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 5
+ *               comment:
+ *                 type: string
+ *                 maxLength: 1000
+ *     responses:
+ *       "201":
+ *         description: Review created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Reviews'
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Validation error or invalid state (e.g., already reviewed, order not completed).
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewReview = async (
 	req: Request<
@@ -214,28 +253,69 @@ export const postNewReview = async (
 };
 
 /**
- * @summary Retrieves a paginated list of reviews based on filters and search criteria.
- * @description Fetches reviews from the database using various filters, including search
- * queries, categories, brands, sizes, colors, and price range. Supports pagination and sorting options.
- * If the user is an admin or super admin, deleted reviews can also be included in the results.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and sorting.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of reviews to retrieve per page.
- * @param {String} [req.query.offset] - The number of reviews to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search query to match against review name and description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted reviews in the response.
- * @param {Number} [req.query.minRating] - Minimum rating to filter reviews by.
- * @param {Number} [req.query.maxRating] - Maximum rating to filter reviews by.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the reviews data.
- *   * @property {Object} entities.data - The retrieved reviews data.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /v1/reviews:
+ *   get:
+ *     summary: Retrieves a paginated list of reviews.
+ *     description: Fetches reviews with filtering, sorting, and pagination.
+ *     tags:
+ *       - Reviews
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted reviews (Admin only).
+ *       - in: query
+ *         name: minRating
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxRating
+ *         schema:
+ *           type: number
+ *     responses:
+ *       "200":
+ *         description: List of reviews.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Reviews'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getReviews = async (
 	req: Request<
@@ -313,26 +393,59 @@ export const getReviews = async (
 };
 
 /**
- * @summary Retrieves reviews for a specific product.
- * @description Fetches reviews for a given product ID from the database, including ratings,
- * comments, and the name of the user who made the review. Supports pagination, sorting,
- * and provides statistical data on the reviews.
- *
- * @param {Request} req - Express request object containing the product ID in the parameters.
- * @param {string} req.params.product - The ID of the product to fetch reviews for.
- * @param {Object} req.query - Query parameters for pagination and sorting.
- * @param {String} [req.query.sort] - The field to sort reviews by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of reviews to retrieve per page.
- * @param {String} [req.query.offset] - The number of reviews to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {Response} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the product reviews data.
- *   * @property {Object} entities.data - The retrieved review object.
- *   * @property {Object} entities.stats - The retrieved review statistics.
- * @throws {Error} 500 - Returns an error if any issue occurs during the review retrieval process.
+ * @openapi
+ * /v1/products/{product}/reviews:
+ *   get:
+ *     summary: Retrieves reviews for a specific product.
+ *     description: Fetches reviews for a given product ID.
+ *     tags:
+ *       - Reviews
+ *     parameters:
+ *       - in: path
+ *         name: product
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *     responses:
+ *       "200":
+ *         description: Product reviews and statistics.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Reviews'
+ *                     stats:
+ *                       type: object
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getReviewsForProduct = async (
 	req: Request<
@@ -491,21 +604,44 @@ export const getReviewsForProduct = async (
 };
 
 /**
- * @summary Retrieves a single review by identifier.
- * @description Fetches a review based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the review data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.review - The review identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the review data.
- *   * @property {Object} entities.data - The retrieved review object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if no review is found.
- * @throws {Error} 500 - Returns an error if the review retrieval fails.
+ * @openapi
+ * /v1/reviews/{review}:
+ *   get:
+ *     summary: Retrieves a single review.
+ *     description: Fetches a review by ID. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Reviews
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: review
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Review ID.
+ *     responses:
+ *       "200":
+ *         description: Review details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Reviews'
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Review not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleReview = async (
 	req: Request<{ review: string }, FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
@@ -539,23 +675,59 @@ export const getSingleReview = async (
 };
 
 /**
- * @summary Updates a single review by its ID.
- * @description This method updates a review's details, including its comment and rating.
- * The method handles errors and returns a success response when the review is successfully updated.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.review - The ID of the review to update.
- * @param {Object} req.body - The updated review data. Optionally includes `comment` and `rating` fields.
- * @param {String} [req.body.comment] - The updated comment of the review.
- * @param {String} [req.body.rating] - The updated rating of the review.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the review was updated.
- *   * @property {Object} entities.data - The retrieved updated review object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - If no review is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the update process.
+ * @openapi
+ * /v1/reviews/{review}:
+ *   patch:
+ *     summary: Updates a single review.
+ *     description: Updates review details (comment, rating).
+ *     tags:
+ *       - Reviews
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: review
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Review ID.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               comment:
+ *                 type: string
+ *                 maxLength: 1000
+ *               rating:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 5
+ *     responses:
+ *       "200":
+ *         description: Review updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Reviews'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Review not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleReview = async (
 	req: Request<
@@ -667,20 +839,41 @@ export const updateSingleReview = async (
 };
 
 /**
- * @summary Deletes a single review by its ID.
- * @description This method deletes a review from the database using the provided identifier.
- * The review is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.review - The ID of the review to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the review was deleted.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - If no review is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/reviews/{review}:
+ *   delete:
+ *     summary: Deletes a single review.
+ *     description: Soft-deletes a review. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Reviews
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: review
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Review ID.
+ *     responses:
+ *       "200":
+ *         description: Review deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Review not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleReview = async (
 	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -718,18 +911,41 @@ export const deleteSingleReview = async (
 };
 
 /**
- * @summary Restores a single review by its ID.
- * @description This method restores a review that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the review is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.review - The ID of the review to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the review was restored.
- * @throws {Error} 404 - If no review is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/reviews/{review}/restore:
+ *   patch:
+ *     summary: Restores a single review.
+ *     description: Restores a soft-deleted review. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Reviews
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: review
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Review ID.
+ *     responses:
+ *       "200":
+ *         description: Review restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Review not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleReview = async (
 	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

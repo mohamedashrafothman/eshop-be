@@ -110,23 +110,62 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new user in the system.
- * @description Handles the creation of a new user in the system.
- * If the user is not authenticated, creates access and refresh tokens.
- * Sends an email with the verification token to the user.
- * Creates the new user in the database and related email and token records.
- * Commits the transaction and returns a success response.
- *
- * @param {Request} req - Express request object.
- * @param {Response} res - Express response object.
- * @param {Object} req.body - The data for creating a new user.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created user entity.
- *   * @property {Object} entities.data - The created user object.
- *   * @property {Array} flashes - Success message for new user creation.
- * @throws {Error} 401 - Returns an error if the user is not authorized to create a user.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
+ * @openapi
+ * /v1/users:
+ *   post:
+ *     summary: Creates a new user.
+ *     description: Creates a new user (SuperAdmin only).
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - role
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               role:
+ *                 type: string
+ *                 enum: [admin, user]
+ *               emailVerified:
+ *                 type: boolean
+ *                 default: true
+ *     responses:
+ *       "201":
+ *         description: User created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "409":
+ *         description: Account already exists.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewUser = async (
 	req: Request<
@@ -235,13 +274,43 @@ export const postNewUser = async (
 };
 
 /**
- * @summary Verifies a user's email using a valid email verification token.
- * @description Marks a user's email as verified if the provided email verification token is valid and not expired.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.token - The email verification token received via email.
- *
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/users/{user}/email/verify/{token}:
+ *   get:
+ *     summary: Verifies a user's email.
+ *     description: Verifies email using a token.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID.
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Verification token.
+ *     responses:
+ *       "200":
+ *         description: Email verified successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Invalid or expired token.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getUserEmailVerification = async (
 	req: Request,
@@ -309,11 +378,39 @@ export const getUserEmailVerification = async (
 };
 
 /**
- * @summary Resend an email verification link to a user who hasn't verified their email yet.
- * @description Sends a new email verification token to a user if their email is not verified
- * and a valid verification token doesn't already exist.
- *
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/users/{user}/email/resend:
+ *   get:
+ *     summary: Resends email verification link.
+ *     description: Resends verification email to user.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID.
+ *     responses:
+ *       "200":
+ *         description: Verification email sent.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Email already verified.
+ *       "404":
+ *         description: User not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getResendEmailVerification = async (
 	req: Request,
@@ -422,26 +519,72 @@ export const getResendEmailVerification = async (
 };
 
 /**
- * @summary Retrieves a paginated list of users.
- * @description Fetches a list of users with pagination and filtering options. Excluded user (based on ID) can be specified in the request.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.query.q - Search term to match against user name and email (case-insensitive).
- * @param {Boolean} req.query.emailVerified - Filter users by email verification status (true/false).
- * @param {Boolean} req.query.deleted - Filter users by deleted status (true/false).
- * @param {Boolean} req.query.active - Filter users by active status (true/false).
- * @param {Number} req.query.page - Page number for pagination (default: 1).
- * @param {Number} req.query.limit - Number of users per page (default: 10).
- * @param {String} req.query.offset - Number of users to skip (default: 0).
- * @param {String} req.query.sort - Sort option (available options: 'name:asc', 'name:desc', 'createdAt:asc', 'createdAt:desc').
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response containing a paginated list of users and sorting options.
- *   * @property {Object} entities.data - An array of user objects.
- *   * @property {Object} entities.meta - Meta information about the pagination and available sorting options.
- *     * @property {Number} entities.meta.pagination - An object containing the current page, total pages, and total results.
- *     * @property {array} entities.meta.sort - An array of available sorting options (see request parameter `sort`).
+ * @openapi
+ * /v1/users:
+ *   get:
+ *     summary: Retrieves a paginated list of users.
+ *     description: Fetches users with filtering and pagination. SuperAdmin only.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: emailVerified
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       "200":
+ *         description: List of users.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Users'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getUsers = async (
 	req: Request<
@@ -545,20 +688,44 @@ export const getUsers = async (
 };
 
 /**
- * @summary Retrieves a single user by identifier.
- * @description Fetches a user based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the user data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.user - The user identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the user data.
- *   * @property {Object} entities.data - The retrieved user object.
- * @throws {Error} 500 - Returns an error if the user retrieval fails.
- * @throws {Error} 404 - Returns an error if no user is found.
+ * @openapi
+ * /v1/users/{user}:
+ *   get:
+ *     summary: Retrieves a single user.
+ *     description: Fetches a user by ID or slug. SuperAdmin only.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID or slug.
+ *     responses:
+ *       "200":
+ *         description: User details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: User not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleUser = async (
 	req: Request<{ user: string }, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
@@ -587,18 +754,35 @@ export const getSingleUser = async (
 };
 
 /**
- * @summary Retrieves the currently authenticated user.
- * @description Fetches the user associated with the current authentication token.
- * Handles errors and returns the user data if found.
- *
- * @param {Object} req - Express request object containing user details.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the user data.
- *   * @property {Object} entities.data - The retrieved user object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 500 - Returns an error if the user retrieval fails.
+ * @openapi
+ * /v1/users/me:
+ *   get:
+ *     summary: Retrieves the currently authenticated user.
+ *     description: Fetches the profile of the logged-in user.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: User profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getCurrentAuthenticatedUser = async (
 	req: Request<{}, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
@@ -626,18 +810,68 @@ export const getCurrentAuthenticatedUser = async (
 };
 
 /**
- * @summary Updates a user.
- * @description Updates a user's profile information based on the provided data.
- * Only the currently authenticated user can update their own profile.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.user - User slug or ID.
- * @param {Object} req.body - Update data for the user.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response containing the updated user object and a success message.
- *   * @property {Object} entities.data - The updated user object.
+ * @openapi
+ * /v1/users/{user}:
+ *   patch:
+ *     summary: Updates a user.
+ *     description: Updates user profile.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               oldPassword:
+ *                 type: string
+ *                 minLength: 8
+ *               passwordConfirmation:
+ *                 type: string
+ *               emailVerified:
+ *                 type: boolean
+ *     responses:
+ *       "200":
+ *         description: User updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: User not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleUser = async (
 	req: Request<
@@ -801,17 +1035,41 @@ export const updateSingleUser = async (
 };
 
 /**
- * @summary Deletes a single user.
- * @description Deletes a user based on the provided slug or ID, along with associated sessions and tokens.
- * Uses transactions to ensure data integrity and handles errors appropriately.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.user - User slug or ID.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a success message.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/users/{user}:
+ *   delete:
+ *     summary: Deletes a single user.
+ *     description: Soft-deletes a user. SuperAdmin only.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID or slug.
+ *     responses:
+ *       "200":
+ *         description: User deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: User not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleUser = async (
 	req: Request<{ user: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -891,18 +1149,41 @@ export const deleteSingleUser = async (
 };
 
 /**
- * @summary Restores a single user by its ID or slug.
- * @description This method restores a user that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the user is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.user - The ID or slug of the user to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the user was restored.
- * @throws {Error} 404 - If no user is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/users/{user}/restore:
+ *   patch:
+ *     summary: Restores a single user.
+ *     description: Restores a soft-deleted user. SuperAdmin only.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: user
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID or slug.
+ *     responses:
+ *       "200":
+ *         description: User restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: User not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleUser = async (
 	req: Request<{ user: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

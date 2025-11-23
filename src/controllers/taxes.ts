@@ -112,18 +112,55 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new tax entry in the database.
- * @description Handles the creation of a new tax entity using the data provided in the request body.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The payload containing details for the new tax entity.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created tax entity.
- *   * @property {Object} entities.data - The newly created tax entity.
- *   * @property {Array} flashes - Success message for tax creation.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
+ * @openapi
+ * /v1/taxes:
+ *   post:
+ *     summary: Creates a new tax.
+ *     description: Creates a tax with name, rate, and percentage flag.
+ *     tags:
+ *       - Taxes
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - rate
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               rate:
+ *                 type: number
+ *                 description: Tax rate (0-100 if percentage).
+ *               isPercentage:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       "201":
+ *         description: Tax created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Taxes'
+ *                 flashes:
+ *                   type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewTax = async (
 	req: Request<
@@ -163,27 +200,61 @@ export const postNewTax = async (
 };
 
 /**
- * @summary Retrieves a paginated list of taxes.
- * @description Fetches taxes based on query parameters. Supports filtering by name,
- * description, and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of states to retrieve per page.
- * @param {String} [req.query.offset] - The number of states to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering taxes by name or description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted taxes.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated taxes and metadata.
- *   * @property {Array} entities.data - List of retrieved tax objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the taxes.
- * @throws {Error} 500 - Returns an error if the tax retrieval fails.
+ * @openapi
+ * /v1/taxes:
+ *   get:
+ *     summary: Retrieves a paginated list of taxes.
+ *     description: Fetches taxes with filtering, sorting, and pagination.
+ *     tags:
+ *       - Taxes
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query (name or description).
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted taxes.
+ *     responses:
+ *       "200":
+ *         description: List of taxes.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Taxes'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getTaxes = async (
 	req: Request<
@@ -256,20 +327,40 @@ export const getTaxes = async (
 };
 
 /**
- * @summary Retrieves a single tax by identifier.
- * @description Fetches a tax based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the tax data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.tax - The tax identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the tax data.
- *   * @property {Object} entities.data - The retrieved tax object.
- * @throws {Error} 500 - Returns an error if the tax retrieval fails.
- * @throws {Error} 404 - Returns an error if no tax is found.
+ * @openapi
+ * /v1/taxes/{tax}:
+ *   get:
+ *     summary: Retrieves a single tax.
+ *     description: Fetches a tax by ID or slug.
+ *     tags:
+ *       - Taxes
+ *     parameters:
+ *       - in: path
+ *         name: tax
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tax ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Tax details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Taxes'
+ *       "404":
+ *         description: Tax not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
@@ -298,18 +389,58 @@ export const getSingleTax = async (
 };
 
 /**
- * @summary Retrieves a single tax.
- * @description Fetches a single tax based on the provided tax ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.tax - The tax ID or slug.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved tax.
- *   * @property {Object} entities.data - The retrieved tax object.
- * @throws {Error} 404 - Returns an error if the tax is not found.
- * @throws {Error} 500 - Returns an error if the tax retrieval fails.
+ * @openapi
+ * /v1/taxes/{tax}:
+ *   patch:
+ *     summary: Updates a single tax.
+ *     description: Updates tax details.
+ *     tags:
+ *       - Taxes
+ *     parameters:
+ *       - in: path
+ *         name: tax
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tax ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               rate:
+ *                 type: number
+ *               isPercentage:
+ *                 type: boolean
+ *     responses:
+ *       "200":
+ *         description: Tax updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Taxes'
+ *                 flashes:
+ *                   type: object
+ *       "404":
+ *         description: Tax not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleTax = async (
 	req: Request<
@@ -374,19 +505,41 @@ export const updateSingleTax = async (
 };
 
 /**
- * @summary Deletes a single tax by its ID or slug.
- * @description This method deletes a tax from the database using the provided slug or MongoDB object ID.
- * The tax is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.tax - The ID or slug of the tax to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the tax was deleted.
- * @throws {Error} 404 - If no tax is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/taxes/{tax}:
+ *   delete:
+ *     summary: Deletes a single tax.
+ *     description: Soft-deletes a tax. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Taxes
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tax
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tax ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Tax deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Tax not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -431,18 +584,37 @@ export const deleteSingleTax = async (
 };
 
 /**
- * @summary Restores a single tax by its ID or slug.
- * @description This method restores a tax that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the tax is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.tax - The ID or slug of the tax to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the tax was restored.
- * @throws {Error} 404 - If no tax is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/taxes/{tax}/restore:
+ *   patch:
+ *     summary: Restores a single tax.
+ *     description: Restores a soft-deleted tax.
+ *     tags:
+ *       - Taxes
+ *     parameters:
+ *       - in: path
+ *         name: tax
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tax ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Tax restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "404":
+ *         description: Tax not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

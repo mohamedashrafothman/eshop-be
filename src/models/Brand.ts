@@ -71,7 +71,7 @@ const BrandSchema: Schema<IBrandDocument, object, IBrandDocument> = new Schema(
 			description: "The number of products associated with the brand",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Brands" }
 );
 
 BrandSchema.pre("save", function (next) {

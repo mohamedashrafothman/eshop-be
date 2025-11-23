@@ -85,7 +85,7 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 				"Total cost for this cart item, calculated as price multiplied by quantity.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Cart Items" }
 );
 
 // schema hooks

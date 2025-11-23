@@ -257,7 +257,7 @@ const OrderSchema: Schema<IOrderDocument, object, IOrderDocument> = new Schema(
 			description: "Optional note provided by the customer or admin related to this order.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Orders" }
 );
 
 OrderSchema.methods.getAllowedNextStatuses = function () {

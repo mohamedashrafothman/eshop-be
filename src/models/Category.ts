@@ -99,7 +99,7 @@ const CategorySchema: Schema<ICategoryDocument, object, ICategoryDocument> = new
 				"The total number of products in this category, used for quick display and statistics.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Categories" }
 );
 
 CategorySchema.pre("save", function (next) {

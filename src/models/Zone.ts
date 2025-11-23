@@ -86,7 +86,7 @@ const ZoneSchema: Schema<IZoneDocument, object, IZoneDocument> = new Schema(
 			},
 		],
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Zones" }
 );
 
 // modal definition

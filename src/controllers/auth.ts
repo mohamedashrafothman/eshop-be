@@ -644,19 +644,77 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
 	})(req, res, next);
 
 /**
- * @summary Creates a new social user or links a social account to an existing user.
- * @description Handles social login/signup using a provider like Google. If the user is already authenticated, it attempts to link the social provider with their account. Otherwise, it creates a new user with the provided information.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
- * @param {Object} req.body - Social login data including provider ID, email, name, and provider access token.
- *   * @property {String} req.body.providerId - User's ID in the social provider.
- *   * @property {String} req.body.email - User's email address.
- *   * @property {String} req.body.name - User's name.
- *   * @property {String} req.body.providerToken - Access token received from the social provider.
- *
- * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {Object} entities.data - The user data.
+ * @openapi
+ * /v1/auth/{provider}:
+ *   post:
+ *     summary: Creates a new social user or links a social account.
+ *     description: |
+ *       Handles social login/signup using a provider like Google or Facebook.
+ *       If the user is already authenticated, it attempts to link the social provider with their account.
+ *       Otherwise, it creates a new user with the provided information.
+ *     tags:
+ *       - Auth
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [google, facebook]
+ *         description: The social provider name.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - providerId
+ *               - email
+ *               - name
+ *               - providerToken
+ *             properties:
+ *               providerId:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               name:
+ *                 type: string
+ *               providerToken:
+ *                 type: string
+ *     responses:
+ *       "200":
+ *         description: Success response containing user data and tokens.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                         refreshToken:
+ *                           type: string
+ *                         tokenType:
+ *                           type: string
+ *                           example: "Bearer"
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "409":
+ *         description: Conflict - Account already exists.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postSocialUser = async (
 	req: Request,
@@ -1025,13 +1083,45 @@ export const postSocialUser = async (
 };
 
 /**
- * @summary Unlinks a social account from the current user.
- * @description Removes a social provider account (e.g., Google, Facebook) from the user's profile.
-
- * @param {Object} req - Express request object.
- * @param {String} req.params.provider - The social provider name (e.g., 'google', 'facebook').
-
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/auth/{provider}/unlink:
+ *   post:
+ *     summary: Unlinks a social account from the current user.
+ *     description: Removes a social provider account (e.g., Google, Facebook) from the user's profile.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: provider
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [google, facebook]
+ *         description: The social provider name.
+ *     responses:
+ *       "200":
+ *         description: Social account unlinked successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postSocialUnlink = async (
 	req: Request,
@@ -1093,15 +1183,62 @@ export const postSocialUnlink = async (
 };
 
 /**
- * @summary Logs in a user with email and password.
- * @description Attempts to authenticate a user using their email and password. If successful, activates the user's account (if inactive) and generates access and refresh tokens for the user.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.body.email - User's email address.
- * @param {String} req.body.password - User's password.
- *
- * @returns {Object} 200 - Success response containing user data, access and refresh tokens, and a success message.
- *   * @property {Object} entities.data - The user data.
+ * @openapi
+ * /v1/auth/login:
+ *   post:
+ *     summary: Logs in a user.
+ *     description: Authenticates a user with email and password and returns access/refresh tokens.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               remember:
+ *                 type: boolean
+ *     responses:
+ *       "200":
+ *         description: Login successful.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                         refreshToken:
+ *                           type: string
+ *                         tokenType:
+ *                           type: string
+ *                 flashes:
+ *                   type: object
+ *       "422":
+ *         description: Invalid credentials.
+ *       "429":
+ *         description: Too many login attempts.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Start a transaction to ensure data integrity
@@ -1247,26 +1384,61 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
 };
 
 /**
- * @summary Register a new user in the system.
- * @description Handles the creation of a new user in the system.
- * If the user is not authenticated, creates access and refresh tokens.
- * Sends an email with the verification token to the user.
- * Creates the new user in the database and related email and token records.
- * Commits the transaction and returns a success response.
- *
- * @param {Request} req - Express request object.
- * @param {Response} res - Express response object.
- * @param {Object} req.body - The data for creating a new user.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created user entity.
- *   * @property {Object} entities.data - The created user object.
- *   * @property {Object} [entities.data.accessToken] - The user's access token.
- *   * @property {Object} [entities.data.refreshToken] - The user's refresh token.
- *   * @property {Object} [entities.data.tokenType] - The token type.
- *   * @property {Array} flashes - Success message for new user creation.
- * @throws {Error} 401 - Returns an error if the user is not authorized to create a user.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process.
+ * @openapi
+ * /v1/auth/register:
+ *   post:
+ *     summary: Registers a new user.
+ *     description: Creates a new user account and sends a verification email.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - password
+ *               - passwordConfirmation
+ *               - g-recaptcha-response
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               passwordConfirmation:
+ *                 type: string
+ *                 format: password
+ *               g-recaptcha-response:
+ *                 type: string
+ *     responses:
+ *       "201":
+ *         description: User registered successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Users'
+ *                 flashes:
+ *                   type: object
+ *       "409":
+ *         description: Email already exists.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postRegister = async (
 	req: Request<
@@ -1462,10 +1634,32 @@ export const _loginRateLimitHandler = async (
 };
 
 /**
- * @summary Logs out the current user.
- * @description Revokes all tokens associated with the user and deactivates the user account.
- *
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/auth/logout:
+ *   post:
+ *     summary: Logs out the current user.
+ *     description: Revokes tokens and logs out the user.
+ *     tags:
+ *       - Auth
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: Logged out successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Check if user logged in
@@ -1527,15 +1721,51 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
 };
 
 /**
- * @summary Refreshes a JWT access token using a refresh token.
- * @description Exchanges a valid refresh token for a new access token if the refresh token is not expired.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - Request body containing a refresh token.
- * @param {String} req.body.refreshToken - The user's refresh token.
- *
- * @returns {Object} 200 - Success response containing a new access token and a refresh token.
- *   * @property {Object} entities.data - The data containing new tokens.
+ * @openapi
+ * /v1/auth/refresh-token:
+ *   post:
+ *     summary: Refreshes an access token.
+ *     description: Exchanges a refresh token for a new access token.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       "200":
+ *         description: Token refreshed successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                         refreshToken:
+ *                           type: string
+ *                         tokenType:
+ *                           type: string
+ *       "403":
+ *         description: Invalid or expired refresh token.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postRefreshToken = async (
 	req: Request,
@@ -1612,13 +1842,42 @@ export const postRefreshToken = async (
 };
 
 /**
- * @summary Initiates password reset process for a user.
- * @description Sends a password reset email to the user's email address if the email exists in the user database.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.body.email - The user's email address.
- *
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/auth/password/forgot:
+ *   post:
+ *     summary: Initiates password reset.
+ *     description: Sends a password reset email to the user.
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       "200":
+ *         description: Password reset email sent.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: No account found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postForgotPassword = async (
 	req: Request,
@@ -1722,16 +1981,53 @@ export const postForgotPassword = async (
 };
 
 /**
- * @summary Resets a user's password using a valid password reset token.
- * @description Updates the password for a user identified by a valid password reset token.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.token - The password reset token received via email.
- * @param {Object} req.body - Request body containing the new password.
- * @param {String} req.body.password - The new password for the user.
- * @param {String} req.body.passwordConfirmation - The new password confirmation for the user.
-
- * @returns {Object} 200 - Success response with a success message.
+ * @openapi
+ * /v1/auth/password/reset/{token}:
+ *   post:
+ *     summary: Resets password.
+ *     description: Resets the user's password using a valid token.
+ *     tags:
+ *       - Auth
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Password reset token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *               - passwordConfirmation
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               passwordConfirmation:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       "200":
+ *         description: Password updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Invalid token.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postResetPassword = async (
 	req: Request,

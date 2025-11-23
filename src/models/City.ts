@@ -65,7 +65,7 @@ const CitySchema: Schema<ICityDocument, object, ICityDocument> = new Schema(
 				"Reference to the state/province this city is located in, autopopulated with 'name' and 'code' for context.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Cities" }
 );
 
 // modal definition

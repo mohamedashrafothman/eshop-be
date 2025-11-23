@@ -108,23 +108,61 @@ export const _checkProductPriceChange = (
 };
 
 /**
- * @summary Adds a product to the logged-in user's cart.
- * @description Handles the addition of a product to the user's cart.
- * The method checks if the user is authenticated, verifies the existence of the product,
- * and updates the cart with the new product. If the product already exists in the cart,
- * it is updated with the new quantity. If the cart item exists in the cart, it is updated
- * with the new quantity.
- *
- * @param {Request} req - Express request object containing parameters and user details.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Success response indicating the cart was created successfully.
- * @property {Object} res.body.data - The updated cart data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the product or cart item does not exist.
- * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @openapi
+ * /v1/cart:
+ *   post:
+ *     summary: Adds a product to the cart.
+ *     description: Adds a product to the user's cart. If the cart doesn't exist, it creates one.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - product
+ *               - quantity
+ *               - color
+ *               - size
+ *             properties:
+ *               product:
+ *                 type: string
+ *                 description: Product ID
+ *               quantity:
+ *                 type: integer
+ *                 minimum: 1
+ *               color:
+ *                 type: string
+ *               size:
+ *                 type: string
+ *     responses:
+ *       "201":
+ *         description: Product added to cart successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Product not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const addToCart = async (
 	req: Request<
@@ -351,20 +389,37 @@ export const addToCart = async (
 };
 
 /**
- * @summary Retrieves the cart for the currently logged-in user.
- * @description Attempts to retrieve the cart for the currently logged-in user from the database.
- * If the user is not logged in, it returns a 401 error. If there is an error during the database
- * operation, it returns a 500 error. If the cart is retrieved successfully, it is returned in the
- * response.
- *
- * @param {Request} req - Express request object containing the user details.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the cart data.
- *   * @property {Object} entities.data - The retrieved cart or empty object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 500 - Returns an error if the cart retrieval fails.
+ * @openapi
+ * /v1/cart:
+ *   get:
+ *     summary: Retrieves the user's cart.
+ *     description: Fetches the current cart for the logged-in user.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: Cart details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleCart = async (
 	req: Request<{}, FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
@@ -393,25 +448,46 @@ export const getSingleCart = async (
 };
 
 /**
- * @summary Removes a product from the user's cart.
- * @description Handles the removal of a product from the user's cart.
- * The method checks if the user is authenticated, verifies the existence of the cart item
- * and the product's stock, and updates the cart with the new product. If the product already
- * exists in the cart, it is updated with the new quantity. If the cart item exists in the cart,
- * it is updated with the new quantity.
- *
- * @param {Request} req - Express request object containing parameters and user details.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.cartItem - The cart item identifier, either a slug or an ObjectId.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the cart was updated successfully.
- *   * @property {Object} res.body.data - The updated cart data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the cart item or product does not exist.
- * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @openapi
+ * /v1/cart/items/{cartItem}:
+ *   delete:
+ *     summary: Removes an item from the cart.
+ *     description: Deletes a specific item from the user's cart.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cartItem
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Cart Item ID.
+ *     responses:
+ *       "200":
+ *         description: Item removed successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Cart item not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const removeItemFromCart = async (
 	req: Request<
@@ -549,25 +625,58 @@ export const removeItemFromCart = async (
 };
 
 /**
- * @summary Updates the quantity of a specific item in the user's cart.
- * @description Handles the update of a cart item's quantity for the currently logged-in user.
- * The method checks if the user is authenticated, verifies the existence of the cart item,
- * checks product stock availability, and updates the cart item and cart accordingly.
- *
- * @param {Request} req - Express request object containing parameters and user details.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.cartItem - The cart item identifier, either a slug or an ObjectId.
- * @param {Object} req.body - Request body containing the new quantity.
- * @param {Number} req.body.quantity - The updated quantity for the cart item.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the cart was updated successfully.
- * @property {Object} res.body.data - The updated cart data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the cart item or product does not exist.
- * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @openapi
+ * /v1/cart/items/{cartItem}:
+ *   patch:
+ *     summary: Updates cart item quantity.
+ *     description: Updates the quantity of a specific item in the cart.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cartItem
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Cart Item ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 minimum: 1
+ *     responses:
+ *       "200":
+ *         description: Cart item updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Cart item not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateCartItem = async (
 	req: Request<
@@ -684,21 +793,37 @@ export const updateCartItem = async (
 };
 
 /**
- * @summary Empties the user's cart.
- * @description This function removes all items from the user's cart and deletes the cart itself.
- * It checks if the user is authenticated, retrieves the cart for the logged-in user, and deletes
- * all cart items as well as the cart. If the user is not authenticated, it returns a 401 error. If
- * there is an issue during database operations, it returns a 500 error. Upon success, it returns
- * a 200 response indicating the cart was cleared successfully.
- *
- * @param {Request} req - Express request object containing user details.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the cart was cleared successfully.
- * @property {Object} res.body.data - An empty object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ * @openapi
+ * /v1/cart:
+ *   delete:
+ *     summary: Empties the cart.
+ *     description: Removes all items from the user's cart.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: Cart cleared successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const emptyCart = async (
 	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
@@ -765,22 +890,51 @@ export const emptyCart = async (
 };
 
 /**
- * @summary Updates the shipping method of the user's cart.
- * @description This function retrieves a shipping method and a cart for the currently logged-in user,
- * updates the cart with the new shipping method, and saves the updated cart to the database.
- * If the user is not authenticated, it returns a 401 error. If the shipping method or cart are not found,
- * or if there is an error during the database operations, it returns the respective error.
- *
- * @param {Request} req - Express request object containing the shipping method ID in the body.
- * @param {Object} req.user - The currently logged-in user object.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with the updated cart data.
- * @property {Object} res.body.data - The updated cart object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} - Returns an error if the shipping method or cart are not found,
- * or if there is an issue during the database operations.
+ * @openapi
+ * /v1/cart/shipping-methods:
+ *   post:
+ *     summary: Sets shipping method.
+ *     description: Updates the cart with a selected shipping method.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - shippingMethod
+ *             properties:
+ *               shippingMethod:
+ *                 type: string
+ *                 description: Shipping Method ID
+ *     responses:
+ *       "200":
+ *         description: Shipping method updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Shipping method not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postShippingMethod = async (
 	req: Request<
@@ -839,22 +993,51 @@ export const postShippingMethod = async (
 };
 
 /**
- * @summary Updates the payment method of the user's cart.
- * @description This function retrieves a payment method and a cart for the currently logged-in user,
- * updates the cart with the new payment method, and saves the updated cart to the database.
- * If the user is not authenticated, it returns a 401 error. If the payment method or cart are not found,
- * or if there is an error during the database operations, it returns the respective error.
- *
- * @param {Request} req - Express request object containing the payment method ID in the body.
- * @param {Object} req.user - The currently logged-in user object.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with the updated cart data.
- * @property {Object} res.body.data - The updated cart object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} - Returns an error if the payment method or cart are not found,
- * or if there is an issue during the database operations.
+ * @openapi
+ * /v1/cart/payment-methods:
+ *   post:
+ *     summary: Sets payment method.
+ *     description: Updates the cart with a selected payment method.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentMethod
+ *             properties:
+ *               paymentMethod:
+ *                 type: string
+ *                 description: Payment Method ID
+ *     responses:
+ *       "200":
+ *         description: Payment method updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Payment method not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postPaymentMethod = async (
 	req: Request<
@@ -913,22 +1096,51 @@ export const postPaymentMethod = async (
 };
 
 /**
- * @summary Updates the coupon of the user's cart.
- * @description Handles the update of a cart's coupon for the currently logged-in user.
- * The method checks if the user is authenticated, verifies the existence of the coupon,
- * checks if the cart is locked, and updates the cart with the new coupon.
- *
- * @param {Request} req - Express request object containing the coupon code in the body.
- * @param {String} req.body.coupon - The coupon code.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the cart was updated successfully.
- * @property {Object} res.body.data - The updated cart data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the coupon or cart does not exist.
- * @throws {Error} 400 - Returns an error if the cart is locked or invalid data is provided.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @openapi
+ * /v1/cart/coupons:
+ *   post:
+ *     summary: Applies a coupon.
+ *     description: Applies a coupon code to the cart.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - coupon
+ *             properties:
+ *               coupon:
+ *                 type: string
+ *                 description: Coupon code
+ *     responses:
+ *       "200":
+ *         description: Coupon applied successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Coupon not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postCoupon = async (
 	req: Request<{}, FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>, { coupon: string }>,
@@ -981,23 +1193,37 @@ export const postCoupon = async (
 };
 
 /**
- * @summary Removes the coupon from the user's cart.
- * @description This function removes the coupon from the cart of the currently logged-in user.
- * It checks if the user is authenticated, retrieves the cart for the logged-in user, and if the
- * cart is not locked, updates the cart by removing the coupon. If the user is not authenticated,
- * it returns a 401 error. If the cart is not found or there is an issue during the database
- * operations, it returns the respective error.
- *
- * @param {Request} req - Express request object.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response indicating the cart was updated successfully.
- * @property {Object} res.body.data - The updated cart data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the cart does not exist.
- * @throws {Error} 400 - Returns an error if the cart is locked.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations.
+ * @openapi
+ * /v1/cart/coupons:
+ *   delete:
+ *     summary: Removes a coupon.
+ *     description: Removes the applied coupon from the cart.
+ *     tags:
+ *       - Cart
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       "200":
+ *         description: Coupon removed successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Cart'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const removeCoupon = async (
 	req: Request<{}, FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,

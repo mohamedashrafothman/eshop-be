@@ -119,6 +119,7 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			transform: (_doc, { password, ...ret }) => ret,
 		},
 		timestamps: true,
+		collection: "Users",
 	}
 );
 

@@ -14,7 +14,7 @@ export type ISessionModel = Model<ISessionDocument>;
 // schema definition
 const SessionSchema: Schema<ISessionDocument, object, ISessionDocument> = new Schema(
 	{},
-	{ timestamps: true }
+	{ timestamps: true, collection: "Sessions" }
 );
 
 // modal definition

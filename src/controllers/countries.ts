@@ -63,18 +63,56 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new country.
- * @description Creates a new country, returning the created country.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - Country data.
- * @param {String} req.body.name - The name of the country, ex: "United States of America".
- * @param {String} req.body.code - The code of the country, ex: "USA".
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Created response with the newly created country.
- *   * @property {Object} entities.data - The created country object.
+ * @openapi
+ * /v1/countries:
+ *   post:
+ *     summary: Creates a new country.
+ *     description: Creates a country with name and code. Admin/SuperAdmin only.
+ *     tags:
+ *       - Countries
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - code
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               code:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 3
+ *     responses:
+ *       "201":
+ *         description: Country created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Countries'
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Invalid data.
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewCountry = async (
 	req: Request<
@@ -105,27 +143,60 @@ export const postNewCountry = async (
 };
 
 /**
- * @summary Retrieves a paginated list of countries.
- * @description Fetches countries based on query parameters. Supports filtering by name,
- * code, and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of states to retrieve per page.
- * @param {String} [req.query.offset] - The number of states to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering countries by name or code.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted countries.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated countries and metadata.
- *   * @property {Array} entities.data - List of retrieved country objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the countries.
- * @throws {Error} 500 - Returns an error if the country retrieval fails.
+ * @openapi
+ * /v1/countries:
+ *   get:
+ *     summary: Retrieves a paginated list of countries.
+ *     description: Fetches countries with filtering and pagination.
+ *     tags:
+ *       - Countries
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       "200":
+ *         description: List of countries.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Countries'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getCountries = async (
 	req: Request<
@@ -200,18 +271,44 @@ export const getCountries = async (
 };
 
 /**
- * @summary Retrieves a single country.
- * @description Fetches a single country based on the provided country ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.country - The country ID or slug.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved country.
- *   * @property {Object} entities.data - The retrieved country object.
- * @throws {Error} 404 - Returns an error if the country is not found.
- * @throws {Error} 500 - Returns an error if the country retrieval fails.
+ * @openapi
+ * /v1/countries/{country}:
+ *   get:
+ *     summary: Retrieves a single country.
+ *     description: Fetches a country by ID or slug. Admin/SuperAdmin only.
+ *     tags:
+ *       - Countries
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: country
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Country ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Country details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Countries'
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
@@ -240,22 +337,59 @@ export const getSingleCountry = async (
 };
 
 /**
- * @summary Updates a single country by ID or slug.
- * @description Updates a country's details in the database using the provided country ID or slug.
- * The update operation modifies the country object with the new data from the request body.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.country - The country ID or slug.
- * @param {Object} req.body - The new data for the country.
- * @param {String} [req.body.name] - new name for the country (optional).
- * @param {String} [req.body.code] - new code for the country (optional).
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated country data.
- *   * @property {Object} entities.data - The updated country object.
- * @throws {Error} 404 - Returns an error if the country is not found.
- * @throws {Error} 500 - Returns an error if the country update fails.
+ * @openapi
+ * /v1/countries/{country}:
+ *   patch:
+ *     summary: Updates a single country.
+ *     description: Updates country details. Admin/SuperAdmin only.
+ *     tags:
+ *       - Countries
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: country
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Country ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               code:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 3
+ *     responses:
+ *       "200":
+ *         description: Country updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Countries'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleCountry = async (
 	req: Request<
@@ -304,19 +438,41 @@ export const updateSingleCountry = async (
 };
 
 /**
- * @summary Deletes a single country by its ID or slug.
- * @description This method deletes a country from the database using the provided slug or MongoDB object ID.
- * The country is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.country - The ID or slug of the country to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the country was deleted.
- * @throws {Error} 404 - If no country is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/countries/{country}:
+ *   delete:
+ *     summary: Deletes a single country.
+ *     description: Soft-deletes a country. Admin/SuperAdmin only.
+ *     tags:
+ *       - Countries
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: country
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Country ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Country deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -361,18 +517,41 @@ export const deleteSingleCountry = async (
 };
 
 /**
- * @summary Restores a single country by its ID or slug.
- * @description This method restores a country that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the country is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.country - The ID or slug of the country to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the country was restored.
- * @throws {Error} 404 - If no country is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/countries/{country}/restore:
+ *   patch:
+ *     summary: Restores a single country.
+ *     description: Restores a soft-deleted country. Admin/SuperAdmin only.
+ *     tags:
+ *       - Countries
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: country
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Country ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Country restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

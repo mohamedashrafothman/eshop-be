@@ -122,23 +122,66 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new zone.
- * @description Handles the creation of a new zone using the data provided in the request body.
- * It attempts to create the zone and returns it in the response if successful.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - Zone data.
- * @param {String} req.body.name - The name of the zone.
- * @param {Array} req.body.countries - Array of country IDs associated with the zone.
- * @param {Array} req.body.states - Array of state IDs associated with the zone.
- * @param {Array} req.body.cities - Array of city IDs associated with the zone.
- * @param {String} [req.body.description] - Optional description of the zone.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Created response with the newly created zone.
- *   * @property {Object} entities.data - The created zone object.
- * @throws {Error} - Returns an error if zone creation fails.
+ * @openapi
+ * /v1/zones:
+ *   post:
+ *     summary: Creates a new zone.
+ *     description: Creates a zone with countries, states, and cities.
+ *     tags:
+ *       - Zones
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - countries
+ *               - states
+ *               - cities
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               countries:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   description: Country ID
+ *               states:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   description: State ID
+ *               cities:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   description: City ID
+ *     responses:
+ *       "201":
+ *         description: Zone created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Zones'
+ *                 flashes:
+ *                   type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewZone = async (
 	req: Request<
@@ -216,27 +259,61 @@ export const postNewZone = async (
 };
 
 /**
- * @summary Retrieves a paginated list of zones.
- * @description Fetches zones based on query parameters. Supports filtering by name, description,
- * and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of zones to retrieve per page.
- * @param {String} [req.query.offset] - The number of zones to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering zones by name or description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted zones.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated zones and metadata.
- *   * @property {Array} entities.data - List of retrieved zones.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the zones.
- * @throws {Error} 500 - Returns an error if the zone retrieval fails.
+ * @openapi
+ * /v1/zones:
+ *   get:
+ *     summary: Retrieves a paginated list of zones.
+ *     description: Fetches zones with filtering, sorting, and pagination.
+ *     tags:
+ *       - Zones
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query (name or description).
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted zones.
+ *     responses:
+ *       "200":
+ *         description: List of zones.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Zones'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getZones = async (
 	req: Request<
@@ -313,6 +390,42 @@ export const getZones = async (
 	);
 };
 
+/**
+ * @openapi
+ * /v1/zones/{zone}:
+ *   get:
+ *     summary: Retrieves a single zone.
+ *     description: Fetches a zone by ID or slug.
+ *     tags:
+ *       - Zones
+ *     parameters:
+ *       - in: path
+ *         name: zone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Zone ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Zone details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Zones'
+ *       "404":
+ *         description: Zone not found.
+ *       "500":
+ *         description: Internal Server Error.
+ */
 export const getSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
@@ -340,25 +453,66 @@ export const getSingleZone = async (
 };
 
 /**
- * @summary Updates a single zone.
- * @description Updates a zone based on the provided ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.zone - The zone identifier, either a slug or an ObjectId.
- * @param {Object} req.body - Update data for the zone.
- * @param {String} [req.body.name] - The updated name of the zone.
- * @param {String} [req.body.description] - The updated description of the zone.
- * @param {Array} [req.body.countries] - The updated list of country IDs associated with the zone.
- * @param {Array} [req.body.states] - The updated list of state IDs associated with the zone.
- * @param {Array} [req.body.cities] - The updated list of city IDs associated with the zone.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated zone data.
- *   * @property {Object} entities.data - The updated zone object.
- * @throws {Error} 404 - Returns an error if no zone is found.
- * @throws {Error} 500 - Returns an error if there is an issue during the update process.
+ * @openapi
+ * /v1/zones/{zone}:
+ *   patch:
+ *     summary: Updates a single zone.
+ *     description: Updates zone details.
+ *     tags:
+ *       - Zones
+ *     parameters:
+ *       - in: path
+ *         name: zone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Zone ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               countries:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               states:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               cities:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       "200":
+ *         description: Zone updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Zones'
+ *                 flashes:
+ *                   type: object
+ *       "404":
+ *         description: Zone not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleZone = async (
 	req: Request<
@@ -457,20 +611,41 @@ export const updateSingleZone = async (
 };
 
 /**
- * @summary Deletes a single zone by its identifier.
- * @description Deletes a zone by searching for its identifier, which can be a slug or a MongoDB ObjectId.
- * If the zone is found, it attempts to soft-delete it, and if there is an issue during the deletion,
- * it passes the error to the next middleware. If the zone is not found, it passes an error to the next middleware.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.zone - The zone identifier, either a slug or a MongoDB ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with success message.
- * @throws {Error} 404 - Returns an error if the zone is not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the deletion process.
+ * @openapi
+ * /v1/zones/{zone}:
+ *   delete:
+ *     summary: Deletes a single zone.
+ *     description: Soft-deletes a zone. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Zones
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: zone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Zone ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Zone deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Zone not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -515,18 +690,37 @@ export const deleteSingleZone = async (
 };
 
 /**
- * @summary Restores a single zone by its ID or slug.
- * @description This method restores a zone that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the zone is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.zone - The ID or slug of the zone to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the zone was restored.
- * @throws {Error} 404 - If no zone is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/zones/{zone}/restore:
+ *   patch:
+ *     summary: Restores a single zone.
+ *     description: Restores a soft-deleted zone.
+ *     tags:
+ *       - Zones
+ *     parameters:
+ *       - in: path
+ *         name: zone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Zone ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Zone restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "404":
+ *         description: Zone not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

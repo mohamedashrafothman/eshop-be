@@ -77,19 +77,60 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new state.
- * @description Creates a new state, returning the created state.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - State data.
- * @param {String} req.body.name - The name of the state, ex: "New York".
- * @param {String} req.body.code - The code of the state, ex: "NY".
- * @param {String} req.body.country - The ID of the country that the state belongs to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Created response with the newly created state.
- *   * @property {Object} entities.data - The created state object.
+ * @openapi
+ * /v1/states:
+ *   post:
+ *     summary: Creates a new state.
+ *     description: Creates a state linked to a country. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - States
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - code
+ *               - country
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               code:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 3
+ *               country:
+ *                 type: string
+ *                 description: Country ID
+ *     responses:
+ *       "201":
+ *         description: State created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/States'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewState = async (
 	req: Request<
@@ -124,29 +165,66 @@ export const postNewState = async (
 };
 
 /**
- * @summary Retrieves a paginated list of states.
- * @description Fetches states based on query parameters. Supports filtering by name,
- * code, and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of states to retrieve per page.
- * @param {String} [req.query.offset] - The number of states to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering states by name or code.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted states.
- * @param {String} [req.query.country] - The ID of the country that the states belong to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated states and metadata.
- *   * @property {Array} entities.data - List of retrieved state objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the states.
- * @throws {Error} 404 - Returns an error if any data are't found.
- * @throws {Error} 500 - Returns an error if the state retrieval fails.
+ * @openapi
+ * /v1/states:
+ *   get:
+ *     summary: Retrieves a paginated list of states.
+ *     description: Fetches states with filtering, sorting, and pagination.
+ *     tags:
+ *       - States
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query (name or code).
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted states (Admin only).
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *         description: Filter by Country ID.
+ *     responses:
+ *       "200":
+ *         description: List of states.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/States'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getStates = async (
 	req: Request<
@@ -227,20 +305,44 @@ export const getStates = async (
 };
 
 /**
- * @summary Retrieves a single state.
- * @description Fetches a state based on the provided slug or ID.
- * Handles errors and returns the state data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.state - The state identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the state data.
- *   * @property {Object} entities.data - The retrieved state object.
- * @throws {Error} 404 - Returns an error if no state is found.
- * @throws {Error} 500 - Returns an error if the state retrieval fails.
+ * @openapi
+ * /v1/states/{state}:
+ *   get:
+ *     summary: Retrieves a single state.
+ *     description: Fetches a state by ID or slug. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - States
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State ID or slug.
+ *     responses:
+ *       "200":
+ *         description: State details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/States'
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: State not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
@@ -269,23 +371,62 @@ export const getSingleState = async (
 };
 
 /**
- * @summary Updates a single state.
- * @description Updates a state based on the provided ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.state - The state identifier, either a slug or an ObjectId.
- * @param {Object} req.body - Update data for the state.
- * @param {String} [req.body.name] - The updated name of the state.
- * @param {String} [req.body.code] - The updated code of the state.
- * @param {String} [req.body.country] - The updated ID of the country that the state belongs to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated state data.
- *   * @property {Object} entities.data - The updated state object.
- * @throws {Error} 404 - Returns an error if any data not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the update process.
+ * @openapi
+ * /v1/states/{state}:
+ *   patch:
+ *     summary: Updates a single state.
+ *     description: Updates state details. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - States
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               code:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 3
+ *               country:
+ *                 type: string
+ *                 description: Country ID
+ *     responses:
+ *       "200":
+ *         description: State updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/States'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: State or Country not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleState = async (
 	req: Request<
@@ -344,19 +485,41 @@ export const updateSingleState = async (
 };
 
 /**
- * @summary Deletes a single state.
- * @description This method deletes a state from the database using the provided slug or MongoDB object ID.
- * The state is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.state - The ID or slug of the state to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the state was deleted.
- * @throws {Error} 404 - If no state is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/states/{state}:
+ *   delete:
+ *     summary: Deletes a single state.
+ *     description: Soft-deletes a state. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - States
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State ID or slug.
+ *     responses:
+ *       "200":
+ *         description: State deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: State not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
@@ -401,18 +564,41 @@ export const deleteSingleState = async (
 };
 
 /**
- * @summary Restores a single state by its ID or slug.
- * @description This method restores a state that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the state is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.state - The ID or slug of the state to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the state was restored.
- * @throws {Error} 404 - If no state is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/states/{state}/restore:
+ *   patch:
+ *     summary: Restores a single state.
+ *     description: Restores a soft-deleted state. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - States
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State ID or slug.
+ *     responses:
+ *       "200":
+ *         description: State restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: State not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleState = async (
 	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,

@@ -289,23 +289,92 @@ export const _checkProductStock = (
 };
 
 /**
- * @summary Creates a new product.
- * @description Handles the creation of a new product in the system.
- * Optionally uploads and attaches a thumbnail and images if provided in the request.
- * The product is then saved to the database, and related category and brand associations are updated.
- * A success message is set upon successful creation.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The data for creating a new product. Optionally includes `thumbnail` and
- * `images` files for product images.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the newly created product data.
- *   * @property {Object} entities.data - The created product object.
- *   * @property {Array} flashes - Success message for product creation.
- * @throws {Error} 500 - Returns an error if the product, thumbnail, or images creation fails.
- * @throws {Error} 401 - Returns an error if the user is not authorized to create a product.
+ * @openapi
+ * /v1/products:
+ *   post:
+ *     summary: Creates a new product.
+ *     description: |
+ *       Creates a new product with details, thumbnail, and images.
+ *       Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - description
+ *               - price[normal]
+ *               - brand
+ *               - category
+ *               - thumbnail
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               quantity:
+ *                 type: integer
+ *               price[normal]:
+ *                 type: number
+ *               price[sale]:
+ *                 type: number
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     value:
+ *                       type: string
+ *               sizes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               brand:
+ *                 type: string
+ *                 description: Brand ID
+ *               category:
+ *                 type: string
+ *                 description: Category ID
+ *               isFeatured:
+ *                 type: boolean
+ *               thumbnail:
+ *                 type: string
+ *                 format: binary
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       "201":
+ *         description: Product created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Products'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const postNewProduct = async (
 	req: Request<
@@ -485,29 +554,93 @@ export const postNewProduct = async (
 };
 
 /**
- * @summary Retrieves a paginated list of products based on filters and search criteria.
- * @description Fetches products from the database using various filters, including search queries, categories, brands, sizes, colors, and price range. Supports pagination and sorting options. If the user is an admin or super admin, deleted products can also be included in the results.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and sorting.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of products to retrieve per page.
- * @param {String} [req.query.offset] - The number of products to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search query to match against product name and description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted products in the response.
- * @param {String[]} [req.query.categories] - List of category IDs to filter products by.
- * @param {String[]} [req.query.brands] - List of brand IDs to filter products by.
- * @param {String[]} [req.query.sizes] - List of size IDs to filter products by.
- * @param {String[]} [req.query.colors] - List of color IDs to filter products by.
- * @param {Number} [req.query.minPrice] - Minimum price to filter products by.
- * @param {Number} [req.query.maxPrice] - Maximum price to filter products by.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of products, pagination metadata, and sort options.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /v1/products:
+ *   get:
+ *     summary: Retrieves a paginated list of products.
+ *     description: Fetches products with filtering, sorting, and pagination.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted products (Admin only).
+ *       - in: query
+ *         name: categories
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - in: query
+ *         name: brands
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - in: query
+ *         name: sizes
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - in: query
+ *         name: colors
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *     responses:
+ *       "200":
+ *         description: List of products.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Products'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getProducts = async (
 	req: Request<
@@ -648,20 +781,40 @@ export const getProducts = async (
 };
 
 /**
- * @summary Retrieves a single product by identifier.
- * @description Fetches a product based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the product data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the product data.
- *   * @property {Object} entities.data - The retrieved product object.
- * @throws {Error} 500 - Returns an error if the product retrieval fails.
- * @throws {Error} 404 - Returns an error if no product is found.
+ * @openapi
+ * /v1/products/{product}:
+ *   get:
+ *     summary: Retrieves a single product.
+ *     description: Fetches a product by ID or slug.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: path
+ *         name: product
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Product details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Products'
+ *       "404":
+ *         description: Product not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const getSingleProduct = async (
 	req: Request<{ product: string }, FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
@@ -696,22 +849,89 @@ export const getSingleProduct = async (
 };
 
 /**
- * @summary Updates a single product by identifier.
- * @description Handles the update of a product's details, including its category, brand, thumbnail, and images.
- * Utilizes transactions to ensure data integrity. If the update is successful, the updated product data is returned.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.product - The product identifier, either a slug or an ObjectId.
- * @param {Object} req.body - The updated product data. Optionally includes `thumbnail` and `images` files.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated product data.
- *   * @property {Object} entities.data - The updated product object.
- *   * @property {Array} flashes - Success message for product update.
- * @throws {Error} 500 - Returns an error if the product update fails.
- * @throws {Error} 404 - Returns an error if the product is not found.
+ * @openapi
+ * /v1/products/{product}:
+ *   patch:
+ *     summary: Updates a single product.
+ *     description: Updates product details. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: product
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID or slug.
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               quantity:
+ *                 type: integer
+ *               price[normal]:
+ *                 type: number
+ *               price[sale]:
+ *                 type: number
+ *               colors:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     value:
+ *                       type: string
+ *               sizes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               brand:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               isFeatured:
+ *                 type: boolean
+ *               thumbnail:
+ *                 type: string
+ *                 format: binary
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       "200":
+ *         description: Product updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Products'
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Product not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const updateSingleProduct = async (
 	req: Request<
@@ -989,19 +1209,41 @@ export const updateSingleProduct = async (
 };
 
 /**
- * @summary Deletes a single product by its ID or slug.
- * @description This method deletes a product from the database using the provided slug or MongoDB object ID.
- * The product is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.product - The ID or slug of the product to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the product was deleted.
- * @throws {Error} 404 - If no product is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/products/{product}:
+ *   delete:
+ *     summary: Deletes a single product.
+ *     description: Soft-deletes a product. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: product
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Product deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Product not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const deleteSingleProduct = async (
 	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -1046,18 +1288,41 @@ export const deleteSingleProduct = async (
 };
 
 /**
- * @summary Restores a single product by its ID or slug.
- * @description This method restores a product that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the product is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.product - The ID or slug of the product to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the product was restored.
- * @throws {Error} 404 - If no product is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/products/{product}/restore:
+ *   patch:
+ *     summary: Restores a single product.
+ *     description: Restores a soft-deleted product. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: product
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Product restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 flashes:
+ *                   type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Product not found.
+ *       "500":
+ *         description: Internal Server Error.
  */
 export const restoreSingleProduct = async (
 	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -1093,6 +1358,42 @@ export const restoreSingleProduct = async (
 	);
 };
 
+/**
+ * @openapi
+ * /v1/products/home:
+ *   get:
+ *     summary: Retrieves home products list.
+ *     description: Fetches products for home page sections (latest, featured, onSale, topRated).
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [latest, featured, onSale, topRated]
+ *     responses:
+ *       "200":
+ *         description: List of products.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Products'
+ *       "500":
+ *         description: Internal Server Error.
+ */
 export const getHomeProductsList = async (
 	req: Request<
 		{},

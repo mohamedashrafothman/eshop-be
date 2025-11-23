@@ -2,13 +2,33 @@ import mongooseToSwagger from "mongoose-to-swagger";
 import path from "path";
 import swaggerJsdoc, * as swaggerJSDoc from "swagger-jsdoc";
 import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
+import { capitalize } from "../utils/helpers";
 import vars from "../utils/vars";
 import { models } from "./mongoose";
 
+const excludedModels = [
+	"Attachments",
+	"Sessions",
+	"Logs",
+	"Cart Items",
+	"Emails",
+	"OrderItems",
+	"Tokens",
+];
 // Mongoose models to Swagger schemas
 const schemas = Object.fromEntries(
-	Object.entries(models).map(([name, model]) => [name, mongooseToSwagger(model)])
+	Object.entries(models)
+		.filter(([_name, model]) => !excludedModels.includes(model.collection.name))
+		.map(([_name, model]) => [capitalize(model.collection.name), mongooseToSwagger(model)])
 );
+
+// Mongoose models to Swagger tags
+const tags = Object.entries(models)
+	.filter(([_name, model]) => !excludedModels.includes(model.collection.name))
+	.map(([_name, model]) => ({
+		name: capitalize(model.collection.name),
+		description: `Operations related to ${capitalize(model.collection.name).toLowerCase()}`,
+	}));
 
 // Swagger Options
 const swaggerOptions: swaggerJSDoc.OAS3Options = {
@@ -35,6 +55,7 @@ const swaggerOptions: swaggerJSDoc.OAS3Options = {
 			},
 			schemas,
 		},
+		tags,
 		security: [{ bearerAuth: [] }],
 	},
 	apis: [

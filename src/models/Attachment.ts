@@ -26,7 +26,7 @@ const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument>
 			description: "Alternative text for the file",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Attachments" }
 );
 
 // modal definition

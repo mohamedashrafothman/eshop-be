@@ -52,22 +52,74 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new policy.
- * @description Handles the creation of a new policy in the system.
- * Validates the policy data and creates a new policy if valid.
- * Sets a success message upon successful creation and returns the created policy.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The policy data to create a new policy.
- * @param {String} req.body.title - The title of the policy.
- * @param {String} req.body.content - The content of the policy.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the newly created policy data.
- *   * @property {Object} entities.data - The created policy object.
- *   * @property {Array} flashes - Success message for policy creation.
- * @throws {Error} 500 - Returns an error if the policy creation fails.
+ * @openapi
+ * /policies:
+ *   post:
+ *     summary: Create a new policy
+ *     description: Creates a new policy. Admin/SuperAdmin only.
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - content
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Title of the policy
+ *                 maxLength: 100
+ *                 example: Privacy Policy
+ *               content:
+ *                 type: string
+ *                 description: Content of the policy
+ *                 example: This is the full content of the privacy policy...
+ *     responses:
+ *       201:
+ *         description: Policy created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Policies'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewPolicy = async (
 	req: Request<
@@ -98,25 +150,65 @@ export const postNewPolicy = async (
 };
 
 /**
- * @summary Retrieves a paginated list of policies.
- * @description Fetches policies from the database using various filters,
- * including search queries, and includes options for pagination and sorting.
- * If the user is an admin or super admin, deleted policies can also be included in the results.
- *
- * @param {Request} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of policies to retrieve per page.
- * @param {String} [req.query.offset] - The number of policies to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search query to match against policy title.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted policies in the response.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of policies, pagination metadata, and sort options.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /policies:
+ *   get:
+ *     summary: Get a list of policies
+ *     description: Retrieves a paginated list of policies. Supports filtering by search term (q) and deleted status (admin only).
+ *     tags: [Policies]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         description: Sort field
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search term (matches title)
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted policies (Admin/SuperAdmin only)
+ *     responses:
+ *       200:
+ *         description: List of policies retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Policies'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getPolicies = async (
 	req: Request<
@@ -197,19 +289,47 @@ export const getPolicies = async (
 };
 
 /**
- * @summary Retrieves a single policy by its ID or slug.
- * @description Fetches a policy from the database using the provided slug or MongoDB object ID.
- * Handles errors and returns the policy data if found.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.policy - The ID or slug of the policy to retrieve.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved policy data.
- *   * @property {Object} entities.data - The retrieved policy object.
- * @throws {Error} 404 - If no policy is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the retrieval process.
+ * @openapi
+ * /policies/{policy}:
+ *   get:
+ *     summary: Get a single policy
+ *     description: Retrieves a single policy by its ID or slug.
+ *     tags: [Policies]
+ *     parameters:
+ *       - in: path
+ *         name: policy
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Policy ID or Slug
+ *         example: privacy-policy
+ *     responses:
+ *       200:
+ *         description: Policy retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Policies'
+ *       404:
+ *         description: Policy not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSinglePolicy = async (
 	req: Request<{ policy: string }, FormatResponseObjectType<IPolicyDocument, HttpStatus["OK"]>>,
@@ -238,22 +358,83 @@ export const getSinglePolicy = async (
 };
 
 /**
- * @summary Updates a single policy by its ID or slug.
- * @description Fetches a policy from the database using the provided slug or MongoDB object ID,
- * and updates the policy with the provided data. Handles errors and returns the updated policy data.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.policy - The ID or slug of the policy to update.
- * @param {Object} req.body - The data to update the policy with.
- * @property {String} [req.body.title] - new title of the policy (optional).
- * @property {String} [req.body.content] - new content of the policy (optional).
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated policy data.
- *   * @property {Object} entities.data - The retrieved policy object.
- * @throws {Error} 404 - If no policy is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the update process.
+ * @openapi
+ * /policies/{policy}:
+ *   patch:
+ *     summary: Update a single policy
+ *     description: Updates a policy's title or content. Admin/SuperAdmin only.
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: policy
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Policy ID or Slug
+ *         example: privacy-policy
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: New title
+ *                 maxLength: 100
+ *               content:
+ *                 type: string
+ *                 description: New content
+ *     responses:
+ *       200:
+ *         description: Policy updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Policies'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Policy not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSinglePolicy = async (
 	req: Request<
@@ -302,19 +483,52 @@ export const updateSinglePolicy = async (
 };
 
 /**
- * @summary Deletes a single policy by its ID or slug.
- * @description This method deletes a policy from the database using the provided slug or MongoDB object ID.
- * The policy is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.policy - The ID or slug of the policy to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the policy was deleted.
- * @throws {Error} 404 - If no policy is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /policies/{policy}:
+ *   delete:
+ *     summary: Delete a single policy
+ *     description: Soft deletes a single policy by its ID or slug. Admin/SuperAdmin only.
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: policy
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Policy ID or Slug
+ *         example: privacy-policy
+ *     responses:
+ *       200:
+ *         description: Policy deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Policy not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSinglePolicy = async (
 	req: Request<{ policy: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -359,18 +573,52 @@ export const deleteSinglePolicy = async (
 };
 
 /**
- * @summary Restores a single policy by its ID or slug.
- * @description This method restores a policy that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the policy is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.policy - The ID or slug of the policy to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the policy was restored.
- * @throws {Error} 404 - If no policy is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /policies/{policy}/restore:
+ *   patch:
+ *     summary: Restore a single policy
+ *     description: Restores a soft-deleted policy by its ID or slug. Admin/SuperAdmin only.
+ *     tags: [Policies]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: policy
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Policy ID or Slug
+ *         example: privacy-policy
+ *     responses:
+ *       200:
+ *         description: Policy restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Policy not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSinglePolicy = async (
 	req: Request<{ policy: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

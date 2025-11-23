@@ -112,7 +112,7 @@ const AddressSchema: Schema<IAddressDocument, object, IAddressDocument> = new Sc
 			description: "The user who owns this address.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Addresses" }
 );
 
 // modal definition

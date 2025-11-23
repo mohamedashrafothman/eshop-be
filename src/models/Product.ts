@@ -226,7 +226,7 @@ const ProductSchema: Schema<IProductDocument, object, IProductDocument> = new Sc
 			description: "Indicates whether the product is featured on the storefront.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Products" }
 );
 
 ProductSchema.pre("save", async function (next) {

@@ -53,7 +53,11 @@ const PaymentMethodSchema: Schema<IPaymentMethodDocument, object, IPaymentMethod
 					"Reference to an attachment representing the icon for this payment method, autopopulated with path and alt text for display purposes.",
 			},
 		},
-		{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+		{
+			toJSON: { versionKey: false, virtual: true },
+			timestamps: true,
+			collection: "Payment Methods",
+		}
 	);
 
 // modal definition

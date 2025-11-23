@@ -129,21 +129,79 @@ export const uploadPaymentMethodIcon = async (
 };
 
 /**
- * @summary Creates a new payment method.
- * @description Handles the creation of a new payment method in the system.
- * Optionally uploads and attaches a icon image if provided in the request.
- * If a icon image is provided, it will be uploaded and linked to the payment method.
- * The payment method is then saved to the database. A success message is set upon successful creation.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The data for creating a new payment method. Optionally includes a `icon` file for payment method image.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the newly created payment method data.
- *   * @property {Object} entities.data - The created payment method object.
- *   * @property {Array} flashes - Success message for payment method creation.
- * @throws {Error} 500 - Returns an error if the payment method or icon creation fails.
+ * @openapi
+ * /payment-methods:
+ *   post:
+ *     summary: Create a new payment method
+ *     description: Creates a new payment method with an icon. Admin/SuperAdmin only.
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - method
+ *               - description
+ *               - icon
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 description: Name of the payment method
+ *                 enum: [card, cash]
+ *                 example: card
+ *               description:
+ *                 type: string
+ *                 description: Description of the payment method
+ *                 example: Credit or debit card payment
+ *               icon:
+ *                 type: string
+ *                 format: binary
+ *                 description: Icon image file
+ *     responses:
+ *       201:
+ *         description: Payment method created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Payment Methods'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewPaymentMethod = async (
 	req: Request<
@@ -220,25 +278,73 @@ export const postNewPaymentMethod = async (
 };
 
 /**
- * @summary Retrieves a paginated list of payment methods.
- * @description Fetches payment methods from the database based on query parameters.
- * Supports filtering by method name or description, and includes options for pagination
- * and sorting. Deleted payment methods can also be included if specified in the query.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of payment methods to retrieve per page.
- * @param {String} [req.query.offset] - The number of payment methods to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering payment methods by method or description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted payment methods.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of payment methods, pagination metadata, and sort options.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /payment-methods:
+ *   get:
+ *     summary: Get a list of payment methods
+ *     description: Retrieves a paginated list of payment methods. Supports filtering by search term (q) and deleted status (admin only).
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         description: Sort field
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search term (matches method, description)
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted payment methods (Admin/SuperAdmin only)
+ *     responses:
+ *       200:
+ *         description: List of payment methods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Payment Methods'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getPaymentMethods = async (
 	req: Request<
@@ -322,17 +428,55 @@ export const getPaymentMethods = async (
 };
 
 /**
- * @summary Retrieves a single payment method by ID.
- * @description Fetches a single payment method from the database with the given ID,
- * and if there was an error or no payment method was found, returns the error and ends the request.
- *
- * @param {Object} req - Express request object containing the payment method ID in the parameters.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved payment method.
- * @throws {Error} 404 - Returns an error if the payment method was not found.
- * @throws {Error} 500 - Returns an error if any other issue occurs during the retrieval process.
+ * @openapi
+ * /payment-methods/{method}:
+ *   get:
+ *     summary: Get a single payment method
+ *     description: Retrieves a single payment method by its ID. Admin/SuperAdmin only.
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment Method ID
+ *         example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Payment method retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Payment Methods'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Payment method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSinglePaymentMethod = async (
 	req: Request<
@@ -359,20 +503,87 @@ export const getSinglePaymentMethod = async (
 };
 
 /**
- * @summary Updates a single payment method by ID.
- * @description Updates a single payment method in the database with the given ID,
- * and if there was an error or no payment method was found, returns the error and ends the request.
- * If the request body contains an icon file, it will be uploaded and linked to the payment method.
- * The payment method is then saved to the database. A success message is set upon successful update.
- *
- * @param {Object} req - Express request object containing the payment method ID in the parameters,
- * and the updated payment method data in the request body.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated payment method data.
- * @throws {Error} 404 - Returns an error if the payment method was not found.
- * @throws {Error} 500 - Returns an error if any other issue occurs during the update process.
+ * @openapi
+ * /payment-methods/{method}:
+ *   patch:
+ *     summary: Update a single payment method
+ *     description: Updates a payment method's details and icon. Admin/SuperAdmin only.
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment Method ID
+ *         example: 507f1f77bcf86cd799439011
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 description: Name of the payment method
+ *                 enum: [card, cash]
+ *               description:
+ *                 type: string
+ *                 description: Description of the payment method
+ *               icon:
+ *                 type: string
+ *                 format: binary
+ *                 description: Icon image file
+ *     responses:
+ *       200:
+ *         description: Payment method updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Payment Methods'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Payment method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSinglePaymentMethod = async (
 	req: Request<
@@ -487,18 +698,52 @@ export const updateSinglePaymentMethod = async (
 };
 
 /**
- * @summary Deletes a single payment method.
- * @description This function retrieves a payment method by its ID and if found, soft-deletes the payment method.
- * If the payment method is not found, it returns a 404 error. If there is an error during the deletion,
- * it passes the error to the next middleware.
- *
- * @param {Request} req - Express request object containing the payment method ID in the parameters.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a success message.
- * @throws {Error} 404 - Returns an error if the payment method is not found.
- * @throws {Error} - Returns an error if there is an issue during the deletion process.
+ * @openapi
+ * /payment-methods/{method}:
+ *   delete:
+ *     summary: Delete a single payment method
+ *     description: Soft deletes a single payment method by its ID. Admin/SuperAdmin only.
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment Method ID
+ *         example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Payment method deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Payment method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSinglePaymentMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -540,18 +785,52 @@ export const deleteSinglePaymentMethod = async (
 };
 
 /**
- * @summary Restores a single soft-deleted payment method.
- * @description This function retrieves a soft-deleted payment method by its ID and if found, restores the payment method.
- * If the payment method is not found, it returns a 404 error. If there is an error during the restoration,
- * it passes the error to the next middleware.
- *
- * @param {Request} req - Express request object containing the payment method ID in the parameters.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a success message.
- * @throws {Error} 404 - Returns an error if the payment method is not found.
- * @throws {Error} - Returns an error if there is an issue during the restoration process.
+ * @openapi
+ * /payment-methods/{method}/restore:
+ *   patch:
+ *     summary: Restore a single payment method
+ *     description: Restores a soft-deleted payment method by its ID. Admin/SuperAdmin only.
+ *     tags: [Payment Methods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment Method ID
+ *         example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Payment method restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Payment method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSinglePaymentMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

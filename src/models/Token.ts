@@ -56,7 +56,7 @@ const TokenSchema: Schema<ITokenDocument, object, ITokenDocument> = new Schema(
 				"Optional expiration date and time for the token, after which it becomes invalid.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Tokens" }
 );
 
 // modal definition
