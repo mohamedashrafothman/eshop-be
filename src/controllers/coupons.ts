@@ -180,7 +180,11 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *       "401":
  *         description: Unauthorized.
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCoupons = async (
 	req: Request<
@@ -313,7 +317,11 @@ export const getCoupons = async (
  *       "409":
  *         description: Coupon code already exists.
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCoupon = async (
 	req: Request<
@@ -392,7 +400,11 @@ export const postNewCoupon = async (
  *       "404":
  *         description: Coupon not found.
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>>,
@@ -482,7 +494,11 @@ export const getSingleCoupon = async (
  *       "404":
  *         description: Coupon not found.
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCoupon = async (
 	req: Request<
@@ -583,19 +599,30 @@ export const updateSingleCoupon = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
  *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Coupon not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -662,19 +689,30 @@ export const deleteSingleCoupon = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
  *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Coupon not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

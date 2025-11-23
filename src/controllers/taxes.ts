@@ -143,24 +143,45 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *                 default: false
  *     responses:
  *       "201":
- *         description: Tax created successfully.
+ *         description: Tax created successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Taxes'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Taxes'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "422":
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewTax = async (
 	req: Request<
@@ -232,29 +253,35 @@ export const postNewTax = async (
  *         description: Include deleted taxes.
  *     responses:
  *       "200":
- *         description: List of taxes.
+ *         description: List of taxes retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Taxes'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Taxes'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getTaxes = async (
 	req: Request<
@@ -343,24 +370,37 @@ export const getTaxes = async (
  *         description: Tax ID or slug.
  *     responses:
  *       "200":
- *         description: Tax details.
+ *         description: Tax details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Taxes'
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Taxes'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Tax not found.
+ *         description: Tax not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
@@ -421,26 +461,51 @@ export const getSingleTax = async (
  *                 type: boolean
  *     responses:
  *       "200":
- *         description: Tax updated successfully.
+ *         description: Tax updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Taxes'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Taxes'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Tax not found.
+ *         description: Tax not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "422":
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleTax = async (
 	req: Request<
@@ -523,23 +588,34 @@ export const updateSingleTax = async (
  *         description: Tax ID or slug.
  *     responses:
  *       "200":
- *         description: Tax deleted successfully.
+ *         description: Tax deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Tax not found.
+ *         description: Tax not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -600,21 +676,34 @@ export const deleteSingleTax = async (
  *         description: Tax ID or slug.
  *     responses:
  *       "200":
- *         description: Tax restored successfully.
+ *         description: Tax restored successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Tax not found.
+ *         description: Tax not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleTax = async (
 	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

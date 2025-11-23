@@ -109,28 +109,39 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *                 description: State ID
  *     responses:
  *       "201":
- *         description: City created successfully.
+ *         description: City created successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Cities'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
  *       "400":
- *         description: Invalid data.
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCity = async (
 	req: Request<
@@ -211,29 +222,29 @@ export const postNewCity = async (
  *         description: State ID
  *     responses:
  *       "200":
- *         description: List of cities.
+ *         description: List of cities retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Cities'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Cities'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCities = async (
 	req: Request<
@@ -338,26 +349,37 @@ export const getCities = async (
  *         description: City ID or slug.
  *     responses:
  *       "200":
- *         description: City details.
+ *         description: City details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Cities'
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: City not found.
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
@@ -417,28 +439,39 @@ export const getSingleCity = async (
  *                 type: string
  *     responses:
  *       "200":
- *         description: City updated successfully.
+ *         description: City updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Cities'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: City not found.
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCity = async (
 	req: Request<
@@ -522,23 +555,34 @@ export const updateSingleCity = async (
  *         description: City ID or slug.
  *     responses:
  *       "200":
- *         description: City deleted successfully.
+ *         description: City deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: City not found.
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -601,23 +645,34 @@ export const deleteSingleCity = async (
  *         description: City ID or slug.
  *     responses:
  *       "200":
- *         description: City restored successfully.
+ *         description: City restored successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: City not found.
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

@@ -78,7 +78,7 @@ const ShippingMethodSchema: Schema<IShippingMethodDocument, object, IShippingMet
 		{
 			toJSON: { versionKey: false, virtual: true },
 			timestamps: true,
-			collection: "Shipping Methods",
+			collection: "Shipping-Methods",
 		}
 	);
 

@@ -91,28 +91,45 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *                 maxLength: 3
  *     responses:
  *       "201":
- *         description: Country created successfully.
+ *         description: Country created successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Countries'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Countries'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
  *       "400":
- *         description: Invalid data.
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "422":
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCountry = async (
 	req: Request<
@@ -174,29 +191,35 @@ export const postNewCountry = async (
  *           type: boolean
  *     responses:
  *       "200":
- *         description: List of countries.
+ *         description: List of countries retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Countries'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Countries'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCountries = async (
 	req: Request<
@@ -289,26 +312,37 @@ export const getCountries = async (
  *         description: Country ID or slug.
  *     responses:
  *       "200":
- *         description: Country details.
+ *         description: Country details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Countries'
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Countries'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Country not found.
+ *         description: Country not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
@@ -368,28 +402,51 @@ export const getSingleCountry = async (
  *                 maxLength: 3
  *     responses:
  *       "200":
- *         description: Country updated successfully.
+ *         description: Country updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Countries'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Countries'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Country not found.
+ *         description: Country not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "422":
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCountry = async (
 	req: Request<
@@ -456,23 +513,34 @@ export const updateSingleCountry = async (
  *         description: Country ID or slug.
  *     responses:
  *       "200":
- *         description: Country deleted successfully.
+ *         description: Country deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Country not found.
+ *         description: Country not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -535,23 +603,34 @@ export const deleteSingleCountry = async (
  *         description: Country ID or slug.
  *     responses:
  *       "200":
- *         description: Country restored successfully.
+ *         description: Country restored successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Country not found.
+ *         description: Country not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCountry = async (
 	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

@@ -219,82 +219,41 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Addresses'
- *                 flashes:
- *                   type: object
- *             example:
- *               status: 201
- *               entities:
- *                 data:
- *                   _id: "650f1c2e3d4b5a6c7d8e9f01"
- *                   name: "Home"
- *                   street: "El Nasr St."
- *                   building: 12
- *                   floor: 3
- *                   apartment: "3B"
- *                   area: "Heliopolis"
- *                   zip: "11511"
- *                   country: "64b7f7f9a1d2c3e4f5a6b7c8"
- *                   state: "64b7f8a0a1d2c3e4f5a6b7c9"
- *                   city: "64b7f8c1a1d2c3e4f5a6b7ca"
- *                   user: "64b7f8e2a1d2c3e4f5a6b7cb"
- *                   default: true
- *                   createdAt: "2023-09-23T12:00:00.000Z"
- *                   updatedAt: "2023-09-23T12:00:00.000Z"
- *                   slug: "home"
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Addresses'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "400":
  *         description: Validation error.
  *         content:
  *           application/json:
- *             example:
- *               status: 400
- *               errors:
- *                 - msg: "You must supply a name!"
- *                   param: "name"
- *                   location: "body"
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "401":
  *         description: Unauthorized access or insufficient permissions.
  *         content:
  *           application/json:
- *             example:
- *               status: 401
- *               message: "Unauthorized"
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Referenced country, state, city, or user not found.
  *         content:
  *           application/json:
- *             examples:
- *               country:
- *                 value:
- *                   status: 404
- *                   message: "Country not found"
- *               state:
- *                 value:
- *                   status: 404
- *                   message: "State not found"
- *               city:
- *                 value:
- *                   status: 404
- *                   message: "City not found"
- *               user:
- *                 value:
- *                   status: 404
- *                   message: "User not found"
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
  *         description: Transaction failure or unexpected server error.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewAddress = async (
 	req: Request<
@@ -478,69 +437,25 @@ export const postNewAddress = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Addresses'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
- *                           properties:
- *                             totalDocs:
- *                               type: integer
- *                               example: 100
- *                             limit:
- *                               type: integer
- *                               example: 10
- *                             page:
- *                               type: integer
- *                               example: 1
- *                             totalPages:
- *                               type: integer
- *                               example: 10
- *                             pagingCounter:
- *                               type: integer
- *                               example: 1
- *                             hasPrevPage:
- *                               type: boolean
- *                               example: false
- *                             hasNextPage:
- *                               type: boolean
- *                               example: true
- *                             prevPage:
- *                               type: integer
- *                               example: null
- *                             nextPage:
- *                               type: integer
- *                               example: 2
- *                         sort:
+ *                         data:
  *                           type: array
  *                           items:
- *                             type: object
- *                             properties:
- *                               name:
- *                                 type: string
- *                                 example: "Name A-Z"
- *                               value:
- *                                 type: object
- *                                 example: { "name": 1 }
+ *                             $ref: '#/components/schemas/Addresses'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
  *       "500":
  *         description: Internal server error - failed to retrieve addresses.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getAddresses = async (
 	req: Request<
@@ -643,37 +558,30 @@ export const getAddresses = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
+ *                     entities:
  *                       $ref: '#/components/schemas/Addresses'
  *       "401":
  *         description: Unauthorized - user not logged in or invalid credentials.
  *         content:
  *           application/json:
- *             example:
- *               status: 401
- *               message: "Unauthorized"
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Address not found or user does not have access.
  *         content:
  *           application/json:
- *             example:
- *               status: 404
- *               message: "Address not found"
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
  *         description: Internal server error - failed to retrieve the address.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
@@ -734,55 +642,30 @@ export const getSingleAddress = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                             example: "650f1c2e3d4b5a6c7d8e9f01"
- *                           name:
- *                             type: string
- *                             example: "Standard Shipping"
- *                           price:
- *                             type: number
- *                             example: 15.5
- *                           deliveryTime:
- *                             type: string
- *                             example: "3-5 business days"
- *                           zone:
- *                             type: string
- *                             example: "64b7f8c1a1d2c3e4f5a6b7ca"
+ *                     entities:
+ *                       $ref: '#/components/schemas/Shipping-Methods'
  *       "401":
  *         description: Unauthorized - user not authenticated.
  *         content:
  *           application/json:
- *             example:
- *               status: 401
- *               message: "Unauthorized"
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Address or zone not found.
  *         content:
  *           application/json:
- *             example:
- *               status: 404
- *               message: "No Shipping methods available."
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
  *         description: Internal server error - failed to retrieve shipping methods.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleAddressShippingMethods = async (
 	req: Request<
@@ -914,46 +797,38 @@ export const getSingleAddressShippingMethods = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
+ *                     entities:
  *                       $ref: '#/components/schemas/Addresses'
- *                 flashes:
- *                   type: object
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "400":
  *         description: Invalid request body.
  *         content:
  *           application/json:
- *             example:
- *               status: 400
- *               message: "Cannot set the only address to non-default"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "401":
  *         description: Unauthorized access.
  *         content:
  *           application/json:
- *             example:
- *               status: 401
- *               message: "Unauthorized"
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Address not found.
  *         content:
  *           application/json:
- *             example:
- *               status: 404
- *               message: "Address not found"
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
  *         description: Internal server error - failed to update address.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleAddress = async (
 	req: Request<
@@ -1172,42 +1047,36 @@ export const updateSingleAddress = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
- *                   example: { success: ["Successfully Deleted."] }
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "400":
  *         description: Cannot delete the only address of the user.
  *         content:
  *           application/json:
- *             example:
- *               status: 400
- *               message: "Cannot delete the only address."
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "401":
  *         description: Unauthorized access.
  *         content:
  *           application/json:
- *             example:
- *               status: 401
- *               message: "Unauthorized"
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
  *         description: Address not found.
  *         content:
  *           application/json:
- *             example:
- *               status: 404
- *               message: "Address not found"
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
  *         description: Internal server error - failed to delete address.
  *         content:
  *           application/json:
- *             example:
- *               status: 500
- *               message: "Internal Server Error"
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>, {}>,

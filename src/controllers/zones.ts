@@ -164,24 +164,27 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *                   description: City ID
  *     responses:
  *       "201":
- *         description: Zone created successfully.
+ *         description: Zone created successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Zones'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Zones'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewZone = async (
 	req: Request<
@@ -291,29 +294,29 @@ export const postNewZone = async (
  *         description: Include deleted zones.
  *     responses:
  *       "200":
- *         description: List of zones.
+ *         description: List of zones retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Zones'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Zones'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getZones = async (
 	req: Request<
@@ -407,24 +410,31 @@ export const getZones = async (
  *         description: Zone ID or slug.
  *     responses:
  *       "200":
- *         description: Zone details.
+ *         description: Zone details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Zones'
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Zones'
  *       "404":
- *         description: Zone not found.
+ *         description: Zone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
@@ -493,26 +503,33 @@ export const getSingleZone = async (
  *                   type: string
  *     responses:
  *       "200":
- *         description: Zone updated successfully.
+ *         description: Zone updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Zones'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Zones'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
  *       "404":
- *         description: Zone not found.
+ *         description: Zone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleZone = async (
 	req: Request<
@@ -629,23 +646,34 @@ export const updateSingleZone = async (
  *         description: Zone ID or slug.
  *     responses:
  *       "200":
- *         description: Zone deleted successfully.
+ *         description: Zone deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
- *         description: Unauthorized.
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "404":
- *         description: Zone not found.
+ *         description: Zone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -706,21 +734,28 @@ export const deleteSingleZone = async (
  *         description: Zone ID or slug.
  *     responses:
  *       "200":
- *         description: Zone restored successfully.
+ *         description: Zone restored successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "404":
- *         description: Zone not found.
+ *         description: Zone not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleZone = async (
 	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

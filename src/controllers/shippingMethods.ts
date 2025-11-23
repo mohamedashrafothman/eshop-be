@@ -117,7 +117,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *     summary: Creates a new shipping method.
  *     description: Creates a shipping method with rate and delivery time. Requires Admin or SuperAdmin role.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -169,7 +169,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Shipping Methods'
+ *                           $ref: '#/components/schemas/Shipping-Methods'
  *                         flashes:
  *                           $ref: '#/components/schemas/Flash'
  *       400:
@@ -255,7 +255,7 @@ export const postNewShippingMethod = async (
  *     summary: Retrieves a paginated list of shipping methods.
  *     description: Fetches shipping methods with filtering, sorting, and pagination.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     parameters:
  *       - in: query
  *         name: page
@@ -300,7 +300,7 @@ export const postNewShippingMethod = async (
  *                         data:
  *                           type: array
  *                           items:
- *                             $ref: '#/components/schemas/Shipping Methods'
+ *                             $ref: '#/components/schemas/Shipping-Methods'
  *                         meta:
  *                           $ref: '#/components/schemas/Meta'
  *       401:
@@ -410,7 +410,7 @@ export const getShippingMethods = async (
  *     summary: Retrieves a single shipping method.
  *     description: Fetches a shipping method by ID or slug. Requires Admin or SuperAdmin role.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -434,7 +434,7 @@ export const getShippingMethods = async (
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Shipping Methods'
+ *                           $ref: '#/components/schemas/Shipping-Methods'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -491,7 +491,7 @@ export const getSingleShippingMethod = async (
  *     summary: Updates a single shipping method.
  *     description: Updates shipping method details. Requires Admin or SuperAdmin role.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -542,7 +542,7 @@ export const getSingleShippingMethod = async (
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Shipping Methods'
+ *                           $ref: '#/components/schemas/Shipping-Methods'
  *                         flashes:
  *                           $ref: '#/components/schemas/Flash'
  *       400:
@@ -659,7 +659,7 @@ export const updateSingleShippingMethod = async (
  *     summary: Deletes a single shipping method.
  *     description: Soft-deletes a shipping method. Requires Admin or SuperAdmin role.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -751,7 +751,7 @@ export const deleteSingleShippingMethod = async (
  *     summary: Restores a single shipping method.
  *     description: Restores a soft-deleted shipping method. Requires Admin or SuperAdmin role.
  *     tags:
- *       - Shipping Methods
+ *       - Shipping-Methods
  *     security:
  *       - bearerAuth: []
  *     parameters:

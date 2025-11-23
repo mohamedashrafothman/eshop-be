@@ -689,32 +689,45 @@ export const _getSocialRedirect = (req: Request, res: Response, next: NextFuncti
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         accessToken:
- *                           type: string
- *                         refreshToken:
- *                           type: string
- *                         tokenType:
- *                           type: string
- *                           example: "Bearer"
- *                 flashes:
- *                   type: object
+ *                         data:
+ *                           allOf:
+ *                             - $ref: '#/components/schemas/Users'
+ *                             - type: object
+ *                               properties:
+ *                                 accessToken:
+ *                                   type: string
+ *                                 refreshToken:
+ *                                   type: string
+ *                                 tokenType:
+ *                                   type: string
+ *                                   example: "Bearer"
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
  *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "409":
  *         description: Conflict - Account already exists.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postSocialUser = async (
 	req: Request,
@@ -1106,22 +1119,29 @@ export const postSocialUser = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Users'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Users'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
  *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postSocialUnlink = async (
 	req: Request,
@@ -1214,31 +1234,44 @@ export const postSocialUnlink = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         accessToken:
- *                           type: string
- *                         refreshToken:
- *                           type: string
- *                         tokenType:
- *                           type: string
- *                 flashes:
- *                   type: object
+ *                         data:
+ *                           allOf:
+ *                             - $ref: '#/components/schemas/Users'
+ *                             - type: object
+ *                               properties:
+ *                                 accessToken:
+ *                                   type: string
+ *                                 refreshToken:
+ *                                   type: string
+ *                                 tokenType:
+ *                                   type: string
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "422":
  *         description: Invalid credentials.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       "429":
  *         description: Too many login attempts.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Start a transaction to ensure data integrity
@@ -1423,22 +1456,38 @@ export const postLogin = async (req: Request, res: Response, next: NextFunction)
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Users'
- *                 flashes:
- *                   type: object
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           allOf:
+ *                             - $ref: '#/components/schemas/Users'
+ *                             - type: object
+ *                               properties:
+ *                                 accessToken:
+ *                                   type: string
+ *                                 refreshToken:
+ *                                   type: string
+ *                                 tokenType:
+ *                                   type: string
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "409":
  *         description: Email already exists.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postRegister = async (
 	req: Request<
@@ -1649,17 +1698,24 @@ export const _loginRateLimitHandler = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "401":
  *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	// Check if user logged in
@@ -1745,27 +1801,34 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         accessToken:
- *                           type: string
- *                         refreshToken:
- *                           type: string
- *                         tokenType:
- *                           type: string
+ *                         data:
+ *                           type: object
+ *                           properties:
+ *                             accessToken:
+ *                               type: string
+ *                             refreshToken:
+ *                               type: string
+ *                             tokenType:
+ *                               type: string
  *       "403":
  *         description: Invalid or expired refresh token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postRefreshToken = async (
 	req: Request,
@@ -1867,17 +1930,24 @@ export const postRefreshToken = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "400":
  *         description: No account found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postForgotPassword = async (
 	req: Request,
@@ -2017,17 +2087,24 @@ export const postForgotPassword = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       "400":
  *         description: Invalid token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       "500":
- *         description: Internal Server Error.
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postResetPassword = async (
 	req: Request,

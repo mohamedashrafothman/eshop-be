@@ -56,7 +56,7 @@ const PaymentMethodSchema: Schema<IPaymentMethodDocument, object, IPaymentMethod
 		{
 			toJSON: { versionKey: false, virtual: true },
 			timestamps: true,
-			collection: "Payment Methods",
+			collection: "Payment-Methods",
 		}
 	);
 

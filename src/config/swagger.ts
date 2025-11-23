@@ -3,6 +3,7 @@ import path from "path";
 import swaggerJsdoc, * as swaggerJSDoc from "swagger-jsdoc";
 import { SwaggerTheme, SwaggerThemeNameEnum } from "swagger-themes";
 import { capitalize } from "../utils/helpers";
+import { normalizeSwaggerTypes } from "../utils/helpers/swagger";
 import vars from "../utils/vars";
 import { models } from "./mongoose";
 
@@ -19,7 +20,10 @@ const excludedModels = [
 const schemas = Object.fromEntries(
 	Object.entries(models)
 		.filter(([_name, model]) => !excludedModels.includes(model.collection.name))
-		.map(([_name, model]) => [capitalize(model.collection.name), mongooseToSwagger(model)])
+		.map(([_name, model]) => [
+			capitalize(model.collection.name),
+			normalizeSwaggerTypes(mongooseToSwagger(model)),
+		])
 );
 
 // Mongoose models to Swagger tags
@@ -49,7 +53,7 @@ const swaggerOptions: swaggerJSDoc.OAS3Options = {
 			securitySchemes: {
 				bearerAuth: {
 					type: vars.app.protocol,
-					scheme: vars.auth.strategies.jwt.tokenType,
+					scheme: vars.auth.strategies.jwt.tokenType.toLowerCase(),
 					bearerFormat: vars.tokenTypes.jwt,
 				},
 			},

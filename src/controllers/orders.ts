@@ -221,25 +221,35 @@ export const _isValidShippingZone = (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 201
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Orders'
- *                     flashes:
+ *                     entities:
  *                       type: object
- *                       example: { success: ["Your order has been placed successfully!"] }
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       400:
  *         description: Bad Request (e.g., empty cart, invalid IDs, stock issues, price changes)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewOrder = async (
 	req: Request<
@@ -562,49 +572,31 @@ export const postNewOrder = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Orders'
- *                     meta:
+ *                     entities:
  *                       type: object
  *                       properties:
- *                         pagination:
- *                           type: object
- *                           properties:
- *                             page:
- *                               type: integer
- *                             limit:
- *                               type: integer
- *                             totalDocs:
- *                               type: integer
- *                             totalPages:
- *                               type: integer
- *                             hasNextPage:
- *                               type: boolean
- *                             hasPrevPage:
- *                               type: boolean
- *                         sort:
+ *                         data:
  *                           type: array
  *                           items:
- *                             type: object
- *                             properties:
- *                               name:
- *                                 type: string
- *                               value:
- *                                 type: object
+ *                             $ref: '#/components/schemas/Orders'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 /**
  * Retrieves a paginated list of orders.
@@ -751,22 +743,33 @@ export const getOrders = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Orders'
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       404:
  *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
@@ -840,27 +843,41 @@ export const getSingleOrder = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Orders'
- *                     flashes:
+ *                     entities:
  *                       type: object
- *                       example: { success: ["Order updated successfully."] }
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       400:
  *         description: Bad Request (e.g., invalid status transition, address/shipping mismatch)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       404:
  *         description: Order, Address, or Shipping Method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleOrder = async (
 	req: Request<
@@ -1065,20 +1082,30 @@ export const updateSingleOrder = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
- *                   example: { success: ["Successfully Deleted."] }
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       404:
  *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -1133,20 +1160,30 @@ export const deleteSingleOrder = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 flashes:
- *                   type: object
- *                   example: { success: ["Successfully Restored."] }
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       404:
  *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -1220,27 +1257,41 @@ export const restoreSingleOrder = async (
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 entities:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     data:
- *                       $ref: '#/components/schemas/Orders'
- *                     flashes:
+ *                     entities:
  *                       type: object
- *                       example: { success: ["Order updated successfully."] }
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
  *       400:
  *         description: Bad Request (e.g., insufficient stock)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
  *       404:
  *         description: Order or Order Item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateOrderItem = async (
 	req: Request<

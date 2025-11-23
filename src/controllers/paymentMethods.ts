@@ -130,11 +130,11 @@ export const uploadPaymentMethodIcon = async (
 
 /**
  * @openapi
- * /payment-methods:
+ * /v1/payment-methods:
  *   post:
  *     summary: Create a new payment method
  *     description: Creates a new payment method with an icon. Admin/SuperAdmin only.
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -175,7 +175,7 @@ export const uploadPaymentMethodIcon = async (
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Payment Methods'
+ *                           $ref: '#/components/schemas/Payment-Methods'
  *                         flashes:
  *                           $ref: '#/components/schemas/Flash'
  *       400:
@@ -279,11 +279,11 @@ export const postNewPaymentMethod = async (
 
 /**
  * @openapi
- * /payment-methods:
+ * /v1/payment-methods:
  *   get:
  *     summary: Get a list of payment methods
  *     description: Retrieves a paginated list of payment methods. Supports filtering by search term (q) and deleted status (admin only).
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -330,7 +330,7 @@ export const postNewPaymentMethod = async (
  *                         data:
  *                           type: array
  *                           items:
- *                             $ref: '#/components/schemas/Payment Methods'
+ *                             $ref: '#/components/schemas/Payment-Methods'
  *                         meta:
  *                           $ref: '#/components/schemas/Meta'
  *       401:
@@ -429,11 +429,11 @@ export const getPaymentMethods = async (
 
 /**
  * @openapi
- * /payment-methods/{method}:
+ * /v1/payment-methods/{method}:
  *   get:
  *     summary: Get a single payment method
  *     description: Retrieves a single payment method by its ID. Admin/SuperAdmin only.
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -458,7 +458,7 @@ export const getPaymentMethods = async (
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Payment Methods'
+ *                           $ref: '#/components/schemas/Payment-Methods'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -504,11 +504,11 @@ export const getSinglePaymentMethod = async (
 
 /**
  * @openapi
- * /payment-methods/{method}:
+ * /v1/payment-methods/{method}:
  *   patch:
  *     summary: Update a single payment method
  *     description: Updates a payment method's details and icon. Admin/SuperAdmin only.
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -551,7 +551,7 @@ export const getSinglePaymentMethod = async (
  *                       type: object
  *                       properties:
  *                         data:
- *                           $ref: '#/components/schemas/Payment Methods'
+ *                           $ref: '#/components/schemas/Payment-Methods'
  *                         flashes:
  *                           $ref: '#/components/schemas/Flash'
  *       400:
@@ -699,11 +699,11 @@ export const updateSinglePaymentMethod = async (
 
 /**
  * @openapi
- * /payment-methods/{method}:
+ * /v1/payment-methods/{method}:
  *   delete:
  *     summary: Delete a single payment method
  *     description: Soft deletes a single payment method by its ID. Admin/SuperAdmin only.
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -786,11 +786,11 @@ export const deleteSinglePaymentMethod = async (
 
 /**
  * @openapi
- * /payment-methods/{method}/restore:
+ * /v1/payment-methods/{method}/restore:
  *   patch:
  *     summary: Restore a single payment method
  *     description: Restores a soft-deleted payment method by its ID. Admin/SuperAdmin only.
- *     tags: [Payment Methods]
+ *     tags: [Payment-Methods]
  *     security:
  *       - bearerAuth: []
  *     parameters:
