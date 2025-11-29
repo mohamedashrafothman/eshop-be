@@ -122,20 +122,69 @@ export const uploadBrandLogo = async (
 };
 
 /**
- * @summary Creates a new brand.
- * @description Handles the creation of a new brand in the system. Optionally uploads and attaches a logo image if provided in the request.
- * If a logo image is provided, it will be uploaded and linked to the brand. The brand is then saved to the database.
- * A success message is set upon successful creation.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The data for creating a new brand. Optionally includes a `logo` file for brand image.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the newly created brand data.
- *   * @property {Object} entities.data - The created brand object.
- *   * @property {Array} flashes - Success message for brand creation.
- * @throws {Error} 500 - Returns an error if the brand or logo creation fails.
+ * @openapi
+ * /v1/brands:
+ *   post:
+ *     summary: Creates a new brand.
+ *     description: Creates a brand with name, description, and logo. Admin/SuperAdmin only.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - logo
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       "201":
+ *         description: Brand created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Brands'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Invalid file or data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewBrand = async (
 	req: Request<
@@ -212,27 +261,71 @@ export const postNewBrand = async (
 };
 
 /**
- * @summary Retrieves a paginated list of brands.
- * @description Fetches brands based on query parameters. Supports filtering by name,
- * description, and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of states to retrieve per page.
- * @param {String} [req.query.offset] - The number of states to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering brands by name or description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted brands.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated brands and metadata.
- *   * @property {Array} entities.data - List of retrieved brand objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the brands.
- * @throws {Error} 500 - Returns an error if the brand retrieval fails.
+ * @openapi
+ * /v1/brands:
+ *   get:
+ *     summary: Retrieves a paginated list of brands.
+ *     description: Fetches brands with filtering and pagination.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       "200":
+ *         description: List of brands.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Brands'
+ *                         meta:
+ *                           type: object
+ *                           properties:
+ *                             pagination:
+ *                               type: object
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getBrands = async (
 	req: Request<
@@ -315,20 +408,55 @@ export const getBrands = async (
 };
 
 /**
- * @summary Retrieves a single brand by identifier.
- * @description Fetches a brand based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the brand data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.brand - The brand identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the brand data.
- *   * @property {Object} entities.data - The retrieved brand object.
- * @throws {Error} 500 - Returns an error if the brand retrieval fails.
- * @throws {Error} 404 - Returns an error if no brand is found.
+ * @openapi
+ * /v1/brands/{brand}:
+ *   get:
+ *     summary: Retrieves a single brand.
+ *     description: Fetches a brand by ID or slug. Admin/SuperAdmin only.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: brand
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Brand ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Brand details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Brands'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Brand not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleBrand = async (
 	req: Request<{ brand: string }, FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
@@ -357,18 +485,72 @@ export const getSingleBrand = async (
 };
 
 /**
- * @summary Retrieves a single brand.
- * @description Fetches a single brand based on the provided brand ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.brand - The brand ID or slug.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved brand.
- *   * @property {Object} entities.data - The retrieved brand object.
- * @throws {Error} 404 - Returns an error if the brand is not found.
- * @throws {Error} 500 - Returns an error if the brand retrieval fails.
+ * @openapi
+ * /v1/brands/{brand}:
+ *   patch:
+ *     summary: Updates a single brand.
+ *     description: Updates brand details and logo. Admin/SuperAdmin only.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: brand
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Brand ID or slug.
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       "200":
+ *         description: Brand updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Brands'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Brand not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleBrand = async (
 	req: Request<
@@ -489,19 +671,52 @@ export const updateSingleBrand = async (
 };
 
 /**
- * @summary Deletes a single brand by its ID or slug.
- * @description This method deletes a brand from the database using the provided slug or MongoDB object ID.
- * The brand is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.brand - The ID or slug of the brand to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the brand was deleted.
- * @throws {Error} 404 - If no brand is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/brands/{brand}:
+ *   delete:
+ *     summary: Deletes a single brand.
+ *     description: Soft-deletes a brand. Admin/SuperAdmin only.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: brand
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Brand ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Brand deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Brand not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleBrand = async (
 	req: Request<{ brand: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -547,18 +762,52 @@ export const deleteSingleBrand = async (
 };
 
 /**
- * @summary Restores a single brand by its ID or slug.
- * @description This method restores a brand that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the brand is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.brand - The ID or slug of the brand to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the brand was restored.
- * @throws {Error} 404 - If no brand is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/brands/{brand}/restore:
+ *   patch:
+ *     summary: Restores a single brand.
+ *     description: Restores a soft-deleted brand. SuperAdmin only.
+ *     tags:
+ *       - Brands
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: brand
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Brand ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Brand restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Brand not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleBrand = async (
 	req: Request<{ brand: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

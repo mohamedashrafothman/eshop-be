@@ -78,19 +78,70 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new city.
- * @description Creates a new city, returning the created city.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - City data.
- * @param {String} req.body.name - The name of the city, ex: "New York".
- * @param {String} req.body.country - The ID of the country that the city belongs to.
- * @param {String} req.body.state - The ID of the state that the city belongs to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Created response with the newly created city.
- *   * @property {Object} entities.data - The created city object.
+ * @openapi
+ * /v1/cities:
+ *   post:
+ *     summary: Creates a new city.
+ *     description: Creates a city with name, country, and state. Admin/SuperAdmin only.
+ *     tags:
+ *       - Cities
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - country
+ *               - state
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               country:
+ *                 type: string
+ *                 description: Country ID
+ *               state:
+ *                 type: string
+ *                 description: State ID
+ *     responses:
+ *       "201":
+ *         description: City created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCity = async (
 	req: Request<
@@ -130,29 +181,70 @@ export const postNewCity = async (
 };
 
 /**
- * @summary Retrieves a paginated list of cities.
- * @description Fetches cities based on query parameters. Supports filtering by name,
- * and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of cities to retrieve per page.
- * @param {String} [req.query.offset] - The number of cities to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted cities.
- * @param {String} [req.query.country] - The ID of the country that the cities belong to.
- * @param {String} [req.query.state] - The ID of the state that the cities belong to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated cities and metadata.
- *   * @property {Array} entities.data - List of retrieved state objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the cities.
- * @throws {Error} 404 - Returns an error if any data are't found.
- * @throws {Error} 500 - Returns an error if the state retrieval fails.
+ * @openapi
+ * /v1/cities:
+ *   get:
+ *     summary: Retrieves a paginated list of cities.
+ *     description: Fetches cities with filtering and pagination.
+ *     tags:
+ *       - Cities
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *         description: Country ID
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         description: State ID
+ *     responses:
+ *       "200":
+ *         description: List of cities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Cities'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCities = async (
 	req: Request<
@@ -239,20 +331,55 @@ export const getCities = async (
 };
 
 /**
- * @summary Retrieves a single city.
- * @description Fetches a city based on the provided slug or ID.
- * Handles errors and returns the city data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.city - The city identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the city data.
- *   * @property {Object} entities.data - The retrieved city object.
- * @throws {Error} 404 - Returns an error if no city is found.
- * @throws {Error} 500 - Returns an error if the city retrieval fails.
+ * @openapi
+ * /v1/cities/{city}:
+ *   get:
+ *     summary: Retrieves a single city.
+ *     description: Fetches a city by ID or slug. Admin/SuperAdmin only.
+ *     tags:
+ *       - Cities
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: city
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: City ID or slug.
+ *     responses:
+ *       "200":
+ *         description: City details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
@@ -281,23 +408,70 @@ export const getSingleCity = async (
 };
 
 /**
- * @summary Updates a single city.
- * @description Updates a city based on the provided ID or slug.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.city - The city identifier, either a slug or an ObjectId.
- * @param {Object} req.body - Update data for the city.
- * @param {String} [req.body.name] - The updated name of the city.
- * @param {String} [req.body.country] - The updated ID of the country that the city belongs to.
- * @param {String} [req.body.state] - The updated ID of the state that the city belongs to.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated city data.
- *   * @property {Object} entities.data - The updated city object.
- * @throws {Error} 404 - Returns an error if any data not found.
- * @throws {Error} 500 - Returns an error if there is an issue during the update process.
+ * @openapi
+ * /v1/cities/{city}:
+ *   patch:
+ *     summary: Updates a single city.
+ *     description: Updates city details. Admin/SuperAdmin only.
+ *     tags:
+ *       - Cities
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: city
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: City ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               country:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *     responses:
+ *       "200":
+ *         description: City updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Cities'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCity = async (
 	req: Request<
@@ -363,19 +537,52 @@ export const updateSingleCity = async (
 };
 
 /**
- * @summary Deletes a single city.
- * @description This method deletes a city from the database using the provided slug or MongoDB object ID.
- * The city is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.city - The ID or slug of the city to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the city was deleted.
- * @throws {Error} 404 - If no city is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/cities/{city}:
+ *   delete:
+ *     summary: Deletes a single city.
+ *     description: Soft-deletes a city. Admin/SuperAdmin only.
+ *     tags:
+ *       - Cities
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: city
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: City ID or slug.
+ *     responses:
+ *       "200":
+ *         description: City deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -420,18 +627,52 @@ export const deleteSingleCity = async (
 };
 
 /**
- * @summary Restores a single city by its ID or slug.
- * @description This method restores a city that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the city is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.city - The ID or slug of the city to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the city was restored.
- * @throws {Error} 404 - If no city is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/cities/{city}/restore:
+ *   patch:
+ *     summary: Restores a single city.
+ *     description: Restores a soft-deleted city. Admin/SuperAdmin only.
+ *     tags:
+ *       - Cities
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: city
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: City ID or slug.
+ *     responses:
+ *       "200":
+ *         description: City restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: City not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCity = async (
 	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

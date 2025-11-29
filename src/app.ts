@@ -11,6 +11,7 @@ import methodOverride from "method-override";
 import passport from "passport";
 import path from "path";
 import xss from "xss-clean";
+import swaggerSpec from "./config/swagger";
 import cors from "./middlewares/cors";
 import csrf from "./middlewares/csrf";
 import { internalServerErrorHandler, notFoundErrorHandler } from "./middlewares/errorHandlers";
@@ -19,6 +20,7 @@ import logger from "./middlewares/logger";
 import queryParser from "./middlewares/queryParser";
 import rateLimiter from "./middlewares/rateLimiter";
 import session from "./middlewares/session";
+import swagger from "./middlewares/swagger";
 import userAgent from "./middlewares/userAgent";
 import routes from "./routes";
 import { normalizePort } from "./utils/helpers";
@@ -59,6 +61,10 @@ app.use(flash());
 app.use(i18n.init); // i18n init parses req for language headers, cookies, etc.
 app.use(userAgent); // attach browser information to express application.
 app.use(locals);
+
+// API Swagger Documentation Routes
+app.get("/api-docs/swagger.json", (_req, res) => res.json(swaggerSpec));
+app.use("/api-docs", ...swagger);
 
 // Routes
 app.use("/", rateLimiter, routes);

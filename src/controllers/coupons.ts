@@ -123,25 +123,68 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Retrieves a paginated list of coupons.
- * @description Fetches coupons from the database based on query parameters.
- * Supports filtering by coupon name or code, and includes options for pagination
- * and sorting. Deleted coupons can also be included if specified in the query.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of coupons to retrieve per page.
- * @param {Number} [req.query.offset] - The number of coupons to skip.
- * @param {Boolean} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering coupons by name or code.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted coupons.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of coupons, pagination metadata, and sort options.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /v1/coupons:
+ *   get:
+ *     summary: Retrieves a paginated list of coupons.
+ *     description: Fetches coupons with filtering and pagination. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       "200":
+ *         description: List of coupons.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Coupons'
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         pagination:
+ *                           type: object
+ *       "401":
+ *         description: Unauthorized.
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCoupons = async (
 	req: Request<
@@ -214,23 +257,71 @@ export const getCoupons = async (
 };
 
 /**
- * @summary Creates a new coupon.
- * @description Handles the creation of a new coupon in the system.
- * Validates the coupon data and creates a new coupon if valid.
- * If a coupon with the same code already exists, a 409 error is returned. A success message is set
- * upon successful creation.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The coupon data to create a new coupon.
- * Required fields include code, discount, expirationDate, and usageLimit.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 201 - Success response with the newly created coupon data.
- *   * @property {Object} entities.data - The created coupon object.
- *   * @property {Array} flashes - Success message for coupon creation.
- * @throws {Error} 500 - Returns an error if the coupon creation fails.
- * @throws {Error} 409 - Returns an error if a coupon with the same code already exists.
+ * @openapi
+ * /v1/coupons:
+ *   post:
+ *     summary: Creates a new coupon.
+ *     description: Creates a coupon with code, discount, etc. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - discount
+ *               - expirationDate
+ *               - usageLimit
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 20
+ *               discount:
+ *                 type: number
+ *               isPercentage:
+ *                 type: boolean
+ *               expirationDate:
+ *                 type: string
+ *                 format: date-time
+ *               usageLimit:
+ *                 type: integer
+ *                 minimum: 1
+ *     responses:
+ *       "201":
+ *         description: Coupon created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 201
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Coupons'
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Invalid data.
+ *       "401":
+ *         description: Unauthorized.
+ *       "409":
+ *         description: Coupon code already exists.
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCoupon = async (
 	req: Request<
@@ -272,20 +363,48 @@ export const postNewCoupon = async (
 };
 
 /**
- * @summary Retrieves a single coupon by its ID or slug.
- * @description Retrieves a coupon from the database using the provided slug or MongoDB object ID.
- * The method handles errors and returns a success response when the coupon is found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.coupon - The ID or slug of the coupon to retrieve.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved coupon data.
- *   * @property {Object} entities.data - The retrieved coupon object.
- * @throws {Error} 404 - If no coupon is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the retrieval process.
+ * @openapi
+ * /v1/coupons/{coupon}:
+ *   get:
+ *     summary: Retrieves a single coupon.
+ *     description: Fetches a coupon by ID or slug. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coupon
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Coupon ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Coupon details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Coupons'
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Coupon not found.
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>>,
@@ -314,29 +433,72 @@ export const getSingleCoupon = async (
 };
 
 /**
- * @summary Updates a single coupon by its identifier.
- * @description Updates the details of a coupon in the database using the provided coupon ID or slug.
- * The update operation modifies the coupon object with the new data from the request body.
- * If the usage limit specified in the request body is exceeded, a 400 error is returned.
- * A success message is set upon successful update.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.coupon - The coupon ID or slug.
- * @param {Object} req.body - The new data for the coupon.
- * @param {String} [req.body.code] - Optional new code for the coupon.
- * @param {Number} [req.body.discount] - Optional new discount value for the coupon.
- * @param {Boolean} [req.body.isPercentage] - Optional flag indicating if the discount is a percentage.
- * @param {Date} [req.body.expirationDate] - Optional new expiration date for the coupon.
- * @param {Number} [req.body.usageLimit] - Optional new usage limit for the coupon.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated coupon data.
- *   * @property {Object} entities.data - The updated coupon object.
- *   * @property {Array} flashes - Success message for coupon update.
- * @throws {Error} 400 - Returns an error if the usage limit is exceeded.
- * @throws {Error} 404 - If no coupon is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the update process.
+ * @openapi
+ * /v1/coupons/{coupon}:
+ *   patch:
+ *     summary: Updates a single coupon.
+ *     description: Updates coupon details. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coupon
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Coupon ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 20
+ *               discount:
+ *                 type: number
+ *               isPercentage:
+ *                 type: boolean
+ *               expirationDate:
+ *                 type: string
+ *                 format: date-time
+ *               usageLimit:
+ *                 type: integer
+ *                 minimum: 1
+ *     responses:
+ *       "200":
+ *         description: Coupon updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 entities:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Coupons'
+ *                 flashes:
+ *                   type: object
+ *       "400":
+ *         description: Invalid data or usage limit exceeded.
+ *       "401":
+ *         description: Unauthorized.
+ *       "404":
+ *         description: Coupon not found.
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCoupon = async (
 	req: Request<
@@ -415,19 +577,52 @@ export const updateSingleCoupon = async (
 };
 
 /**
- * @summary Deletes a single coupon by its ID or slug.
- * @description This method deletes a coupon from the database using the provided slug or MongoDB object ID.
- * The coupon is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.coupon - The ID or slug of the coupon to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the coupon was deleted.
- * @throws {Error} 404 - If no coupon is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/coupons/{coupon}:
+ *   delete:
+ *     summary: Deletes a single coupon.
+ *     description: Soft-deletes a coupon. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coupon
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Coupon ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Coupon deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Coupon not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -472,18 +667,52 @@ export const deleteSingleCoupon = async (
 };
 
 /**
- * @summary Restores a single coupon by its ID or slug.
- * @description This method restores a coupon that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the coupon is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.coupon - The ID or slug of the coupon to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the coupon was restored.
- * @throws {Error} 404 - If no coupon is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/coupons/{coupon}/restore:
+ *   patch:
+ *     summary: Restores a single coupon.
+ *     description: Restores a soft-deleted coupon. Admin/SuperAdmin only.
+ *     tags:
+ *       - Coupons
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: coupon
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Coupon ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Coupon restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Coupon not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCoupon = async (
 	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

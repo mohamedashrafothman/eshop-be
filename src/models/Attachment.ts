@@ -14,18 +14,19 @@ export type IAttachmentModel = Model<IAttachmentDocument>;
 // schema definition
 const AttachmentSchema: Schema<IAttachmentDocument, object, IAttachmentDocument> = new Schema(
 	{
-		path: { type: String },
-		dir: { type: String },
-		name: { type: String },
-		extname: { type: String },
-		base: { type: String },
+		path: { type: String, description: "The path of the file" },
+		dir: { type: String, description: "The directory of the file" },
+		name: { type: String, description: "The name of the file" },
+		extname: { type: String, description: "The extension of the file" },
+		base: { type: String, description: "The base path of the file" },
 		alt: {
 			type: String,
 			maxlength: [150, "Alternative text can't be greater than 150 characters!"],
 			default: "",
+			description: "Alternative text for the file",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Attachments" }
 );
 
 // modal definition

@@ -33,20 +33,30 @@ const TokenSchema: Schema<ITokenDocument, object, ITokenDocument> = new Schema(
 			required: [true, "User is required!"],
 			ref: "User",
 			autopopulate: true,
+			description:
+				"Reference to the user associated with this token, autopopulated for convenience.",
 		},
 		kind: {
 			type: String,
 			required: [true, "Kind is required!"],
 			enum: [...Object.values(vars.tokenTypes)],
+			description:
+				"The type of token, such as access, refresh, or password reset, restricted to predefined values.",
 		},
 		token: {
 			type: String,
 			required: [true, "Token is required!"],
 			index: true,
+			description:
+				"The unique token string used for authentication or verification purposes.",
 		},
-		expireAt: { type: Date },
+		expireAt: {
+			type: Date,
+			description:
+				"Optional expiration date and time for the token, after which it becomes invalid.",
+		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Tokens" }
 );
 
 // modal definition

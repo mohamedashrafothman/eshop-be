@@ -34,6 +34,8 @@ const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schem
 			type: String,
 			trim: true,
 			maxlength: [1000, "Comment can't be greater than 1000 characters!"],
+			description:
+				"Optional text comment provided by the user reviewing the product, limited to 1000 characters.",
 		},
 		rating: {
 			type: Number,
@@ -46,15 +48,23 @@ const ReviewSchema: Schema<IReviewDocument, object, IReviewDocument> = new Schem
 				"Rating must be an integer number!",
 			],
 			required: [true, "Rating is required!"],
+			description:
+				"Numerical rating given by the user for the product, must be an integer between 1 and 5.",
 		},
 		product: {
 			type: Schema.Types.ObjectId,
 			ref: "Product",
 			required: [true, "Product is required!"],
+			description: "Reference to the product being reviewed.",
 		},
-		user: { type: Schema.Types.ObjectId, ref: "User", required: [true, "User is required!"] },
+		user: {
+			type: Schema.Types.ObjectId,
+			ref: "User",
+			required: [true, "User is required!"],
+			description: "Reference to the user who submitted the review.",
+		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Reviews" }
 );
 
 // modal definition

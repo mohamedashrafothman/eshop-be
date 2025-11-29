@@ -111,23 +111,91 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new shipping method.
- * @description This function handles the creation of a new shipping method using the data provided in the request body.
- * It uses the ShippingMethod model to create a new entry in the database. If successful, it sets a flash message and
- * returns the created shipping method in the response. If an error occurs, it forwards the error to the next middleware.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The payload containing details for the new shipping method.
- * @param {String} req.body.name - The name of the shipping method.
- * @param {Number} req.body.rate - The rate of the shipping method.
- * @param {Object} req.body.deliveryTime - The delivery time object with min and max values.
- * @param {String} req.body.zone - The ID of the zone associated with the shipping method.
- * @param {String} [req.body.description] - The description of the shipping method (optional).
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created shipping method entity.
- * @throws {Error} - Returns an error if the creation process fails.
+ * @openapi
+ * /v1/shipping-methods:
+ *   post:
+ *     summary: Creates a new shipping method.
+ *     description: Creates a shipping method with rate and delivery time. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Shipping-Methods
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - rate
+ *               - deliveryTime
+ *               - zone
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               rate:
+ *                 type: number
+ *                 minimum: 0
+ *               deliveryTime:
+ *                 type: object
+ *                 required:
+ *                   - min
+ *                 properties:
+ *                   min:
+ *                     type: number
+ *                     minimum: 0
+ *                   max:
+ *                     type: number
+ *                     minimum: 0
+ *               zone:
+ *                 type: string
+ *                 description: Zone ID
+ *     responses:
+ *       201:
+ *         description: Shipping method created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Shipping-Methods'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewShippingMethod = async (
 	req: Request<
@@ -181,26 +249,72 @@ export const postNewShippingMethod = async (
 };
 
 /**
- * @summary Retrieves a list of shipping methods based on filters and search criteria.
- * @description Fetches shipping methods from the database using various filters,
- * including search queries, zones, and deletion status. Supports pagination and sorting options.
- * If the user is an admin or super admin, deleted shipping methods can also be included in the results.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - Query parameters for filtering and sorting.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of zones to retrieve per page.
- * @param {String} [req.query.offset] - The number of zones to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search query to match against shipping method name and description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted shipping methods in the response.
- * @param {String} [req.query.zone] - The ID of the zone associated with the shipping methods.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of shipping methods, pagination metadata, and sort options.
- * @throws {Error} 500 - Returns an error if any issue occurs during the retrieval process.
+ * @openapi
+ * /v1/shipping-methods:
+ *   get:
+ *     summary: Retrieves a paginated list of shipping methods.
+ *     description: Fetches shipping methods with filtering, sorting, and pagination.
+ *     tags:
+ *       - Shipping-Methods
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted shipping methods (Admin only).
+ *       - in: query
+ *         name: zone
+ *         schema:
+ *           type: string
+ *         description: Filter by Zone ID.
+ *     responses:
+ *       200:
+ *         description: List of shipping methods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Shipping-Methods'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getShippingMethods = async (
 	req: Request<
@@ -290,22 +404,55 @@ export const getShippingMethods = async (
 };
 
 /**
- * @summary Retrieves a single shipping method by its slug or ID.
- * @description This function fetches a shipping method record from the database using
- * either the shipping method slug or the MongoDB object ID. If the provided identifier
- * is a valid MongoDB ID, it will attempt to find the shipping method by its ID; otherwise,
- * it will search by the slug. It also accounts for deleted shipping method records.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.method - The slug or ID of the shipping method to retrieve.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the retrieved shipping method data.
- *   * @property {Object} entities.data - The retrieved shipping method object.
- * @throws {Error} 404 - If no shipping method is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the retrieval process.
+ * @openapi
+ * /v1/shipping-methods/{method}:
+ *   get:
+ *     summary: Retrieves a single shipping method.
+ *     description: Fetches a shipping method by ID or slug. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Shipping-Methods
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shipping Method ID or slug.
+ *     responses:
+ *       200:
+ *         description: Shipping method retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Shipping-Methods'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Shipping method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleShippingMethod = async (
 	req: Request<
@@ -338,33 +485,96 @@ export const getSingleShippingMethod = async (
 };
 
 /**
- * @summary Updates a shipping method.
- * @description This function retrieves a shipping method by ID or slug, and if it exists,
- * merges the provided request body data into the existing shipping method object and saves
- * the updated object to the database. It also checks if the zone ID provided in
- * the request body exists in the database and if not, returns an error.
- * If the user is not authenticated, it returns a 401 error.
- * If the shipping method or cart are not found, or if there is an error during the database
- * operations, it returns the respective error.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.method - The slug or ID of the shipping method to retrieve.
- * @param {Object} req.body - The payload containing details for the updated shipping method.
- * @param {String} req.body.name - The name of the shipping method (optional).
- * @param {String} req.body.description - The description of the shipping method (optional).
- * @param {Number} req.body.rate - The rate of the shipping method (optional).
- * @param {String} req.body.zone - The ID of the zone associated with the shipping method (optional).
- * @param {Object} req.body.deliveryTime - The delivery time object with min and max values (optional).
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated shipping method data, success message, and error messages.
- *   * @property {Object} entities.data - The updated shipping method object.
- *   * @property {String[]} flashes - Success and error messages.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - If no shipping method is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the retrieval process.
+ * @openapi
+ * /v1/shipping-methods/{method}:
+ *   patch:
+ *     summary: Updates a single shipping method.
+ *     description: Updates shipping method details. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Shipping-Methods
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shipping Method ID or slug.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               rate:
+ *                 type: number
+ *                 minimum: 0
+ *               deliveryTime:
+ *                 type: object
+ *                 properties:
+ *                   min:
+ *                     type: number
+ *                     minimum: 0
+ *                   max:
+ *                     type: number
+ *                     minimum: 0
+ *               zone:
+ *                 type: string
+ *                 description: Zone ID
+ *     responses:
+ *       200:
+ *         description: Shipping method updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Shipping-Methods'
+ *                         flashes:
+ *                           $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Shipping method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleShippingMethod = async (
 	req: Request<
@@ -443,20 +653,52 @@ export const updateSingleShippingMethod = async (
 };
 
 /**
- * @summary Deletes a single shipping method by its slug or ID.
- * @description This function first attempts to find a shipping method by its slug or ID. If the shipping method is found,
- * it then attempts to soft-delete the shipping method. If the deletion is successful, it flashes a success message and
- * responds with a success status.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.method - The slug or ID of the shipping method to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void}
- * @throws {Error} 404 - If no shipping method is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/shipping-methods/{method}:
+ *   delete:
+ *     summary: Deletes a single shipping method.
+ *     description: Soft-deletes a shipping method. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Shipping-Methods
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shipping Method ID or slug.
+ *     responses:
+ *       200:
+ *         description: Shipping method deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Shipping method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -503,20 +745,52 @@ export const deleteSingleShippingMethod = async (
 };
 
 /**
- * @summary Restore a single shipping method by its slug or ID.
- * @description This function first attempts to find a shipping method by its slug or ID. If the shipping method is found,
- * it then attempts to restore the shipping method. If the restoration is successful, it flashes a success message and
- * responds with a success status.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - Route parameters.
- * @param {String} req.params.method - The slug or ID of the shipping method to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void}
- * @throws {Error} 404 - If no shipping method is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restoration process.
+ * @openapi
+ * /v1/shipping-methods/{method}/restore:
+ *   patch:
+ *     summary: Restores a single shipping method.
+ *     description: Restores a soft-deleted shipping method. Requires Admin or SuperAdmin role.
+ *     tags:
+ *       - Shipping-Methods
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: method
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Shipping Method ID or slug.
+ *     responses:
+ *       200:
+ *         description: Shipping method restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Shipping method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleShippingMethod = async (
 	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

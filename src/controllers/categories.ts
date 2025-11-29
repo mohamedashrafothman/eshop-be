@@ -129,21 +129,75 @@ export const uploadCategoryIcon = async (
 };
 
 /**
- * @summary Creates a new category.
- * @description Handles the creation of a new category in the system.
- * Optionally uploads and attaches a icon image if provided in the request.
- * If a icon image is provided, it will be uploaded and linked to the category.
- * The category is then saved to the database. A success message is set upon successful creation.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The data for creating a new category. Optionally includes a `icon` file for category image.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the newly created category data.
- *   * @property {Object} entities.data - The created category object.
- *   * @property {Array} flashes - Success message for category creation.
- * @throws {Error} 500 - Returns an error if the category or icon creation fails.
+ * @openapi
+ * /v1/categories:
+ *   post:
+ *     summary: Creates a new category.
+ *     description: Creates a category with name, description, icon, and optional parent. Admin/SuperAdmin only.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - description
+ *               - icon
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               icon:
+ *                 type: string
+ *                 format: binary
+ *               parent:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   description: Parent Category ID
+ *     responses:
+ *       "201":
+ *         description: Category created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Categories'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Invalid file or data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCategory = async (
 	req: Request<
@@ -239,30 +293,67 @@ export const postNewCategory = async (
 };
 
 /**
- * @summary Retrieves a paginated list of categories.
- * @description Fetches categories based on query parameters. Supports filtering by name,
- * description, and deletion status in case of logged in users.
- * Also includes pagination and sorting options. If the user is an admin or super admin,
- * deleted categories can also be included in the results.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of categories to retrieve per page.
- * @param {String} [req.query.offset] - The number of categories to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering categories by name or description.
- * @param {Boolean} [req.query.deleted] - Flag to include deleted categories.
- * @param {Boolean} [req.query.firstLevelOnly] - Flag to include only first-level categories.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated categories and metadata.
- *   * @property {Array} entities.data - List of retrieved category objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the categories.
- * @throws {Error} 500 - Returns an error if the category retrieval fails.
+ * @openapi
+ * /v1/categories:
+ *   get:
+ *     summary: Retrieves a paginated list of categories.
+ *     description: Fetches categories with filtering and pagination.
+ *     tags:
+ *       - Categories
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search query.
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: firstLevelOnly
+ *         schema:
+ *           type: boolean
+ *     responses:
+ *       "200":
+ *         description: List of categories.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Categories'
+ *                         meta:
+ *                           type: object
+ *                           properties:
+ *                             pagination:
+ *                               type: object
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCategories = async (
 	req: Request<
@@ -352,20 +443,47 @@ export const getCategories = async (
 };
 
 /**
- * @summary Retrieves a single category by identifier.
- * @description Fetches a category based on the provided identifier, which can be either a slug or an ObjectId.
- * Handles errors and returns the category data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the category data.
- *   * @property {Object} entities.data - The retrieved category object.
- * @throws {Error} 500 - Returns an error if the category retrieval fails.
- * @throws {Error} 404 - Returns an error if no category is found.
+ * @openapi
+ * /v1/categories/{category}:
+ *   get:
+ *     summary: Retrieves a single category.
+ *     description: Fetches a category by ID or slug.
+ *     tags:
+ *       - Categories
+ *     parameters:
+ *       - in: path
+ *         name: category
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Category details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Categories'
+ *       "404":
+ *         description: Category not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCategory = async (
 	req: Request<
@@ -403,21 +521,76 @@ export const getSingleCategory = async (
 };
 
 /**
- * @summary Updates an existing category by its identifier.
- * @description This endpoint updates a category's details, including its thumbnail, images, category, and category. The category can be identified by a slug or MongoDB ObjectId. If images or thumbnails are provided, the old ones are replaced. The method also updates related category and category associations if specified.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.category - The category identifier, either a slug or an ObjectId.
- * @param {Object} req.body - The request body containing the category data.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated category details.
- *    * @property {Object} entities - Contains the updated category data.
- *    * @property {Object} entities.data - The updated category.
- * @throws {Error} 500 - Internal server error if there's a problem updating the category.
- * @throws {Error} 404 - Category not found.
+ * @openapi
+ * /v1/categories/{category}:
+ *   patch:
+ *     summary: Updates a single category.
+ *     description: Updates category details and icon. Admin/SuperAdmin only.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: category
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug.
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               description:
+ *                 type: string
+ *                 maxLength: 1000
+ *               icon:
+ *                 type: string
+ *                 format: binary
+ *               parent:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       "200":
+ *         description: Category updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Categories'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Category not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCategory = async (
 	req: Request<
@@ -570,19 +743,52 @@ export const updateSingleCategory = async (
 };
 
 /**
- * @summary Deletes a single category by its ID or slug.
- * @description This method deletes a category from the database using the provided slug or MongoDB object ID.
- * The category is soft-deleted by marking it as deleted, ensuring it can be restored if needed.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.category - The ID or slug of the category to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the category was deleted.
- * @throws {Error} 404 - If no category is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/categories/{category}:
+ *   delete:
+ *     summary: Deletes a single category.
+ *     description: Soft-deletes a category. Admin/SuperAdmin only.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: category
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Category deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Category not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCategory = async (
 	req: Request<{ category: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -631,18 +837,52 @@ export const deleteSingleCategory = async (
 };
 
 /**
- * @summary Restores a single category by its ID or slug.
- * @description This method restores a category that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the category is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.category - The ID or slug of the category to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the category was restored.
- * @throws {Error} 404 - If no category is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restore process.
+ * @openapi
+ * /v1/categories/{category}/restore:
+ *   patch:
+ *     summary: Restores a single category.
+ *     description: Restores a soft-deleted category. SuperAdmin only.
+ *     tags:
+ *       - Categories
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: category
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug.
+ *     responses:
+ *       "200":
+ *         description: Category restored successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "401":
+ *         description: Unauthorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Category not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCategory = async (
 	req: Request<{ category: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,

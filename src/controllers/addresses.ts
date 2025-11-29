@@ -146,30 +146,114 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 };
 
 /**
- * @summary Creates a new address entry in the database.
- * @description Handles the creation of a new address entity using the data provided in the request body.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.body - The payload containing details for the new address entity.
- * @param {String} req.body.name - The name of the address.
- * @param {String} req.body.street - The street of the address.
- * @param {Number} [req.body.building] - The building number of the address.
- * @param {Number} [req.body.floor] - The floor number of the address.
- * @param {Number} req.body.apartment - The apartment number of the address.
- * @param {String} req.body.area - The area of the address.
- * @param {String} [req.body.zip] - The zip code of the address (optional).
- * @param {String} req.body.country - The ID of the country where the address is located.
- * @param {String} req.body.state - The ID of the state where the address is located.
- * @param {String} req.body.city - The ID of the city where the address is located.
- * @param {String} req.body.user - The ID of the user associated with the address.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created address entity.
- *   * @property {Object} entities.data - The newly created address entity.
- * @throws {Error} 401 - Returns an error if the user is unauthorized to create the address.
- * @throws {Error} 404 - Returns an error if the country, state, city, or user is not found.
- * @throws {Error} 500 - Returns an error if any issue occurs during the creation process or if the transaction fails.
+ * @openapi
+ * /v1/addresses:
+ *   post:
+ *     summary: Creates a new address entry in the database.
+ *     description: |
+ *       Creates an address inside a MongoDB transaction and links it to the specified user.
+ *       Requires a valid bearer JWT. If the authenticated user has role `user`, their id must
+ *       match the `user` field in the payload.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - street
+ *               - building
+ *               - area
+ *               - country
+ *               - state
+ *               - city
+ *               - user
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 100
+ *               street:
+ *                 type: string
+ *               building:
+ *                 type: number
+ *               floor:
+ *                 type: number
+ *               apartment:
+ *                 type: string
+ *               area:
+ *                 type: string
+ *               zip:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               state:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               city:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               user:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *           example:
+ *             name: "Home"
+ *             street: "El Nasr St."
+ *             building: 12
+ *             floor: 3
+ *             apartment: "3B"
+ *             area: "Heliopolis"
+ *             zip: "11511"
+ *             country: "64b7f7f9a1d2c3e4f5a6b7c8"
+ *             state: "64b7f8a0a1d2c3e4f5a6b7c9"
+ *             city: "64b7f8c1a1d2c3e4f5a6b7ca"
+ *             user: "64b7f8e2a1d2c3e4f5a6b7cb"
+ *     responses:
+ *       "201":
+ *         description: Address created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Addresses'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       "401":
+ *         description: Unauthorized access or insufficient permissions.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Referenced country, state, city, or user not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Transaction failure or unexpected server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewAddress = async (
 	req: Request<
@@ -305,26 +389,73 @@ export const postNewAddress = async (
 };
 
 /**
- * @summary Retrieves a paginated list of addresses.
- * @description Fetches addresses based on query parameters. Supports filtering by name, street,
- * and deletion status. Also includes pagination and sorting options.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.query - The query parameters for filtering and pagination.
- * @param {String} [req.query.sort] - The field to sort by.
- * @param {Number} [req.query.page] - The page number to retrieve.
- * @param {Number} [req.query.limit] - The number of addresses to retrieve per page.
- * @param {String} [req.query.offset] - The number of addresses to skip.
- * @param {String} [req.query.pagination] - Enable or disable pagination.
- * @param {String} [req.query.q] - Search term for filtering addresses by name or street.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with paginated addresses and metadata.
- *   * @property {Array} entities.data - List of retrieved address objects.
- *   * @property {Object} entities.meta.pagination - Pagination metadata (total docs, page, etc.).
- *   * @property {Array} entities.meta.sort - Available sort options for the addresses.
- * @throws {Error} 500 - Returns an error if the address retrieval fails.
+ * @openapi
+ * /v1/addresses:
+ *   get:
+ *     summary: Retrieves a paginated list of addresses.
+ *     description: |
+ *       Fetches addresses with optional filtering by name or street, supports pagination
+ *       and sorting. Returns pagination metadata and available sort options.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         description: Field to sort by (e.g., name, createdAt).
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of addresses per page.
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Number of addresses to skip.
+ *       - in: query
+ *         name: pagination
+ *         schema:
+ *           type: boolean
+ *         description: Enable or disable pagination.
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search term to filter addresses by name or street.
+ *     responses:
+ *       "200":
+ *         description: Paginated list of addresses with metadata.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Addresses'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       "500":
+ *         description: Internal server error - failed to retrieve addresses.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getAddresses = async (
 	req: Request<
@@ -402,20 +533,55 @@ export const getAddresses = async (
 };
 
 /**
- * @summary Retrieves a single address by its ID.
- * @description Fetches a single address using the given ID from the request parameters.
- * Handles errors and returns the address data if found.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.address - The address ID.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the address data.
- *   * @property {Object} entities.data - The retrieved address object.
- * @throws {Error} 404 - Returns an error if no address is found.
- * @throws {Error} 500 - Returns an error if the address retrieval fails.
+ * @openapi
+ * /v1/addresses/{address}:
+ *   get:
+ *     summary: Retrieves a single address by its ID.
+ *     description: |
+ *       Fetches a single address using the provided ID. Requires authentication.
+ *       If the user has role `user`, they can only retrieve their own addresses.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[a-fA-F0-9]{24}$"
+ *         description: The MongoDB ObjectId of the address to retrieve.
+ *     responses:
+ *       "200":
+ *         description: Address retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       $ref: '#/components/schemas/Addresses'
+ *       "401":
+ *         description: Unauthorized - user not logged in or invalid credentials.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Address not found or user does not have access.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal server error - failed to retrieve the address.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
@@ -451,34 +617,218 @@ export const getSingleAddress = async (
 };
 
 /**
- * @summary Updates a single address.
- * @description Updates an address based on the provided ID. The user must have permission to update the address.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.address - The address ID.
- * @param {Object} req.body - Update data for the address.
- * @param {String} [req.body.name] - The updated name of the address.
- * @param {String} [req.body.street] - The updated street of the address.
- * @param {String} [req.body.building] - The updated building of the address.
- * @param {String} [req.body.floor] - The updated floor of the address.
- * @param {String} [req.body.apartment] - The updated apartment of the address.
- * @param {String} [req.body.area] - The updated area of the address.
- * @param {String} [req.body.zip] - The updated zip code of the address.
- * @param {String} [req.body.country] - The updated country of the address.
- * @param {String} [req.body.state] - The updated state of the address.
- * @param {String} [req.body.city] - The updated city of the address.
- * @param {String} [req.body.user] - The updated user of the address.
- * @param {Boolean} [req.body.default] - The updated default flag of the address.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated address data.
- *   * @property {Object} entities.data - The updated address object.
- * @throws {Error} 400 - Returns an error if the request body is invalid.
- * @throws {Error} 401 - Returns an error if the user is not authorized to update the address.
- * @throws {Error} 404 - Returns an error if no address is found.
- * @throws {Error} 500 - Returns an error if the address update fails.
+ * @openapi
+ * /v1/addresses/{address}/shipping-methods:
+ *   get:
+ *     summary: Retrieves available shipping methods for a specific address.
+ *     description: |
+ *       Fetches shipping methods associated with the zone of the specified address.
+ *       Requires authentication. Only returns methods for addresses belonging to the logged-in user.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[a-fA-F0-9]{24}$"
+ *         description: The ID of the address to retrieve shipping methods for.
+ *     responses:
+ *       "200":
+ *         description: List of available shipping methods for the address.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       $ref: '#/components/schemas/Shipping-Methods'
+ *       "401":
+ *         description: Unauthorized - user not authenticated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Address or zone not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal server error - failed to retrieve shipping methods.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+export const getSingleAddressShippingMethods = async (
+	req: Request<
+		{ address: string },
+		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>
+	>,
+	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
+	next: NextFunction
+): Promise<void> => {
+	// Check if user logged in
+	if (req.isUnauthenticated() || !req.user) {
+		const error = createError(httpStatus.UNAUTHORIZED);
+		return next({ ...(error || {}), status: error.status });
+	}
+
+	// Extract the address identifier from request parameters
+	const { address: addressIdentifier } = req.params || {};
+
+	// Attempt to retrieve an address from the database for logged in user,
+	// and if there was an error, return the error and end the request
+	const [addressError, address] = await to(
+		Address.findOne({ _id: addressIdentifier, user: req.user._id })
+	);
+	if (addressError || !address)
+		return next(addressError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve a zone from the database for the address,
+	// and if there was an error, return the error and end the request
+	const [zoneError, zone] = await to(
+		Zone.findOne({
+			...(address.country && {
+				countries: { $in: [address.country?._id || address.country] },
+			}),
+			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
+			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
+		})
+	);
+	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
+
+	// Attempt to retrieve shipping methods from the database for the zone,
+	// and if there was an error, return the error and end the request
+	const [shippingMethodsError, shippingMethods] = await to(
+		ShippingMethod.find({ zone: zone._id })
+	);
+	if (shippingMethodsError) return next(shippingMethodsError);
+
+	// Return the shipping methods data in the response
+	res.status(httpStatus.OK).json(
+		formatResponseObject({
+			status: httpStatus.OK,
+			entities: { data: shippingMethods },
+			flashes: req.flash(),
+		})
+	);
+};
+
+/**
+ * @openapi
+ * /v1/addresses/{address}:
+ *   patch:
+ *     summary: Updates a single address.
+ *     description: |
+ *       Updates an address by ID. Requires authentication. Users with role `user` can only
+ *       update their own addresses. Handles the `default` flag and ensures data integrity
+ *       within a transaction.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[a-fA-F0-9]{24}$"
+ *         description: The ID of the address to update.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               street:
+ *                 type: string
+ *               building:
+ *                 type: number
+ *               floor:
+ *                 type: number
+ *               apartment:
+ *                 type: string
+ *               area:
+ *                 type: string
+ *               zip:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               state:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               city:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               user:
+ *                 type: string
+ *                 pattern: "^[a-fA-F0-9]{24}$"
+ *               default:
+ *                 type: boolean
+ *           example:
+ *             name: "Office"
+ *             street: "Tahrir St."
+ *             building: 15
+ *             floor: 5
+ *             apartment: "5A"
+ *             area: "Downtown"
+ *             zip: "11512"
+ *             country: "64b7f7f9a1d2c3e4f5a6b7c8"
+ *             state: "64b7f8a0a1d2c3e4f5a6b7c9"
+ *             city: "64b7f8c1a1d2c3e4f5a6b7ca"
+ *             user: "64b7f8e2a1d2c3e4f5a6b7cb"
+ *             default: true
+ *     responses:
+ *       "200":
+ *         description: Address updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       $ref: '#/components/schemas/Addresses'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Invalid request body.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       "401":
+ *         description: Unauthorized access.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Address not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal server error - failed to update address.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleAddress = async (
 	req: Request<
@@ -671,19 +1021,62 @@ export const updateSingleAddress = async (
 };
 
 /**
- * @summary Deletes a single address by its ID.
- * @description This method deletes a single address from the database using the provided ID.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.address - The ID of the address to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the address was deleted.
- * @throws {Error} 404 - If no address is found with the provided identifier.
- * @throws {Error} 401 - If the user doesn't have permission to delete the address.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /v1/addresses/{address}:
+ *   delete:
+ *     summary: Deletes a single address by its ID.
+ *     description: |
+ *       Deletes an address from the database using the provided ID. Requires authentication.
+ *       Users with role `user` can only delete their own addresses. If the deleted address
+ *       was the default, another address will automatically be set as default.
+ *     tags:
+ *       - Addresses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[a-fA-F0-9]{24}$"
+ *         description: The ID of the address to delete.
+ *     responses:
+ *       "200":
+ *         description: Address deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       "400":
+ *         description: Cannot delete the only address of the user.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       "401":
+ *         description: Unauthorized access.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       "404":
+ *         description: Address not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       "500":
+ *         description: Internal server error - failed to delete address.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleAddress = async (
 	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>, {}>,
@@ -777,80 +1170,5 @@ export const deleteSingleAddress = async (
 	req.flash("success", "Successfully Deleted.");
 	res.status(httpStatus.OK).json(
 		formatResponseObject({ status: httpStatus.OK, flashes: req.flash() })
-	);
-};
-
-/**
- * @summary Retrieves available shipping methods for a specific address.
- * @description This function fetches a list of shipping methods associated with a zone
- * corresponding to the given address ID. It first ensures the user is authenticated,
- * then checks if the address belongs to the logged-in user, and subsequently finds
- * the zone linked to the address's location. If successful, it returns a list of
- * shipping methods available for that zone.
- *
- * @param {Object} req - Express request object.
- * @param {Object} req.params - URL parameters for the request.
- * @param {String} req.params.address - The address ID to retrieve shipping methods for.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with a list of shipping methods.
- *   * @property {Array} entities.data - List of shipping method objects.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the address or zone is not found.
- * @throws {Error} 500 - Returns an error if there is a failure in retrieving shipping methods.
- */
-export const getSingleAddressShippingMethods = async (
-	req: Request<
-		{ address: string },
-		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>
-	>,
-	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
-	next: NextFunction
-): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
-	// Extract the address identifier from request parameters
-	const { address: addressIdentifier } = req.params || {};
-
-	// Attempt to retrieve an address from the database for logged in user,
-	// and if there was an error, return the error and end the request
-	const [addressError, address] = await to(
-		Address.findOne({ _id: addressIdentifier, user: req.user._id })
-	);
-	if (addressError || !address)
-		return next(addressError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve a zone from the database for the address,
-	// and if there was an error, return the error and end the request
-	const [zoneError, zone] = await to(
-		Zone.findOne({
-			...(address.country && {
-				countries: { $in: [address.country?._id || address.country] },
-			}),
-			...(address.state && { states: { $in: [address.state?._id || address.state] } }),
-			...(address.city && { cities: { $in: [address.city?._id || address.city] } }),
-		})
-	);
-	if (zoneError || !zone) return next(zoneError || new Error("No Shipping methods available."));
-
-	// Attempt to retrieve shipping methods from the database for the zone,
-	// and if there was an error, return the error and end the request
-	const [shippingMethodsError, shippingMethods] = await to(
-		ShippingMethod.find({ zone: zone._id })
-	);
-	if (shippingMethodsError) return next(shippingMethodsError);
-
-	// Return the shipping methods data in the response
-	res.status(httpStatus.OK).json(
-		formatResponseObject({
-			status: httpStatus.OK,
-			entities: { data: shippingMethods },
-			flashes: req.flash(),
-		})
 	);
 };

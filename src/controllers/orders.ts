@@ -184,28 +184,72 @@ export const _isValidShippingZone = (
 };
 
 /**
- * @summary Creates a new order.
- * @description This function retrieves a payment method, an address, and a shipping method from the request body,
- * and then creates a new order document in the database. If the user is not authenticated, it returns a 401 error.
- * If the payment method, address, or shipping method are not found, or if there is an issue during the database operations,
- * it returns the respective error. It also checks if the cart is locked, and if the product is out of stock or if the price has
- * changed since it was added to the cart. If so, it returns the respective error.
- *
- * @param {Request} req - Express request object containing the payment method, address, and shipping method data in the body.
- * @param {Object} req.body - The request body containing the payment method, address, and shipping method data.
- * @param {string} req.body.paymentMethod - The ID of the payment method to be used for the order.
- * @param {string} req.body.address - The ID of the address to be used for the order.
- * @param {string} req.body.shippingMethod - The ID of the shipping method to be used for the order.
- * @param {string} [req.body.note] - The note to be added to the order (optional).
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {void} 201 - Success response with the created order data.
- * @property {IOrderDocument} res.body.data - The created order object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} - Returns an error if the payment method, address, or shipping method are not found,
- * or if there is an issue during the database operations.
- * @throws {Error} - Returns an error if the product is out of stock or if the price has changed since it was added to the cart.
+ * @openapi
+ * /orders:
+ *   post:
+ *     summary: Create a new order
+ *     description: Creates a new order with the provided payment method, address, and shipping method. Checks stock and price changes before creation.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentMethod
+ *               - address
+ *               - shippingMethod
+ *             properties:
+ *               paymentMethod:
+ *                 type: string
+ *                 description: ID of the payment method
+ *               address:
+ *                 type: string
+ *                 description: ID of the address
+ *               shippingMethod:
+ *                 type: string
+ *                 description: ID of the shipping method
+ *               note:
+ *                 type: string
+ *                 description: Optional note for the order
+ *     responses:
+ *       201:
+ *         description: Order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request (e.g., empty cart, invalid IDs, stock issues, price changes)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewOrder = async (
 	req: Request<
@@ -486,6 +530,75 @@ export const postNewOrder = async (
 };
 
 /**
+ * @openapi
+ * /orders:
+ *   get:
+ *     summary: Get a list of orders
+ *     description: Retrieves a paginated list of orders. Supports filtering by search term (q) and deleted status (admin only).
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         description: Sort field
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search term (matches shortId, status, user details, address details)
+ *       - in: query
+ *         name: deleted
+ *         schema:
+ *           type: boolean
+ *         description: Include deleted orders (Admin/SuperAdmin only)
+ *     responses:
+ *       200:
+ *         description: List of orders retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Orders'
+ *                         meta:
+ *                           $ref: '#/components/schemas/Meta'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+/**
  * Retrieves a paginated list of orders.
  * @description Fetches orders based on query parameters. Supports filtering by name, code,
  * status, and deletion status. Also includes pagination and sorting options. If the user is an
@@ -609,21 +722,54 @@ export const getOrders = async (
 };
 
 /**
- * @summary Retrieves a single order by its ID.
- * @description Attempts to retrieve a single order by its ID from the database.
- * If the user is not authenticated or does not have permission,
- * and pass the error to the next middleware.
- *
- * @param {Object} req - Express request object containing the user details.
- * @param {String} req.params.order - The ID of the order to retrieve.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the order data.
- *   * @property {Object} entities.data - The retrieved order.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if no order is found with the provided identifier.
- * @throws {Error} 500 - Returns an error if the order retrieval fails.
+ * @openapi
+ * /orders/{order}:
+ *   get:
+ *     summary: Get a single order
+ *     description: Retrieves a single order by its ID. Users can only access their own orders.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
@@ -656,31 +802,82 @@ export const getSingleOrder = async (
 };
 
 /**
- * @summary Updates a single order by its ID.
- * @description This function updates the details of an order, including its status, address,
- * and shipping method. It ensures that the user is authenticated and has the necessary permissions
- * to perform the update. The function validates the status transition, verifies the existence of
- * the provided address and shipping method in the database, and ensures the address matches the
- * shipping method's zone. The updated order is then saved to the database and returned in the response.
- * If an error occurs at any point, the error is returned and the transaction is handled accordingly.
- *
- * @param {Object} req - Express request object containing the order ID in the parameters,
- * and the updated order details in the request body.
- * @param {String} req.params.order - The ID of the order to update.
- * @param {Object} req.body - The request body containing the updated order details.
- * @param {String} req.body.status - The new status of the order.
- * @param {String} req.body.address - The new address id of the order.
- * @param {String} req.body.shippingMethod - The new shipping method id of the order.
- * @param {String} req.body.note - The new note for the order.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated order data.
- * @throws {Error} 401 - Returns an error if the user is not authenticated or lacks permission.
- * @throws {Error} 400 - Returns an error if the status transition is invalid or if the address
- * and shipping method do not match.
- * @throws {Error} 404 - Returns an error if the order, address, or shipping method is not found.
- * @throws {Error} 500 - Returns an error if any other issue occurs during the update process.
+ * @openapi
+ * /orders/{order}:
+ *   patch:
+ *     summary: Update a single order
+ *     description: Updates an order's status, address, shipping method, or note. Admin/SuperAdmin only.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 description: New status of the order
+ *                 enum: [pending, processing, shipped, delivered, cancelled, returned, refunded]
+ *               address:
+ *                 type: string
+ *                 description: New address ID
+ *               shippingMethod:
+ *                 type: string
+ *                 description: New shipping method ID
+ *               note:
+ *                 type: string
+ *                 description: New note
+ *     responses:
+ *       200:
+ *         description: Order updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request (e.g., invalid status transition, address/shipping mismatch)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Order, Address, or Shipping Method not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleOrder = async (
 	req: Request<
@@ -864,18 +1061,51 @@ export const updateSingleOrder = async (
 };
 
 /**
- * @summary Deletes a single order by its ID.
- * @description This method deletes a single order by its ID from the database.
- * The method handles errors and returns a success response when the deletion is successful.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.order - The ID of the order to delete.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response indicating the order was deleted.
- * @throws {Error} 404 - If no order is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the deletion process.
+ * @openapi
+ * /orders/{order}:
+ *   delete:
+ *     summary: Delete a single order
+ *     description: Soft deletes a single order by its ID. Admin/SuperAdmin only.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -909,18 +1139,51 @@ export const deleteSingleOrder = async (
 };
 
 /**
- * @summary Restores a single order by its ID.
- * @description This method restores an order that was previously soft-deleted from the database.
- * The method handles errors and returns a success response when the order is successfully restored.
- *
- * @param {Object} req - Express request object.
- * @param {String} req.params.order - The ID of the order to restore.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function to handle errors.
- *
- * @returns {void} 200 - Success response with a success message.
- * @throws {Error} 404 - If no order is found with the provided identifier.
- * @throws {Error} 500 - If an error occurs during the restoration process.
+ * @openapi
+ * /orders/{order}/restore:
+ *   patch:
+ *     summary: Restore a single order
+ *     description: Restores a soft-deleted order by its ID. Admin/SuperAdmin only.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleOrder = async (
 	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
@@ -954,27 +1217,81 @@ export const restoreSingleOrder = async (
 };
 
 /**
- * @summary Updates a single order item's quantity by its ID.
- * @description Retrieves an order item by its ID, checks if the user is authenticated,
- * checks if the product stock is sufficient, and updates the order item and order accordingly.
- * If the user is not authenticated, it returns a 401 error. If the order item or product are not found,
- * or if there is an issue during the database operations, it returns the respective error.
- * If the product stock is insufficient or invalid data is provided, it returns the respective error.
- *
- * @param {Request} req - Express request object containing the order item ID in the parameters,
- * and the updated order item quantity in the request body.
- * @param {String} req.params.orderItem - The ID of the order item to update.
- * @param {String} req.params.order - The ID of the order that the order item belongs to.
- * @param {Number} req.body.quantity - The updated quantity for the order item.
- * @param {Response} res - Express response object.
- * @param {NextFunction} next - Express next middleware function to handle errors.
- *
- * @returns {Object} 200 - Success response with the updated order data.
- * @property {Object} res.body.data - The updated order object.
- * @throws {Error} 401 - Returns an error if the user is not authenticated.
- * @throws {Error} 404 - Returns an error if the order item or product are not found.
- * @throws {Error} 400 - Returns an error if the product stock is insufficient or invalid data is provided.
- * @throws {Error} 500 - Returns an error if there is an issue during the database operations or transaction.
+ * @openapi
+ * /orders/{order}/items/{orderItem}:
+ *   patch:
+ *     summary: Update an order item quantity
+ *     description: Updates the quantity of a specific item in an order. Admin/SuperAdmin only.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *       - in: path
+ *         name: orderItem
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order Item ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: New quantity
+ *     responses:
+ *       200:
+ *         description: Order item updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     entities:
+ *                       type: object
+ *                       properties:
+ *                         data:
+ *                           $ref: '#/components/schemas/Orders'
+ *                     flashes:
+ *                       $ref: '#/components/schemas/Flash'
+ *       400:
+ *         description: Bad Request (e.g., insufficient stock)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Order or Order Item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateOrderItem = async (
 	req: Request<

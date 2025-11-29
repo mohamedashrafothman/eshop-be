@@ -34,10 +34,18 @@ const WishlistSchema: Schema<IWishlistDocument, object, IWishlistDocument> = new
 			ref: "User",
 			index: true,
 			required: [true, "User is required!"],
+			description: "Reference to the user who owns this wishlist.",
 		},
-		products: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+		products: [
+			{
+				type: Schema.Types.ObjectId,
+				ref: "Product",
+				description:
+					"Array of product references that the user has added to their wishlist.",
+			},
+		],
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Wishlists" }
 );
 
 // modal definition

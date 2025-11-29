@@ -36,13 +36,23 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 				maxDepth: 2,
 				select: "name slug thumbnail colors sizes price quantity category",
 			},
+			description:
+				"Reference to the product being added to the cart, autopopulated up to 2 levels with selected product fields for quick access.",
 		},
-		color: { type: String, index: true, required: [true, "Color name is required!"] },
+		color: {
+			type: String,
+			index: true,
+			required: [true, "Color name is required!"],
+			description:
+				"The selected color variant of the product. Must match one of the available color options.",
+		},
 		size: {
 			type: String,
 			enum: vars.products.sizes,
 			index: true,
 			required: [true, "Size is required!"],
+			description:
+				"The selected size variant of the product, constrained to allowed sizes defined in product settings.",
 		},
 		quantity: {
 			type: Number,
@@ -55,21 +65,27 @@ const CartItemSchema: Schema<ICartItemDocument, object, ICartItemDocument> = new
 				"Quantity must be an integer number!",
 			],
 			required: [true, "Quantity is required!"],
+			description:
+				"The number of units of this product in the cart. Must be an integer between 1 and 1000.",
 		},
 		price: {
 			type: Number,
 			default: 0,
 			min: [0, "Price can't be less than 0!"],
 			required: [true, "Price is required!"],
+			description:
+				"Unit price of the product at the time it was added to the cart. Used to calculate totals.",
 		},
 		total: {
 			type: Number,
 			default: 0,
 			min: [0, "Total can't be less than 0!"],
 			required: [true, "Total is required!"],
+			description:
+				"Total cost for this cart item, calculated as price multiplied by quantity.",
 		},
 	},
-	{ toJSON: { versionKey: false, virtual: true }, timestamps: true }
+	{ toJSON: { versionKey: false, virtual: true }, timestamps: true, collection: "Cart Items" }
 );
 
 // schema hooks
