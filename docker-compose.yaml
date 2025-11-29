@@ -19,7 +19,7 @@ services:
         # this is similar to the -p flag in `docker run` command
         # first port is the port on host machine and the second is the port inside the container
         ports:
-            - 8088:8088
+            - 8080:8080
         # specify the volumes to mount
         # what this does is it mounts the current directory to the `/app` directory inside the container.
         # due to this, any changes made to the files in the current directory will be reflected inside the container. It is similar to the -v flag in `docker run` command.

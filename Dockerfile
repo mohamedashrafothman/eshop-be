@@ -40,7 +40,7 @@ RUN npm ci --force --no-audit --no-fund
 COPY . .
 
 # expose port 3000 to tell Docker that the container listens on the specified network ports at runtime
-EXPOSE 8088
+EXPOSE 8080
 
 # command to run the app
 CMD ["npm", "run", "dev"]
