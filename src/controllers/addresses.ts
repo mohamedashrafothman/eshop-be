@@ -670,9 +670,16 @@ export const getSingleAddress = async (
 export const getSingleAddressShippingMethods = async (
 	req: Request<
 		{ address: string },
-		FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>
+		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
+		{},
+		Partial<
+			Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination"> & {
+				q?: string;
+				deleted?: boolean | number;
+			}
+		>
 	>,
-	res: Response<FormatResponseObjectType<IShippingMethodDocument[], HttpStatus["OK"]>>,
+	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
 	// Check if user logged in
@@ -683,6 +690,29 @@ export const getSingleAddressShippingMethods = async (
 
 	// Extract the address identifier from request parameters
 	const { address: addressIdentifier } = req.params || {};
+
+	// Destructure the query parameters (req.query) into
+	// q (search term), deleted (include deleted shipping methods).
+	const { q, deleted } = req.query || {};
+
+	// Check if the query includes a deleted flag
+	const isFilterByDeletedAllowed: boolean =
+		"deleted" in req.query &&
+		Boolean(
+			req?.user &&
+				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
+		);
+
+	// List of fields to search for the query term
+	const querySearchFields: string[] = ["name", "description"];
+
+	// List of sort options
+	const sort: SortItemType<"name" | "createdAt">[] = [
+		{ name: "Name A-Z", value: { name: 1 } },
+		{ name: "Name Z-A", value: { name: -1 } },
+		{ name: "Created Date Ascending", value: { createdAt: 1 } },
+		{ name: "Created Date Descending", value: { createdAt: -1 } },
+	];
 
 	// Attempt to retrieve an address from the database for logged in user,
 	// and if there was an error, return the error and end the request
@@ -707,16 +737,40 @@ export const getSingleAddressShippingMethods = async (
 
 	// Attempt to retrieve shipping methods from the database for the zone,
 	// and if there was an error, return the error and end the request
-	const [shippingMethodsError, shippingMethods] = await to(
-		ShippingMethod.find({ zone: zone._id })
+	const [paginatedShippingMethodsError, paginatedShippingMethods] = await to(
+		ShippingMethod.paginate<IShippingMethodDocument>(
+			{
+				zone: zone._id,
+				// If the query includes a search term, filter shipping methods by name or code
+				...((q && {
+					$or: querySearchFields.map((item) => ({
+						[item]: { $regex: String(q).toLowerCase() || "", $options: "i" },
+					})),
+				}) ||
+					{}),
+				// If the query includes a deleted flag, include deleted shipping methods
+				...((isFilterByDeletedAllowed && { deleted: Boolean(deleted) }) || {}),
+			},
+			// Use the query parameters for pagination and sorting
+			{
+				...("sort" in req.query && { sort: req.query.sort }),
+				...("page" in req.query && { page: Number(req.query.page) }),
+				...("limit" in req.query && { limit: Number(req.query.limit) }),
+				...("offset" in req.query && { offset: Number(req.query.offset) }),
+				...("pagination" in req.query && { pagination: Boolean(req.query.pagination) }),
+			}
+		)
 	);
-	if (shippingMethodsError) return next(shippingMethodsError);
+	if (paginatedShippingMethodsError) return next(paginatedShippingMethodsError);
+
+	// Destructure the paginated shipping methods into the list of shipping methods (docs) and pagination metadata
+	const { docs, ...pagination } = paginatedShippingMethods;
 
 	// Return the shipping methods data in the response
 	res.status(httpStatus.OK).json(
 		formatResponseObject({
 			status: httpStatus.OK,
-			entities: { data: shippingMethods },
+			entities: { data: [...(docs || [])], meta: { pagination, sort } },
 			flashes: req.flash(),
 		})
 	);
