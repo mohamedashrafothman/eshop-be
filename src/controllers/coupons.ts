@@ -1,10 +1,11 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import ICoupon from "../interfaces/Coupon.interface";
 import Coupon, { ICouponDocument } from "../models/Coupon";
 import {
@@ -13,7 +14,6 @@ import {
 	handleTransactionError,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -187,7 +187,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCoupons = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>,
 		{},
@@ -324,7 +324,7 @@ export const getCoupons = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCoupon = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICouponDocument, HttpStatus["CREATED"]>,
 		Pick<ICoupon, "code" | "discount" | "isPercentage" | "expirationDate" | "usageLimit">
@@ -407,7 +407,10 @@ export const postNewCoupon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCoupon = async (
-	req: Request<{ coupon: string }, FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ coupon: string },
+		FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -501,7 +504,7 @@ export const getSingleCoupon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCoupon = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ coupon: string },
 		FormatResponseObjectType<ICouponDocument, HttpStatus["OK"]>,
 		Partial<
@@ -545,7 +548,7 @@ export const updateSingleCoupon = async (
 	}
 
 	// Merge the request body data into the existing coupon object
-	coupon = Object.assign(coupon, {
+	Object.assign(coupon, {
 		...(code && { code }),
 		...(discount && { discount }),
 		...(usageLimit && { usageLimit }),
@@ -625,20 +628,13 @@ export const updateSingleCoupon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCoupon = async (
-	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ coupon: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the coupon identifier from request parameters
 	const { coupon: couponIdentifier } = req.params || {};
 
@@ -715,7 +711,10 @@ export const deleteSingleCoupon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCoupon = async (
-	req: Request<{ coupon: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ coupon: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

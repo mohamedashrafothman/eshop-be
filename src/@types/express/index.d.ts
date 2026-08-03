@@ -13,8 +13,18 @@ declare global {
 			prevPrevPath?: string;
 			userAgent: UAParserInstance;
 			rateLimit: RateLimitInfo;
+			user?: User;
 		}
 	}
 }
 
-export {};
+export type AuthenticatedRequest<P = any, Res = any, Body = any, Query = any> = Request<
+	P,
+	Res,
+	Body,
+	Query
+> & {
+	user: Express.User;
+};
+
+export { AuthenticatedRequest };

@@ -1,11 +1,11 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IBrand from "../interfaces/Brand.interface";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Brand, { IBrandDocument } from "../models/Brand";
@@ -16,8 +16,10 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	hasAnyPermission,
 	type SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 
 /**
@@ -187,7 +189,7 @@ export const uploadBrandLogo = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewBrand = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IBrandDocument, HttpStatus["CREATED"]>,
 		Pick<IBrand, "name" | "description"> & { logo?: Express.Multer.File }
@@ -342,12 +344,6 @@ export const getBrands = async (
 	res: Response<FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries)
 	const { q, deleted } = req.query || {};
@@ -355,7 +351,9 @@ export const getBrands = async (
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "");
+		Boolean(
+			req?.user && hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL)
+		);
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -459,7 +457,10 @@ export const getBrands = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleBrand = async (
-	req: Request<{ brand: string }, FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ brand: string },
+		FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -553,7 +554,7 @@ export const getSingleBrand = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleBrand = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ brand: string },
 		FormatResponseObjectType<IBrandDocument, HttpStatus["OK"]>,
 		Partial<Pick<IBrand, "name" | "description">> & { logo?: Express.Multer.File }
@@ -719,21 +720,13 @@ export const updateSingleBrand = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleBrand = async (
-	req: Request<{ brand: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ brand: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	console.log("brand:", req.params);
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the brand identifier from request parameters
 	const { brand: brandIdentifier } = req.params || {};
 
@@ -810,7 +803,10 @@ export const deleteSingleBrand = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleBrand = async (
-	req: Request<{ brand: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ brand: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

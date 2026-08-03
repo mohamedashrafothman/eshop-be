@@ -4,7 +4,7 @@ import * as authController from "../../../controllers/auth";
 import * as reviewsController from "../../../controllers/reviews";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -16,7 +16,7 @@ router
 	.get(authController.passportJWTSerialize, reviewsController.getReviews)
 	.post(
 		authController.passportJWTAuthenticate,
-		permission.check([vars.auth.roles.user]),
+		permission(PermissionType.CREATE_REVIEW),
 		reviewsController.validator("create"),
 		unprocessableEntityValidator,
 		reviewsController.postNewReview
@@ -25,26 +25,21 @@ router
 router
 	.route("/:review")
 	.all(allowMethods(["get", "patch", "delete"]), authController.passportJWTAuthenticate)
-	.get(
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		reviewsController.getSingleReview
-	)
+	.get(permission(PermissionType.READ_REVIEW), reviewsController.getSingleReview)
 	.patch(
+		permission(PermissionType.UPDATE_REVIEW),
 		reviewsController.validator("update"),
 		unprocessableEntityValidator,
 		reviewsController.updateSingleReview
 	)
-	.delete(
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
-		reviewsController.deleteSingleReview
-	);
+	.delete(permission(PermissionType.DELETE_REVIEW), reviewsController.deleteSingleReview);
 
 router
 	.route("/:review/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+		permission(PermissionType.RESTORE_REVIEW)
 	)
 	.patch(reviewsController.restoreSingleReview);
 

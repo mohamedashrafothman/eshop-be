@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import ICountry from "../interfaces/Country.interface";
 import Country, { ICountryDocument } from "../models/Country";
 import {
@@ -12,7 +12,6 @@ import {
 	type FormatResponseObjectType,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -132,7 +131,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCountry = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICountryDocument, HttpStatus["CREATED"]>,
 		Pick<ICountry, "name" | "code">
@@ -222,7 +221,7 @@ export const postNewCountry = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCountries = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
 		{},
@@ -345,7 +344,10 @@ export const getCountries = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCountry = async (
-	req: Request<{ country: string }, FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ country: string },
+		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -449,7 +451,7 @@ export const getSingleCountry = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCountry = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ country: string },
 		FormatResponseObjectType<ICountryDocument, HttpStatus["OK"]>,
 		Partial<Pick<ICountry, "name" | "code">>
@@ -473,7 +475,7 @@ export const updateSingleCountry = async (
 	if (countryError || !country) return next(countryError);
 
 	// Merge the request body data into the existing country object
-	country = Object.assign(country, {
+	Object.assign(country, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.code && { code: req.body.code }),
 	});
@@ -543,20 +545,13 @@ export const updateSingleCountry = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCountry = async (
-	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ country: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the country identifier from request parameters
 	const { country: countryIdentifier } = req.params || {};
 
@@ -633,7 +628,10 @@ export const deleteSingleCountry = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCountry = async (
-	req: Request<{ country: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ country: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

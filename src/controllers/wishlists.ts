@@ -1,9 +1,9 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
+import { AuthenticatedRequest } from "../@types/express";
 import Product, { IProductDocument } from "../models/Product";
 import Wishlist from "../models/Wishlist";
 import {
@@ -93,7 +93,7 @@ export const validator = (method: "add"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleWishlist = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
 		Partial<Pick<PaginateOptions, "sort" | "page" | "limit" | "offset" | "pagination">>
@@ -101,12 +101,6 @@ export const getSingleWishlist = async (
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// List of sort options
 	const sort: SortItemType<"name" | "price" | "createdAt">[] = [
 		{ name: "Name A-Z", value: { name: 1 } },
@@ -273,16 +267,14 @@ export const getSingleWishlist = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const addToWishlist = async (
-	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, { product: string }>,
+	req: AuthenticatedRequest<
+		{},
+		FormatResponseObjectType<{}, HttpStatus["OK"]>,
+		{ product: string }
+	>,
 	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Destructure the request body to get product data
 	const { product } = req.body;
 
@@ -347,16 +339,14 @@ export const addToWishlist = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const removeFromWishlist = async (
-	req: Request<{ product: string }, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
+	req: AuthenticatedRequest<
+		{ product: string },
+		FormatResponseObjectType<{}, HttpStatus["OK"]>,
+		{}
+	>,
 	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the product ID or slug from the request parameters
 	const { product: productIdentifier } = req.params || {};
 
@@ -407,16 +397,10 @@ export const removeFromWishlist = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const emptyWishlist = async (
-	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Attempt to retrieve a wishlist from the database for logged in user,
 	// and if there was an error, return the error and end the request
 	const [wishlistError] = await to(Wishlist.findOneAndDelete({ user: req.user._id }));

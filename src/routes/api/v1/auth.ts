@@ -64,7 +64,6 @@ router
 router
 	.route(`/:provider(${Object.keys(vars.auth.strategies.social).join("|")})`)
 	.all(allowMethods(["post"]), (req, res, next) => {
-		console.log("req.headers.authorization: ", req.headers.authorization);
 		return req.headers.authorization
 			? authController.passportJWTAuthenticate(req, res, next)
 			: next();

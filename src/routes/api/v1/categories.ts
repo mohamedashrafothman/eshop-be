@@ -4,7 +4,7 @@ import * as authController from "../../../controllers/auth";
 import * as categoriesController from "../../../controllers/categories";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -16,7 +16,7 @@ router
 	.get(authController.passportJWTSerialize, categoriesController.getCategories)
 	.post(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.CREATE_CATEGORY),
 		categoriesController.uploadCategoryIcon,
 		categoriesController.validator("create"),
 		unprocessableEntityValidator,
@@ -27,24 +27,22 @@ router
 	.route("/:category")
 	.all(allowMethods(["get", "patch", "delete"]))
 	.get(authController.passportJWTSerialize, categoriesController.getSingleCategory)
-	.all(
-		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
-	)
+	.all(authController.passportJWTAuthenticate)
 	.patch(
+		permission(PermissionType.UPDATE_CATEGORY),
 		categoriesController.uploadCategoryIcon,
 		categoriesController.validator("update"),
 		unprocessableEntityValidator,
 		categoriesController.updateSingleCategory
 	)
-	.delete(categoriesController.deleteSingleCategory);
+	.delete(permission(PermissionType.DELETE_CATEGORY), categoriesController.deleteSingleCategory);
 
 router
 	.route("/:category/restore")
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check(vars.auth.roles.superAdmin)
+		permission(PermissionType.RESTORE_CATEGORY)
 	)
 	.patch(categoriesController.restoreSingleCategory);
 

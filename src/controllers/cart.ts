@@ -1,9 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError, { HttpError } from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession } from "mongoose";
+import { AuthenticatedRequest } from "../@types/express";
 import Cart, { ICartDocument } from "../models/Cart";
 import CartItem, { ICartItemDocument } from "../models/CartItem";
 import Coupon from "../models/Coupon";
@@ -176,7 +177,7 @@ export const _checkProductPriceChange = (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const addToCart = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICartDocument, HttpStatus["CREATED"]>,
 		{ product: string; quantity: number; color: string; size: string }
@@ -184,12 +185,6 @@ export const addToCart = async (
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -440,16 +435,10 @@ export const addToCart = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCart = async (
-	req: Request<{}, FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<{}, FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Attempt to retrieve a cart from the database for logged in user,
 	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));
@@ -519,19 +508,13 @@ export const getSingleCart = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const removeItemFromCart = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ cartItem: string },
 		FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>
 	>,
 	res: Response<FormatResponseObjectType<ICartDocument | {}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -719,7 +702,7 @@ export const removeItemFromCart = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateCartItem = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ cartItem: string },
 		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
 		{ quantity: number }
@@ -727,12 +710,6 @@ export const updateCartItem = async (
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -868,16 +845,10 @@ export const updateCartItem = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const emptyCart = async (
-	req: Request<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
+	req: AuthenticatedRequest<{}, FormatResponseObjectType<{}, HttpStatus["OK"]>, {}>,
 	res: Response<FormatResponseObjectType<{}, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -990,7 +961,7 @@ export const emptyCart = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postShippingMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
 		{ shippingMethod: string }
@@ -998,12 +969,6 @@ export const postShippingMethod = async (
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the shipping method id from the request body
 	const { shippingMethod: shippingMethodIdentifier } = req.body;
 
@@ -1104,7 +1069,7 @@ export const postShippingMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postPaymentMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
 		{ paymentMethod: string }
@@ -1112,12 +1077,6 @@ export const postPaymentMethod = async (
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the payment method id from the request body
 	const { paymentMethod: paymentMethodIdentifier } = req.body;
 
@@ -1218,16 +1177,14 @@ export const postPaymentMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postCoupon = async (
-	req: Request<{}, FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>, { coupon: string }>,
+	req: AuthenticatedRequest<
+		{},
+		FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>,
+		{ coupon: string }
+	>,
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the coupon id from the request body
 	const { coupon: couponIdentifier } = req.body;
 
@@ -1308,16 +1265,10 @@ export const postCoupon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const removeCoupon = async (
-	req: Request<{}, FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<{}, FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<ICartDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Attempt to retrieve a cart from the database for logged in user,
 	// and if there was an error, return the error and end the request
 	const [cartError, cart] = await to(Cart.findOne({ user: req.user._id }));

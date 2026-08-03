@@ -3,7 +3,7 @@ import { Router } from "express";
 import * as shippingMethodsController from "../../../controllers/shippingMethods";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -14,7 +14,7 @@ router
 	.all(allowMethods(["get", "post"]))
 	.get(shippingMethodsController.getShippingMethods)
 	.post(
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		shippingMethodsController.validator("create"),
 		unprocessableEntityValidator,
 		shippingMethodsController.postNewShippingMethod
@@ -22,10 +22,7 @@ router
 
 router
 	.route("/:method")
-	.all(
-		allowMethods(["get", "patch", "delete"]),
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
-	)
+	.all(allowMethods(["get", "patch", "delete"]), permission(PermissionType.MANAGE_SETTINGS))
 	.get(shippingMethodsController.getSingleShippingMethod)
 	.patch(
 		shippingMethodsController.validator("update"),
@@ -36,10 +33,7 @@ router
 
 router
 	.route("/:method/restore")
-	.all(
-		allowMethods(["patch"]),
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
-	)
+	.all(allowMethods(["patch"]), permission(PermissionType.MANAGE_SETTINGS))
 	.patch(shippingMethodsController.restoreSingleShippingMethod);
 
 // Exporting router

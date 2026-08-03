@@ -4,7 +4,7 @@ import * as authController from "../../../controllers/auth";
 import * as policiesController from "../../../controllers/policies";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -16,7 +16,7 @@ router
 	.get(policiesController.getPolicies)
 	.post(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		policiesController.validator("create"),
 		unprocessableEntityValidator,
 		policiesController.postNewPolicy
@@ -28,14 +28,14 @@ router
 	.get(policiesController.getSinglePolicy)
 	.patch(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		policiesController.validator("update"),
 		unprocessableEntityValidator,
 		policiesController.updateSinglePolicy
 	)
 	.delete(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		policiesController.deleteSinglePolicy
 	);
 
@@ -44,7 +44,7 @@ router
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+		permission(PermissionType.MANAGE_SETTINGS)
 	)
 	.patch(policiesController.restoreSinglePolicy);
 

@@ -1,18 +1,19 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IPolicy from "../interfaces/Policy.interface";
 import Policy, { IPolicyDocument } from "../models/Policy";
 import {
 	formatResponseObject,
 	FormatResponseObjectType,
+	hasAnyPermission,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
+import PermissionType from "../utils/helpers/permissions";
 
 /**
  * Validates the input fields based on the method provided.
@@ -122,7 +123,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewPolicy = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IPolicyDocument, HttpStatus["CREATED"]>,
 		Pick<IPolicy, "title" | "content">
@@ -233,9 +234,8 @@ export const getPolicies = async (
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
 		Boolean(
-			req.user &&
-				req.user.role &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+			req?.user &&
+				hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
 		);
 
 	// List of fields to search for the query term
@@ -437,7 +437,7 @@ export const getSinglePolicy = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSinglePolicy = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ policy: string },
 		FormatResponseObjectType<IPolicyDocument, HttpStatus["OK"]>,
 		Partial<Pick<IPolicy, "title" | "content">>
@@ -461,7 +461,7 @@ export const updateSinglePolicy = async (
 	if (policyError || !policy) return next(policyError);
 
 	// Merge the request body data into the existing policy object
-	policy = Object.assign(policy, {
+	Object.assign(policy, {
 		...(req.body?.title && { title: req.body.title }),
 		...(req.body?.content && { content: req.body.content }),
 	});
@@ -531,20 +531,13 @@ export const updateSinglePolicy = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSinglePolicy = async (
-	req: Request<{ policy: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ policy: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the policy identifier from request parameters
 	const { policy: policyIdentifier } = req.params || {};
 
@@ -621,7 +614,10 @@ export const deleteSinglePolicy = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSinglePolicy = async (
-	req: Request<{ policy: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ policy: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

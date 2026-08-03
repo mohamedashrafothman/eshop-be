@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IShippingMethod from "../interfaces/ShippingMethod.interface";
 import ShippingMethod, { IShippingMethodDocument } from "../models/ShippingMethod";
 import Zone from "../models/Zone";
@@ -12,8 +12,9 @@ import {
 	type FormatResponseObjectType,
 	type SortItemType,
 	formatResponseObject,
+	hasAnyPermission,
 } from "../utils/helpers";
-import vars from "../utils/vars";
+import PermissionType from "../utils/helpers/permissions";
 
 /**
  * Validates the input fields based on the method provided.
@@ -198,7 +199,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewShippingMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["CREATED"]>,
 		Pick<IShippingMethod, "name" | "description" | "rate" | "zone"> & {
@@ -317,7 +318,7 @@ export const postNewShippingMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getShippingMethods = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
 		{},
@@ -340,9 +341,8 @@ export const getShippingMethods = async (
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
 		Boolean(
-			req.user &&
-				req.user.role &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+			req?.user &&
+				hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
 		);
 
 	// Check if the query includes a zone
@@ -455,7 +455,7 @@ export const getShippingMethods = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleShippingMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ method: string },
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>
 	>,
@@ -577,7 +577,7 @@ export const getSingleShippingMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleShippingMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ method: string },
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
 		Partial<
@@ -619,7 +619,7 @@ export const updateSingleShippingMethod = async (
 	if (shippingMethodError || !shippingMethod) return next(shippingMethodError);
 
 	// Merge the request body data into the existing shipping method object
-	shippingMethod = Object.assign(shippingMethod, {
+	Object.assign(shippingMethod, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.description && { description: req.body.description }),
 		...(req.body?.rate && { rate: req.body.rate }),
@@ -701,20 +701,13 @@ export const updateSingleShippingMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleShippingMethod = async (
-	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ method: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the shipping method identifier from request parameters
 	const { method: shippingMethodIdentifier } = req.params || {};
 
@@ -793,7 +786,10 @@ export const deleteSingleShippingMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleShippingMethod = async (
-	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ method: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IZone from "../interfaces/Zone";
 import City from "../models/City";
 import Country from "../models/Country";
@@ -15,7 +15,6 @@ import {
 	type FormatResponseObjectType,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -187,7 +186,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewZone = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IZoneDocument, HttpStatus["CREATED"]>,
 		Pick<IZone, "name" | "description" | "countries" | "states" | "cities">
@@ -319,7 +318,7 @@ export const postNewZone = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getZones = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>,
 		{},
@@ -437,7 +436,10 @@ export const getZones = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleZone = async (
-	req: Request<{ zone: string }, FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ zone: string },
+		FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -532,7 +534,7 @@ export const getSingleZone = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleZone = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ zone: string },
 		FormatResponseObjectType<IZoneDocument, HttpStatus["OK"]>,
 		Partial<Pick<IZone, "name" | "description" | "countries" | "states" | "cities">>
@@ -603,7 +605,7 @@ export const updateSingleZone = async (
 	}
 
 	// Merge the request body data into the existing zone object
-	zone = Object.assign(zone, {
+	Object.assign(zone, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.description && { description: req.body.description }),
 		...(req.body?.countries && { countries: req.body.countries }),
@@ -676,20 +678,13 @@ export const updateSingleZone = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleZone = async (
-	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ zone: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the zone identifier from request parameters
 	const { zone: zoneIdentifier } = req.params || {};
 
@@ -758,7 +753,10 @@ export const deleteSingleZone = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleZone = async (
-	req: Request<{ zone: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ zone: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

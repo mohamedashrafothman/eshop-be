@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import ICity from "../interfaces/City.interface";
 import City, { ICityDocument } from "../models/City";
 import Country from "../models/Country";
@@ -14,7 +14,6 @@ import {
 	type FormatResponseObjectType,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -144,7 +143,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewCity = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICityDocument, HttpStatus["CREATED"]>,
 		Pick<ICity, "name" | "country" | "state">
@@ -247,7 +246,7 @@ export const postNewCity = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCities = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
 		{},
@@ -382,7 +381,10 @@ export const getCities = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleCity = async (
-	req: Request<{ city: string }, FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ city: string },
+		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -474,7 +476,7 @@ export const getSingleCity = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCity = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ city: string },
 		FormatResponseObjectType<ICityDocument, HttpStatus["OK"]>,
 		Partial<Pick<ICity, "name" | "country" | "state">>
@@ -514,7 +516,7 @@ export const updateSingleCity = async (
 	if (cityError || !city) return next(cityError);
 
 	// Merge the request body data into the existing city object
-	city = Object.assign(city, {
+	Object.assign(city, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.country && { country: req.body.country }),
 		...(req.body?.state && { state: req.body.state }),
@@ -585,20 +587,13 @@ export const updateSingleCity = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCity = async (
-	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ city: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the city identifier from request parameters
 	const { city: cityIdentifier } = req.params || {};
 
@@ -675,7 +670,10 @@ export const deleteSingleCity = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCity = async (
-	req: Request<{ city: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ city: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

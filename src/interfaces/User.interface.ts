@@ -2,7 +2,7 @@ export default interface User {
 	email: string;
 	name: string;
 	password: string;
-	role: string;
+	roles: string[];
 	active: boolean;
 	emailVerified: boolean;
 	google?: string;

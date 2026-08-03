@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import ITax from "../interfaces/Tax.interface";
 import Tax, { ITaxDocument } from "../models/Tax";
 import {
@@ -13,7 +13,6 @@ import {
 	handleTransactionError,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -184,7 +183,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewTax = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ITaxDocument, HttpStatus["CREATED"]>,
 		Pick<ITax, "name" | "description" | "rate" | "isPercentage">
@@ -284,7 +283,7 @@ export const postNewTax = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getTaxes = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
 		{},
@@ -403,7 +402,10 @@ export const getTaxes = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleTax = async (
-	req: Request<{ tax: string }, FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ tax: string },
+		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -508,7 +510,7 @@ export const getSingleTax = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleTax = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ tax: string },
 		FormatResponseObjectType<ITaxDocument, HttpStatus["OK"]>,
 		Partial<Pick<ITax, "name" | "description" | "rate" | "isPercentage">>
@@ -539,7 +541,7 @@ export const updateSingleTax = async (
 	}
 
 	// Merge the request body data into the existing tax object
-	tax = Object.assign(tax, {
+	Object.assign(tax, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.description && { description: req.body.description }),
 		...(req.body?.rate && { rate: req.body.rate }),
@@ -618,20 +620,13 @@ export const updateSingleTax = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleTax = async (
-	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ tax: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the tax identifier from request parameters
 	const { tax: taxIdentifier } = req.params || {};
 
@@ -706,7 +701,10 @@ export const deleteSingleTax = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleTax = async (
-	req: Request<{ tax: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ tax: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

@@ -12,8 +12,11 @@ import { type VerifyCallback as GoogleVerifyCallback } from "passport-google-oau
 import { type VerifiedCallback as JWTVerifyCallback } from "passport-jwt";
 import { type VerifyFunctionWithRequest as LocalVerifyFunctionWithRequest } from "passport-local";
 import qs from "qs";
+import { AuthenticatedRequest } from "../@types/express";
 import IUser from "../interfaces/User.interface";
 import Email from "../models/Email";
+import { IPermissionDocument } from "../models/Permission";
+import Role, { type IRoleDocument } from "../models/Role";
 import Token from "../models/Token";
 import User, { type IUserDocument } from "../models/User";
 import emailService from "../services/email";
@@ -207,8 +210,33 @@ export const _passportDeserializeUser = async (
 	done: (err: Error | null, user?: IUserDocument | false | null) => void
 ) => {
 	const [userError, user] = await to(User.findOne({ _id }));
-	if (userError) return done(userError);
-	if (!user) return done(new Error("User Not Found"));
+	if (userError || !user) return done(userError || new Error("User Not Found"));
+
+	// Aggregate permissions from all assigned roles
+	if (user.roles && user.roles.length) {
+		const roleIds = user.roles.map((r: any) => (typeof r === "object" ? r._id : r));
+		const [roleError, roleDocs] = await to(
+			Role.find({ _id: { $in: roleIds } })
+				.populate({ path: "permissions", select: "name" })
+				.select("name permissions")
+		);
+		if (!roleError && roleDocs) {
+			const roleNames = roleDocs.map((rd: IRoleDocument) => rd.name);
+			const permissionNames = roleDocs.flatMap((rd: IRoleDocument) =>
+				(rd.permissions || [])
+					.filter(
+						(p): p is IPermissionDocument => !(p instanceof mongoose.Types.ObjectId)
+					)
+					.map((p) => p?.name)
+			);
+			user.permissions = [...new Set([...roleNames, ...permissionNames])];
+		} else {
+			user.permissions = [];
+		}
+	} else {
+		user.permissions = [];
+	}
+
 	done(null, user);
 };
 
@@ -219,7 +247,7 @@ export const _passportLocalStrategy: LocalVerifyFunctionWithRequest = async (
 	done
 ) => {
 	const [error, user] = await to(User.findOne({ email: email.toLowerCase() }));
-	if (error) done(error);
+	if (error) return done(error);
 	if (!user) {
 		req.flash("danger", "Your credentials doesn't match our records");
 		return done(null, false, {
@@ -256,6 +284,31 @@ export const _passportJWTStrategy = async (
 	);
 	if (tokenError) return done(tokenError, false);
 	if (!token) return done(null, false);
+
+	// Aggregate permissions from all assigned roles
+	if (user.roles && user.roles.length) {
+		const roleIds = user.roles.map((r: any) => (typeof r === "object" ? r._id : r));
+		const [roleError, roleDocs] = await to(
+			Role.find({ _id: { $in: roleIds } })
+				.populate({ path: "permissions", select: "name" })
+				.select("name permissions")
+		);
+		if (!roleError && roleDocs) {
+			const roleNames = roleDocs.map((rd: IRoleDocument) => rd.name);
+			const permissionNames = roleDocs.flatMap((rd: IRoleDocument) =>
+				(rd.permissions || [])
+					.filter(
+						(p): p is IPermissionDocument => !(p instanceof mongoose.Types.ObjectId)
+					)
+					.map((p) => p?.name)
+			);
+			user.permissions = [...new Set([...roleNames, ...permissionNames])];
+		} else {
+			user.permissions = [];
+		}
+	} else {
+		user.permissions = [];
+	}
 
 	return done(null, user);
 };
@@ -1144,16 +1197,10 @@ export const postSocialUser = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postSocialUnlink = async (
-	req: Request,
+	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1717,13 +1764,11 @@ export const _loginRateLimitHandler = async (
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
+export const logout = async (
+	req: AuthenticatedRequest,
+	res: Response,
+	next: NextFunction
+): Promise<void> => {
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -1755,7 +1800,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
 		return next(updateUserError);
 	}
 
-	req.logout(async (err) => {
+	req.logout(async (err: any) => {
 		if (err) {
 			handleTransactionError(session);
 			return next(err);

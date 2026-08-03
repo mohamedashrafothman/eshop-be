@@ -5,8 +5,10 @@ import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IUser from "../interfaces/User.interface";
 import Email from "../models/Email";
+import Role from "../models/Role";
 import Session from "../models/Session";
 import Token from "../models/Token";
 import User, { IUserDocument } from "../models/User";
@@ -47,11 +49,16 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
 					.escape()
 					.isLength({ max: 100 })
 					.withMessage("Name must be at most 100 characters long!"),
-				body("role")
-					.notEmpty()
-					.withMessage("You must supply a role!")
-					.isIn([vars.auth.roles.admin, vars.auth.roles.user])
-					.withMessage("Invalid role"),
+				body("roles")
+					.isArray({ min: 1 })
+					.withMessage("You must supply at least one role!")
+					.custom(async (names: string[]) => {
+						const roleDocs = await Role.find({ name: { $in: names } });
+						if (roleDocs.length !== names.length) {
+							throw new Error("One or more roles are invalid");
+						}
+						return true;
+					}),
 			];
 		case "update":
 			return [
@@ -182,7 +189,7 @@ export const postNewUser = async (
 	req: Request<
 		{},
 		FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>,
-		Pick<IUser, "email" | "name" | "role" | "emailVerified">
+		Pick<IUser, "email" | "name" | "roles" | "emailVerified">
 	>,
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
@@ -191,8 +198,8 @@ export const postNewUser = async (
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
 
-	// Get email value from the request body.
-	const { email, name, role, emailVerified = true } = req.body;
+	// Get values from the request body.
+	const { email, name, roles, emailVerified = true } = req.body;
 
 	// Check if user already exists, if so, or if there is an error,
 	// rollback the transaction and pass the error to the next middleware
@@ -206,11 +213,15 @@ export const postNewUser = async (
 		);
 	}
 
+	// Resolve role names to ObjectIds
+	const roleDocs = await Role.find({ name: { $in: roles } });
+	const roleIds = roleDocs.map((r) => r._id);
+
 	// Attempt to create the new user
 	// If there is an error creating the user,
 	// Rollback the transaction and pass the error to the next middleware
 	const [createdUserError, createdUser] = await to(
-		User.create([{ email, name, role, emailVerified }], { session })
+		User.create([{ email, name, roles: roleIds, emailVerified }], { session })
 	);
 	if (createdUserError) {
 		handleTransactionError(session);
@@ -620,7 +631,7 @@ export const getResendEmailVerification = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getUsers = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
 		{},
@@ -636,16 +647,6 @@ export const getUsers = async (
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Destructure the query parameters (req.query) into
 	// q (search term), emailVerified (filter by email verification status),
 	// deleted(include deleted countries), active (filter by active status),
@@ -836,16 +837,10 @@ export const getSingleUser = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getCurrentAuthenticatedUser = async (
-	req: Request<{}, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<{}, FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	res: Response<FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Attempt to retrieve the user associated with the current authentication token,
 	// and if there was an error or no user was found, return the error and end the request
 	const [userError, user] = await to(User.findOne({ _id: req.user._id }));
@@ -939,7 +934,7 @@ export const updateSingleUser = async (
 	req: Request<
 		{ user: string },
 		FormatResponseObjectType<IUserDocument, HttpStatus["OK"]>,
-		Partial<Pick<IUser, "email" | "name" | "password" | "emailVerified">> & {
+		Partial<Pick<IUser, "email" | "name" | "password" | "emailVerified" | "roles">> & {
 			oldPassword?: string;
 			passwordConfirmation?: string;
 		}
@@ -984,12 +979,73 @@ export const updateSingleUser = async (
 		});
 	}
 
+	if (req.body?.roles !== undefined) {
+		const [existingRolesCountError, existingRolesCount] = await to(
+			Role.countDocuments({
+				_id: { $in: req.body.roles },
+			}).session(session)
+		);
+		if (existingRolesCountError) {
+			handleTransactionError(session);
+			return next(existingRolesCountError);
+		}
+
+		if (existingRolesCount !== req.body.roles.length) {
+			handleTransactionError(session);
+			const error = createError(httpStatus.BAD_REQUEST, "One or more roles do not exist!");
+			return next({ ...(error || {}), status: error.status });
+		}
+
+		if (req.user && req.user._id === user._id) {
+			handleTransactionError(session);
+			const error = createError(httpStatus.FORBIDDEN, "You cannot modify your own roles.");
+			return next({ ...(error || {}), status: error.status });
+		}
+
+		const [superAdminRoleError, superAdminRole] = await to(
+			Role.findOne({ name: vars.auth.roles.superAdmin }).session(session)
+		);
+
+		if (superAdminRoleError) {
+			handleTransactionError(session);
+			return next(superAdminRoleError);
+		}
+
+		if (
+			superAdminRole &&
+			user.roles.some((r) => r?.toString() === superAdminRole._id?.toString()) &&
+			!req.body.roles.some((r) => r.toString() === superAdminRole._id.toString())
+		) {
+			const [remainingSuperAdminsCountError, remainingSuperAdmins] = await to(
+				User.countDocuments({
+					_id: { $ne: user._id },
+					roles: superAdminRole._id,
+				}).session(session)
+			);
+
+			if (remainingSuperAdminsCountError) {
+				handleTransactionError(session);
+				return next(remainingSuperAdminsCountError);
+			}
+
+			if (remainingSuperAdmins === 0) {
+				handleTransactionError(session);
+				const error = createError(
+					httpStatus.FORBIDDEN,
+					"Cannot remove the last Super Admin."
+				);
+				return next({ ...(error || {}), status: error.status });
+			}
+		}
+	}
+
 	// Merge the request body data into the existing user object
 	user = Object.assign(user, {
 		...("emailVerified" in req.body ? { emailVerified: req.body.emailVerified } : {}),
 		...(req.body?.name ? { name: req.body.name } : {}),
 		...(isEmailModified ? { emailVerified: false, email: req.body.email } : {}),
 		...(isPasswordModified ? { password: req.body.password } : {}),
+		...(req.body?.roles !== undefined ? { roles: req.body.roles } : {}),
 	});
 
 	// If the user is not found, pass control to the next middleware
@@ -1145,20 +1201,13 @@ export const updateSingleUser = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleUser = async (
-	req: Request<{ user: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ user: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();

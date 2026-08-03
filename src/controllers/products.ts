@@ -7,6 +7,7 @@ import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isHexColor from "validator/lib/isHexColor";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IProduct from "../interfaces/Product.interface";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Brand from "../models/Brand";
@@ -19,8 +20,10 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	hasAnyPermission,
 	type SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 
 /**
@@ -384,7 +387,7 @@ export const _checkProductStock = (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewProduct = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>,
 		Pick<
@@ -406,16 +409,6 @@ export const postNewProduct = async (
 	res: Response<FormatResponseObjectType<IProductDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -689,9 +682,7 @@ export const getProducts = async (
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
 		Boolean(
-			req.user &&
-				req.user.role &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+			req?.user && hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL)
 		);
 
 	// List of fields to search for the query term
@@ -840,12 +831,11 @@ export const getSingleProduct = async (
 
 	// Attempt to retrieve the product using the given identifier, and if there was an error,
 	// return the error
-	const findMethodName =
-		req.user &&
-		req.user.role &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-			? "findOneWithDeleted"
-			: "findOne";
+	const findMethodName = Boolean(
+		req?.user && hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
+	)
+		? "findOneWithDeleted"
+		: "findOne";
 	const [productError, product] = await to(
 		Product[findMethodName]({
 			$or: [
@@ -959,7 +949,7 @@ export const getSingleProduct = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleProduct = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ product: string },
 		FormatResponseObjectType<IProductDocument, HttpStatus["OK"]>,
 		Partial<
@@ -1104,7 +1094,7 @@ export const updateSingleProduct = async (
 
 		// Create a new thumbnail from the request body logo, and if there was an error,
 		// return the error and end the request
-		const handledImages = req.body?.images.map((image) =>
+		const handledImages = req.body?.images.map((image: any) =>
 			handleFileToUpload(
 				image,
 				`${req.protocol}://${req.hostname}${req.app.get("port") ? `:${req.app.get("port")}` : ""}`
@@ -1282,20 +1272,13 @@ export const updateSingleProduct = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleProduct = async (
-	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ product: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the product identifier from request parameters
 	const { product: productIdentifier } = req.params || {};
 
@@ -1372,7 +1355,10 @@ export const deleteSingleProduct = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleProduct = async (
-	req: Request<{ product: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ product: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -1456,10 +1442,6 @@ export const getHomeProductsList = async (
 ): Promise<void> => {
 	// Destructure the query parameters (req.query) into the 'type' variable
 	const { type } = req.query || {};
-	const isTypeLatest = type === "latest";
-	const isTypeFeatured = type === "featured";
-	const isTypeOnSale = type === "onSale";
-	const isTypeTopRated = type === "topRated";
 
 	// Aggregation stages
 	let matchStage = {};

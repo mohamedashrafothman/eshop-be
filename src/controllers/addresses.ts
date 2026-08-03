@@ -1,9 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
+import { AuthenticatedRequest } from "../@types/express";
 import IAddress from "../interfaces/Address.interface";
 import Address, { IAddressDocument } from "../models/Address";
 import City from "../models/City";
@@ -15,10 +16,11 @@ import Zone from "../models/Zone";
 import {
 	formatResponseObject,
 	handleTransactionError,
+	hasAnyPermission,
 	type FormatResponseObjectType,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
+import PermissionType from "../utils/helpers/permissions";
 
 /**
  * Validates the input fields based on the method provided.
@@ -256,7 +258,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewAddress = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IAddressDocument, HttpStatus["CREATED"]>,
 		Pick<
@@ -285,10 +287,8 @@ export const postNewAddress = async (
 	// If the user is not authenticated or does not have permission,
 	// Rollback the transaction and pass the error to the next middleware
 	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		([vars.auth.roles.user].includes(req.user.role) &&
-			req.body.user !== req.user._id?.toString())
+		!hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL) &&
+		req.body.user !== req.user._id?.toString()
 	) {
 		handleTransactionError(session);
 		const error = createError(httpStatus.UNAUTHORIZED);
@@ -347,9 +347,9 @@ export const postNewAddress = async (
 					city: city._id,
 					user: req.body.user,
 					default: Boolean(![...(user?.addresses || [])].length),
-					...(req.body?.floor && { floor: req.body.floor }),
-					...(req.body?.apartment && { apartment: req.body.apartment }),
-					...(req.body?.zip && { zip: req.body.zip }),
+					...(req.body?.floor !== undefined && { floor: req.body.floor }),
+					...(req.body?.apartment !== undefined && { apartment: req.body.apartment }),
+					...(req.body?.zip !== undefined && { zip: req.body.zip }),
 				},
 			],
 			{ session }
@@ -458,7 +458,7 @@ export const postNewAddress = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getAddresses = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
 		{},
@@ -584,16 +584,13 @@ export const getAddresses = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleAddress = async (
-	req: Request<{ address: string }, FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ address: string },
+		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the address ID from the request parameters
 	const { address: addressIdentifier } = req.params || {};
 
@@ -602,7 +599,9 @@ export const getSingleAddress = async (
 	const [addressError, address] = await to(
 		Address.findOne({
 			_id: addressIdentifier,
-			...(req.user.role === vars.auth.roles.user && { user: req.user._id }),
+			...(!hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL) && {
+				user: req.user._id,
+			}),
 		})
 	);
 	if (addressError || !address) return next(addressError);
@@ -668,7 +667,7 @@ export const getSingleAddress = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleAddressShippingMethods = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ address: string },
 		FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>,
 		{},
@@ -682,12 +681,6 @@ export const getSingleAddressShippingMethods = async (
 	res: Response<FormatResponseObjectType<IShippingMethodDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the address identifier from request parameters
 	const { address: addressIdentifier } = req.params || {};
 
@@ -698,10 +691,7 @@ export const getSingleAddressShippingMethods = async (
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
-		Boolean(
-			req?.user &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
-		);
+		hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL);
 
 	// List of fields to search for the query term
 	const querySearchFields: string[] = ["name", "description"];
@@ -885,7 +875,7 @@ export const getSingleAddressShippingMethods = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleAddress = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ address: string },
 		FormatResponseObjectType<IAddressDocument, HttpStatus["OK"]>,
 		Partial<
@@ -959,15 +949,14 @@ export const updateSingleAddress = async (
 		return next(addressError);
 	}
 
-	// Check if user logged in
+	// Check if user is authorized to update the address
+	const isAddressOwner = address.user?._id?.toString() === req.user._id?.toString();
 	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		([vars.auth.roles.user].includes(req.user.role) &&
-			address.user?._id?.toString() !== req.user._id?.toString())
+		!hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL) &&
+		!isAddressOwner
 	) {
 		handleTransactionError(session);
-		const error = createError(httpStatus.UNAUTHORIZED);
+		const error = createError(httpStatus.FORBIDDEN);
 		return next({ ...(error || {}), status: error.status });
 	}
 
@@ -978,7 +967,9 @@ export const updateSingleAddress = async (
 		// Retrieve the addresses of the user
 		[addressesError, addresses] = await to(
 			Address.find({
-				user: [vars.auth.roles.user].includes(req.user.role) ? req.user._id : address.user,
+				user: !hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL)
+					? req.user._id
+					: address.user,
 				_id: { $ne: addressIdentifier },
 			}).session(session)
 		);
@@ -1044,7 +1035,10 @@ export const updateSingleAddress = async (
 			const [updateManyError] = await to(
 				Address.updateMany(
 					{
-						user: [vars.auth.roles.user].includes(req.user.role)
+						user: !hasAnyPermission(
+							req.user.permissions || [],
+							PermissionType.MANAGE_ALL
+						)
 							? req.user._id
 							: address.user,
 						_id: { $ne: addressIdentifier },
@@ -1133,7 +1127,11 @@ export const updateSingleAddress = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleAddress = async (
-	req: Request<{ address: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>, {}>,
+	req: AuthenticatedRequest<
+		{ address: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>,
+		{}
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -1154,15 +1152,14 @@ export const deleteSingleAddress = async (
 		return next(addressError);
 	}
 
-	// Check if the user has permission to delete the address
+	// Check if user is authorized to update the address
+	const isAddressOwner = address.user?._id?.toString() === req.user._id?.toString();
 	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		([vars.auth.roles.user].includes(req.user.role) &&
-			address.user.toString() !== req.user._id?.toString())
+		!hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL) &&
+		!isAddressOwner
 	) {
 		handleTransactionError(session);
-		const error = createError(httpStatus.UNAUTHORIZED);
+		const error = createError(httpStatus.FORBIDDEN);
 		return next({ ...(error || {}), status: error.status });
 	}
 

@@ -5,6 +5,7 @@ import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { ObjectId } from "mongodb";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
+import { AuthenticatedRequest } from "../@types/express";
 import IReview from "../interfaces/Review.interface";
 import Order from "../models/Order";
 import { IOrderItemDocument } from "../models/OrderItem";
@@ -14,8 +15,10 @@ import {
 	formatResponseObject,
 	FormatResponseObjectType,
 	handleTransactionError,
+	hasAnyPermission,
 	SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 
 /**
@@ -148,7 +151,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewReview = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IReviewDocument, HttpStatus["CREATED"]>,
 		Pick<IReview, "comment" | "rating" | "product"> & { order: string }
@@ -159,13 +162,6 @@ export const postNewReview = async (
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
-
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user || ![vars.auth.roles.user].includes(req.user.role)) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		handleTransactionError(session);
-		return next({ ...(error || {}), status: error.status });
-	}
 
 	// Destructure the request body to get product, comment, and rating data
 	const { product, comment, rating, order } = req.body;
@@ -329,7 +325,7 @@ export const postNewReview = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getReviews = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
 		{},
@@ -666,20 +662,13 @@ export const getReviewsForProduct = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleReview = async (
-	req: Request<{ review: string }, FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ review: string },
+		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the review ID from the request parameters
 	const { review: reviewIdentifier } = req.params || {};
 
@@ -763,7 +752,7 @@ export const getSingleReview = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleReview = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ review: string },
 		FormatResponseObjectType<IReviewDocument, HttpStatus["OK"]>,
 		Partial<Pick<IReview, "comment" | "rating">>
@@ -774,13 +763,6 @@ export const updateSingleReview = async (
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
-
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		handleTransactionError(session);
-		return next({ ...(error || {}), status: error.status });
-	}
 
 	// Retrieve the review ID from the request parameters
 	const { review: reviewIdentifier } = req.params || {};
@@ -793,7 +775,9 @@ export const updateSingleReview = async (
 	const [reviewError, reviewExists] = await to(
 		Review.findOne({
 			_id: reviewIdentifier,
-			...([vars.auth.roles.user].includes(req.user.role) ? { user: req.user._id } : {}),
+			...(!hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_ALL) && {
+				user: req.user._id,
+			}),
 		}).session(session)
 	);
 	if (reviewError || !reviewExists) {
@@ -812,7 +796,7 @@ export const updateSingleReview = async (
 	}
 
 	// Merge the old review data with the new review comment or rating
-	const newReview = Object.assign(reviewExists, {
+	Object.assign(reviewExists, {
 		...(comment && { comment }),
 		...(rating && { rating }),
 	});
@@ -826,7 +810,7 @@ export const updateSingleReview = async (
 
 	// Save the updated review to the database, and if there is an error during saving,
 	// pass the error to the next middleware
-	const [saveReviewError, updatedReview] = await to(newReview.save({ session }));
+	const [saveReviewError, updatedReview] = await to(reviewExists.save({ session }));
 	if (saveReviewError) {
 		handleTransactionError(session);
 		return next(saveReviewError);
@@ -920,20 +904,13 @@ export const updateSingleReview = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleReview = async (
-	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ review: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the review identifier from request parameters
 	const { review: reviewIdentifier } = req.params || {};
 
@@ -1003,7 +980,10 @@ export const deleteSingleReview = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleReview = async (
-	req: Request<{ review: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ review: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

@@ -3,7 +3,7 @@ import { Router } from "express";
 import * as ordersController from "../../../controllers/orders";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -12,9 +12,9 @@ const router = Router();
 router
 	.route("/")
 	.all(allowMethods(["get", "post"]))
-	.get(ordersController.getOrders)
+	.get(permission(PermissionType.READ_ORDERS), ordersController.getOrders)
 	.post(
-		permission.check(vars.auth.roles.user),
+		permission(PermissionType.CREATE_ORDER),
 		ordersController.validator("create"),
 		unprocessableEntityValidator,
 		ordersController.postNewOrder
@@ -23,23 +23,18 @@ router
 router
 	.route("/:order")
 	.all(allowMethods(["get", "patch", "delete"]))
-	.get(ordersController.getSingleOrder)
+	.get(permission(PermissionType.READ_ORDER), ordersController.getSingleOrder)
 	.patch(
+		permission(PermissionType.UPDATE_ORDER),
 		ordersController.validator("update"),
 		unprocessableEntityValidator,
 		ordersController.updateSingleOrder
 	)
-	.delete(
-		permission.check([[vars.auth.roles.admin], [vars.auth.roles.superAdmin]]),
-		ordersController.deleteSingleOrder
-	);
+	.delete(permission(PermissionType.DELETE_ORDER), ordersController.deleteSingleOrder);
 
 router
 	.route("/:order/items/:orderItem")
-	.all(
-		allowMethods(["patch"]),
-		permission.check([[vars.auth.roles.admin], [vars.auth.roles.superAdmin]])
-	)
+	.all(allowMethods(["patch"]), permission(PermissionType.UPDATE_ORDER))
 	.patch(
 		ordersController.validator("item/update"),
 		unprocessableEntityValidator,
@@ -48,10 +43,7 @@ router
 
 router
 	.route("/:order/restore")
-	.all(
-		allowMethods(["patch"]),
-		permission.check([[vars.auth.roles.admin], [vars.auth.roles.superAdmin]])
-	)
+	.all(allowMethods(["patch"]), permission(PermissionType.RESTORE_ORDER))
 	.patch(ordersController.restoreSingleOrder);
 
 // Exporting router

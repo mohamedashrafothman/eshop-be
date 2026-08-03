@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
+import { AuthenticatedRequest } from "../@types/express";
 import IPaymentMethod, { PAYMENT_METHODS } from "../interfaces/PaymentMethod.interface";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import PaymentMethod, { IPaymentMethodDocument } from "../models/PaymentMethod";
@@ -15,8 +15,10 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	hasAnyPermission,
 	type SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 
 /**
@@ -91,7 +93,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *   * @throws {Error} 400 - Returns an error if the file type is invalid or the file size exceeds the limit.
  */
 export const uploadPaymentMethodIcon = async (
-	req: Request,
+	req: AuthenticatedRequest,
 	res: Response,
 	next: NextFunction
 ): Promise<void> => {
@@ -107,7 +109,11 @@ export const uploadPaymentMethodIcon = async (
 	const imageUpload = multer({
 		storage: storageEngine,
 		limits: { files: 1, fileSize: 1024 * 1024 * Number(vars.storage.allowedFileSizeInMB) },
-		fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+		fileFilter: (
+			_req: AuthenticatedRequest,
+			file: Express.Multer.File,
+			cb: FileFilterCallback
+		) => {
 			// supported image file mimetype
 			const isFileTypeValid = storageEngine.options.accept.some((item) =>
 				file.mimetype.startsWith(item)
@@ -204,7 +210,7 @@ export const uploadPaymentMethodIcon = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewPaymentMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["CREATED"]>,
 		Pick<IPaymentMethod, "method" | "description"> & { icon?: Express.Multer.File }
@@ -347,7 +353,7 @@ export const postNewPaymentMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getPaymentMethods = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>,
 		{},
@@ -369,9 +375,8 @@ export const getPaymentMethods = async (
 	const isFilterByDeletedAllowed: boolean =
 		"deleted" in req.query &&
 		Boolean(
-			req.user &&
-				req.user.role &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
+			req?.user &&
+				hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
 		);
 
 	// List of fields to search for the query term
@@ -479,7 +484,7 @@ export const getPaymentMethods = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSinglePaymentMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ method: string },
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>
 	>,
@@ -586,7 +591,7 @@ export const getSinglePaymentMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSinglePaymentMethod = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ method: string },
 		FormatResponseObjectType<IPaymentMethodDocument, HttpStatus["OK"]>,
 		Partial<Pick<IPaymentMethod, "method" | "description">> & { icon?: Express.Multer.File }
@@ -668,7 +673,7 @@ export const updateSinglePaymentMethod = async (
 	}
 
 	// Merge the request body data into the existing payment method object
-	paymentMethod = Object.assign(paymentMethod, {
+	Object.assign(paymentMethod, {
 		...(req.body?.method && { method: req.body.method }),
 		...(req.body?.description && { description: req.body.description }),
 		...(createdAttachment?.[0]?._id ? { icon: createdAttachment[0]._id } : {}),
@@ -746,20 +751,13 @@ export const updateSinglePaymentMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSinglePaymentMethod = async (
-	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ method: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the payment method identifier from request parameters
 	const { method: paymentMethodIdentifier } = req.params || {};
 
@@ -833,7 +831,10 @@ export const deleteSinglePaymentMethod = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSinglePaymentMethod = async (
-	req: Request<{ method: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ method: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

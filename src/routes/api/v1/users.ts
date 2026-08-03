@@ -3,7 +3,7 @@ import { Router } from "express";
 import * as usersController from "../../../controllers/users";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -11,9 +11,10 @@ const router = Router();
 // Endpoints
 router
 	.route("/")
-	.all(allowMethods(["get", "post"]), permission.check(vars.auth.roles.superAdmin))
-	.get(usersController.getUsers)
+	.all(allowMethods(["get", "post"]))
+	.get(permission(PermissionType.READ_USERS), usersController.getUsers)
 	.post(
+		permission(PermissionType.CREATE_USER),
 		usersController.validator("create"),
 		unprocessableEntityValidator,
 		usersController.postNewUser
@@ -22,22 +23,23 @@ router
 router
 	.route("/me")
 	.all(allowMethods(["get"]))
-	.get(usersController.getCurrentAuthenticatedUser);
+	.get(permission(PermissionType.READ_USER), usersController.getCurrentAuthenticatedUser);
 
 router
 	.route("/:user")
 	.all(allowMethods(["get", "patch", "delete"]))
-	.get(permission.check(vars.auth.roles.superAdmin), usersController.getSingleUser)
+	.get(permission(PermissionType.READ_USER), usersController.getSingleUser)
 	.patch(
+		permission(PermissionType.UPDATE_USER),
 		usersController.validator("update"),
 		unprocessableEntityValidator,
 		usersController.updateSingleUser
 	)
-	.delete(permission.check(vars.auth.roles.superAdmin), usersController.deleteSingleUser);
+	.delete(permission(PermissionType.DELETE_USER), usersController.deleteSingleUser);
 
 router
 	.route("/:user/restore")
-	.all(allowMethods(["patch"]), permission.check(vars.auth.roles.superAdmin))
+	.all(allowMethods(["patch"]), permission(PermissionType.RESTORE_USER))
 	.patch(usersController.restoreSingleUser);
 
 router

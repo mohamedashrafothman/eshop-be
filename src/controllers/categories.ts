@@ -1,11 +1,11 @@
 import to from "await-to-js";
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
 import multer, { FileFilterCallback } from "multer";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import ICategory from "../interfaces/Category.interface";
 import Attachment, { IAttachmentDocument } from "../models/Attachment";
 import Category, { ICategoryDocument } from "../models/Category";
@@ -16,9 +16,11 @@ import {
 	FormatResponseObjectType,
 	handleFileToUpload,
 	handleTransactionError,
+	hasAnyPermission,
 	isObject,
 	type SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 
 /**
@@ -380,7 +382,7 @@ export const getCategories = async (
 		"deleted" in req.query &&
 		Boolean(
 			req?.user &&
-				[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role || "")
+				hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
 		);
 
 	// Check if the query includes a firstLevelOnly flag
@@ -498,12 +500,11 @@ export const getSingleCategory = async (
 
 	// Attempt to retrieve the category using the given identifier, and if there was an error,
 	// return the error
-	const findMethodName =
-		req.user &&
-		req.user.role &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-			? "findOneWithDeleted"
-			: "findOne";
+	const findMethodName = Boolean(
+		req?.user && hasAnyPermission(req.user.permissions || [], PermissionType.MANAGE_SETTINGS)
+	)
+		? "findOneWithDeleted"
+		: "findOne";
 	const [categoryError, category] = await to(
 		Category[findMethodName]({
 			$or: [
@@ -593,7 +594,7 @@ export const getSingleCategory = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleCategory = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ category: string },
 		FormatResponseObjectType<ICategoryDocument, HttpStatus["OK"]>,
 		Partial<Pick<ICategory, "name" | "description" | "parent">> & { icon?: Express.Multer.File }
@@ -712,7 +713,7 @@ export const updateSingleCategory = async (
 	}
 
 	// Merge the request body data into the existing category object
-	category = Object.assign(category, {
+	Object.assign(category, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.description && { description: req.body.description }),
 		...(isParentPresentedInTheRequest && { parent: req.body?.parent || [] }),
@@ -791,20 +792,13 @@ export const updateSingleCategory = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleCategory = async (
-	req: Request<{ category: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ category: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the category identifier from request parameters
 	const { category: categoryIdentifier } = req.params || {};
 
@@ -885,7 +879,10 @@ export const deleteSingleCategory = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleCategory = async (
-	req: Request<{ category: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ category: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

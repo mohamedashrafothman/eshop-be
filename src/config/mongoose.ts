@@ -7,6 +7,7 @@ import MongooseDelete from "mongoose-delete";
 import mongoosePagination from "mongoose-paginate-v2";
 import slug from "mongoose-slug-updater";
 import path from "path";
+import { seedRolesAndPermissions } from "../utils/helpers/db";
 import vars from "../utils/vars";
 
 // Connection
@@ -27,7 +28,10 @@ mongoose.plugin(MongooseDelete, {
 // Events
 mongoose.set("debug", !vars.isProduction);
 mongoose.connection
-	.once("open", () => console.log(chalk.blue("✅  Connected to the database")))
+	.once("open", async () => {
+		console.log(chalk.blue("✅  Connected to the database"));
+		await seedRolesAndPermissions();
+	})
 	.on("error", (error) => {
 		console.error(error);
 		console.log(

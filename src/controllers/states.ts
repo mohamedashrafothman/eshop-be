@@ -1,10 +1,10 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
-import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import { PaginateOptions } from "mongoose";
 import isMongoId from "validator/lib/isMongoId";
+import { AuthenticatedRequest } from "../@types/express";
 import IState from "../interfaces/State.interface";
 import Country from "../models/Country";
 import State, { IStateDocument } from "../models/State";
@@ -13,7 +13,6 @@ import {
 	type FormatResponseObjectType,
 	type SortItemType,
 } from "../utils/helpers";
-import vars from "../utils/vars";
 
 /**
  * Validates the input fields based on the method provided.
@@ -156,7 +155,7 @@ export const validator = (method: "create" | "update"): ValidationChain[] => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewState = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IStateDocument, HttpStatus["CREATED"]>,
 		Pick<IState, "name" | "code" | "country">
@@ -256,7 +255,7 @@ export const postNewState = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getStates = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
 		{},
@@ -385,7 +384,10 @@ export const getStates = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleState = async (
-	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ state: string },
+		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -492,7 +494,7 @@ export const getSingleState = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleState = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ state: string },
 		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>,
 		Partial<Pick<IState, "name" | "code" | "country">>
@@ -525,7 +527,7 @@ export const updateSingleState = async (
 	if (stateError || !state) return next(stateError);
 
 	// Merge the request body data into the existing state object
-	state = Object.assign(state, {
+	Object.assign(state, {
 		...(req.body?.name && { name: req.body.name }),
 		...(req.body?.code && { code: req.body.code }),
 		...(req.body?.country && { country: req.body.country }),
@@ -596,20 +598,13 @@ export const updateSingleState = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleState = async (
-	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ state: string },
+		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the state identifier from request parameters
 	const { state: stateIdentifier } = req.params || {};
 
@@ -686,7 +681,10 @@ export const deleteSingleState = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleState = async (
-	req: Request<{ state: string }, FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ state: string },
+		FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IStateDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {

@@ -1,8 +1,14 @@
 import crypto from "crypto";
 import { Request } from "express";
+import PermissionType from "./permissions";
 export * from "./attachment";
 export * from "./server";
 
+/**
+ * Checking is value is an object or not.
+ * @param value unknown type represent the data we want to check.
+ * @returns Boolean indicate if the value param is an object or not.
+ */
 export const isObject = (value: unknown): boolean =>
 	typeof value === "object" && !Array.isArray(value) && value !== null;
 
@@ -83,3 +89,29 @@ export const capitalize = (sentence: string): string =>
 			return word.charAt(0).toUpperCase() + word.slice(1);
 		})
 		.join(" ");
+
+/**
+ * Checks whether a user holds at least one of the given role names.
+ * Works with the new multi-role `roles` array on `IUserDocument`.
+ * @param userRoles The user's roles array (array of role name strings or ObjectId strings)
+ * @param roleNames One or more role name strings to test against
+ */
+export const hasAnyRole = (userRoles: string[] | undefined, ...roleNames: string[]): boolean => {
+	if (!userRoles || !userRoles.length) return false;
+	return roleNames.some((r) => userRoles.includes(r));
+};
+
+/**
+ * Checks whether a user holds at least one of the given permission names.
+ * Works with the new multi-permission `permissions` array on `IUserDocument`.
+ * @param userPermissions The user's permissions array (array of permission name strings or ObjectId strings)
+ * @param permissions One or more permission name strings to test against
+ */
+export const hasAnyPermission = (
+	userPermissions: string[] | undefined,
+	...requiredPermissions: PermissionType[]
+): boolean => {
+	if (!userPermissions?.length) return false;
+	if (userPermissions.includes(PermissionType.MANAGE_ALL)) return true;
+	return requiredPermissions.some((permission) => userPermissions.includes(permission));
+};

@@ -5,7 +5,7 @@ import * as productsController from "../../../controllers/products";
 import * as reviewsController from "../../../controllers/reviews";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -17,7 +17,7 @@ router
 	.get(authController.passportJWTSerialize, productsController.getProducts)
 	.post(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		productsController.uploadImages,
 		productsController.validator("create"),
 		unprocessableEntityValidator,
@@ -39,7 +39,7 @@ router
 	.get(authController.passportJWTSerialize, productsController.getSingleProduct)
 	.patch(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		productsController.uploadImages,
 		productsController.validator("update"),
 		unprocessableEntityValidator,
@@ -47,7 +47,7 @@ router
 	)
 	.delete(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		productsController.deleteSingleProduct
 	);
 
@@ -56,7 +56,7 @@ router
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.user]])
+		permission(PermissionType.MANAGE_SETTINGS)
 	)
 	.patch(productsController.restoreSingleProduct);
 

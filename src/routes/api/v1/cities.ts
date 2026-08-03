@@ -4,7 +4,7 @@ import * as authController from "../../../controllers/auth";
 import * as citiesController from "../../../controllers/cities";
 import permission from "../../../middlewares/permission";
 import unprocessableEntityValidator from "../../../middlewares/validator";
-import vars from "../../../utils/vars";
+import PermissionType from "../../../utils/helpers/permissions";
 
 // Defining express router
 const router = Router();
@@ -16,7 +16,7 @@ router
 	.get(citiesController.getCities)
 	.post(
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]]),
+		permission(PermissionType.MANAGE_SETTINGS),
 		citiesController.validator("create"),
 		unprocessableEntityValidator,
 		citiesController.postNewCity
@@ -27,7 +27,7 @@ router
 	.all(
 		allowMethods(["get", "patch", "delete"]),
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+		permission(PermissionType.MANAGE_SETTINGS)
 	)
 	.get(citiesController.getSingleCity)
 	.patch(
@@ -42,7 +42,7 @@ router
 	.all(
 		allowMethods(["patch"]),
 		authController.passportJWTAuthenticate,
-		permission.check([[vars.auth.roles.superAdmin], [vars.auth.roles.admin]])
+		permission(PermissionType.MANAGE_SETTINGS)
 	)
 	.patch(citiesController.restoreSingleCity);
 

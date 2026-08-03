@@ -1,10 +1,11 @@
 import to from "await-to-js";
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Response } from "express";
 import { body, ValidationChain } from "express-validator";
 import createError from "http-errors";
 import httpStatus, { HttpStatus } from "http-status";
 import moment from "moment";
 import mongoose, { ClientSession, PaginateOptions } from "mongoose";
+import { AuthenticatedRequest } from "../@types/express";
 import IOrder from "../interfaces/Order.interface";
 import IOrderItem from "../interfaces/OrderItem.interface";
 import IProduct from "../interfaces/Product.interface";
@@ -28,8 +29,10 @@ import {
 	type FormatResponseObjectType,
 	getShortUniqueId,
 	handleTransactionError,
+	hasAnyPermission,
 	type SortItemType,
 } from "../utils/helpers";
+import PermissionType from "../utils/helpers/permissions";
 import vars from "../utils/vars";
 import { _checkProductPriceChange } from "./cart";
 import { _checkProductStock } from "./products";
@@ -252,7 +255,7 @@ export const _isValidShippingZone = (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const postNewOrder = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>,
 		Pick<IOrder, "paymentMethod" | "address" | "shippingMethod" | "note">
@@ -260,12 +263,6 @@ export const postNewOrder = async (
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["CREATED"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in and has the correct role
-	if (req.isUnauthenticated() || !req.user || ![vars.auth.roles.user].includes(req.user.role)) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -623,7 +620,7 @@ export const postNewOrder = async (
  * @throws {Error} 500 - Returns an error if the order retrieval fails.
  */
 export const getOrders = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{},
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
 		{},
@@ -637,24 +634,18 @@ export const getOrders = async (
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Destructure the query parameters (req.query) into
 	// q (search term), deleted (include deleted countries)
 	const { q, deleted } = req.query || {};
 
 	// Check if the query includes a deleted flag
 	const isFilterByDeletedAllowed: boolean =
-		"deleted" in req.query &&
-		[vars.auth.roles.superAdmin, vars.auth.roles.admin].includes(req.user.role);
+		"deleted" in req.query && hasAnyPermission(req.user.permissions, PermissionType.MANAGE_ALL);
 
 	// Check if the authenticated user has permission to filter by their own orders
-	const isFilterByAuthenticatedUserAllowed: boolean = [vars.auth.roles.user].includes(
-		req.user.role
+	const isFilterByAuthenticatedUserAllowed: boolean = !hasAnyPermission(
+		req.user.permissions,
+		PermissionType.MANAGE_ALL
 	);
 
 	// List of fields to search for the query term
@@ -772,16 +763,13 @@ export const getOrders = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const getSingleOrder = async (
-	req: Request<{ order: string }, FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ order: string },
+		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Retrieve the order ID from the request parameters
 	const { order: orderIdentifier } = req.params || {};
 
@@ -790,7 +778,9 @@ export const getSingleOrder = async (
 	const [orderError, order] = await to(
 		Order.findOne({
 			_id: orderIdentifier,
-			...([vars.auth.roles.user].includes(req.user.role) && { user: req.user._id }),
+			...(!hasAnyPermission(req.user.permissions, PermissionType.MANAGE_ALL) && {
+				user: req.user._id,
+			}),
 		})
 	);
 	if (orderError || !order) return next(orderError);
@@ -880,7 +870,7 @@ export const getSingleOrder = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateSingleOrder = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ order: string },
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
 		Partial<Pick<IOrder, "status" | "address" | "shippingMethod" | "note">>
@@ -888,16 +878,6 @@ export const updateSingleOrder = async (
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in and has the correct role
-	if (
-		req.isUnauthenticated() ||
-		!req.user ||
-		![vars.auth.roles.admin, vars.auth.roles.superAdmin].includes(req.user.role)
-	) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();
@@ -975,7 +955,7 @@ export const updateSingleOrder = async (
 	}
 
 	// Merge the old order data with the new data
-	const newOrder = Object.assign(order, {
+	Object.assign(order, {
 		...(existsAddress && {
 			address: {
 				name: existsAddress.name,
@@ -1015,7 +995,7 @@ export const updateSingleOrder = async (
 
 	// Save the updated order to the database, and if there is an error during saving,
 	// pass the error to the next middleware
-	const [saveOrderError, updatedOrder] = await to(newOrder.save({ session }));
+	const [saveOrderError, updatedOrder] = await to(order.save({ session }));
 	if (saveOrderError) {
 		handleTransactionError(session);
 		return next(saveOrderError);
@@ -1108,16 +1088,13 @@ export const updateSingleOrder = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const deleteSingleOrder = async (
-	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ order: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Extract the order identifier from request parameters
 	const { order: orderIdentifier } = req.params || {};
 
@@ -1186,7 +1163,10 @@ export const deleteSingleOrder = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const restoreSingleOrder = async (
-	req: Request<{ order: string }, FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
+	req: AuthenticatedRequest<
+		{ order: string },
+		FormatResponseObjectType<undefined, HttpStatus["OK"]>
+	>,
 	res: Response<FormatResponseObjectType<undefined, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
@@ -1294,7 +1274,7 @@ export const restoreSingleOrder = async (
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 export const updateOrderItem = async (
-	req: Request<
+	req: AuthenticatedRequest<
 		{ order: string; orderItem: string },
 		FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>,
 		{ quantity: number }
@@ -1302,12 +1282,6 @@ export const updateOrderItem = async (
 	res: Response<FormatResponseObjectType<IOrderDocument, HttpStatus["OK"]>>,
 	next: NextFunction
 ): Promise<void> => {
-	// Check if user logged in
-	if (req.isUnauthenticated() || !req.user) {
-		const error = createError(httpStatus.UNAUTHORIZED);
-		return next({ ...(error || {}), status: error.status });
-	}
-
 	// Start a transaction to ensure data integrity
 	const session: ClientSession = await mongoose.startSession();
 	session.startTransaction();

@@ -15,15 +15,18 @@ import isEmail from "validator/lib/isEmail.js";
 import IUser from "../interfaces/User.interface";
 import vars from "../utils/vars";
 import { IAddressDocument } from "./Address";
+import { IRoleDocument } from "./Role";
 
 // adding schema methods here
 export interface IUserDocument
 	extends SoftDeleteInterface,
-		Omit<IUser, "addresses">,
+		Omit<IUser, "addresses" | "roles">,
 		Document<string> {
 	createdAt: Date;
 	updatedAt: Date;
 	slug: string;
+	roles: (Types.ObjectId | IRoleDocument)[];
+	permissions?: string[];
 	addresses: (Types.ObjectId | IAddressDocument)[] | [];
 	comparePassword: (
 		password: string,
@@ -72,13 +75,12 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 			description:
 				"Hashed password for authentication; hidden in outputs and not exposed via toJSON.",
 		},
-		role: {
-			type: String,
-			enum: [...Object.values(vars.auth.roles)],
-			default: vars.auth.roles.user,
-			required: [true, "Role is required!"],
-			description:
-				"The user's role, determining access level and permissions within the application.",
+		roles: {
+			type: [Schema.Types.ObjectId],
+			ref: "Role",
+			default: [],
+			autopopulate: { maxDepth: 1, select: "name permissions" },
+			description: "The user's roles, referencing Role documents.",
 		},
 		active: {
 			type: Boolean,
@@ -116,7 +118,15 @@ const UserSchema: Schema<IUserDocument, object, IUserDocument> = new Schema(
 		toJSON: {
 			versionKey: false,
 			virtual: true,
-			transform: (_doc, { password, ...ret }) => ret,
+			transform: (_doc, { password, ...ret }) => {
+				// Serialize each populated role object to just its name string
+				if (Array.isArray(ret.roles)) {
+					ret.roles = ret.roles.map((r: any) =>
+						typeof r === "object" && r !== null && "name" in r ? r.name : String(r)
+					);
+				}
+				return ret;
+			},
 		},
 		timestamps: true,
 		collection: "Users",
@@ -139,6 +149,14 @@ UserSchema.methods.gravatar = function (user, size = 200) {
 
 // schema hooks
 UserSchema.pre("save", async function (next) {
+	// If roles is empty, assign the default 'USER' role
+	if (!this.roles || !this.roles.length) {
+		const defaultRole = await model("Role").findOne({ name: vars.auth.roles.user });
+		if (defaultRole) {
+			this.roles = [defaultRole._id];
+		}
+	}
+
 	// Check if password isn't modified.
 	if (!this.isModified("password")) return next();
 
